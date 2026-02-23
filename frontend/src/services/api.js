@@ -1,0 +1,165 @@
+import axios from 'axios';
+
+const API_BASE_URL = '/api';
+
+export const documentService = {
+    async getAll() {
+        const response = await axios.get(`${API_BASE_URL}/uploaded-documents/`);
+        return response.data;
+    },
+
+    async create(formData) {
+        const response = await axios.post(`${API_BASE_URL}/upload/`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
+    async update(id, formData) {
+        const response = await axios.patch(`${API_BASE_URL}/upload/${id}/`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
+    async delete(id) {
+        const response = await axios.delete(`${API_BASE_URL}/upload/${id}/`);
+        return response.data;
+    },
+
+    async updateStatus(id, status) {
+        const response = await axios.patch(`${API_BASE_URL}/upload/${id}/`, { status });
+        return response.data;
+    },
+
+    async addComment(id, comment) {
+        const response = await axios.post(`${API_BASE_URL}/upload/${id}/comments/`, { comment });
+        return response.data;
+    },
+
+    async getComments(id) {
+        const response = await axios.get(`${API_BASE_URL}/upload/${id}/comments/`);
+        return response.data;
+    },
+};
+
+export const reportService = {
+    async getAll() {
+        const response = await axios.get(`${API_BASE_URL}/reports/`);
+        return response.data;
+    },
+
+    async create(formData) {
+        const response = await axios.post(`${API_BASE_URL}/reports/`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+};
+
+export const dashboardService = {
+    async getData(bypassCache = false, uploadedBy = '') {
+        const params = bypassCache ? { _: Date.now() } : {};
+        if (uploadedBy) params.uploadedBy = uploadedBy;
+        const response = await axios.get(`${API_BASE_URL}/dashboard`, { params });
+        return response.data;
+    },
+};
+
+export const notificationService = {
+    async getAll() {
+        const response = await axios.get(`${API_BASE_URL}/notifications/`);
+        return response.data;
+    },
+    async markRead(id) {
+        const response = await axios.post(`${API_BASE_URL}/notifications/${id}/mark_read/`);
+        return response.data;
+    },
+    async markAllRead() {
+        await axios.post(`${API_BASE_URL}/notifications/mark_all_read/`);
+    },
+};
+
+export const calendarEventService = {
+    async getAll() {
+        const response = await axios.get(`${API_BASE_URL}/calendar-events/`);
+        return response.data;
+    },
+    async create(data) {
+        const response = await axios.post(`${API_BASE_URL}/calendar-events/`, data);
+        return response.data;
+    },
+    async update(id, data) {
+        const response = await axios.patch(`${API_BASE_URL}/calendar-events/${id}/`, data);
+        return response.data;
+    },
+    async delete(id) {
+        await axios.delete(`${API_BASE_URL}/calendar-events/${id}/`);
+    },
+};
+
+export const backupRestoreService = {
+    async backup() {
+        const response = await axios.get(`${API_BASE_URL}/backup/`, { responseType: 'json' });
+        return response.data;
+    },
+    async restore(data) {
+        const response = await axios.post(`${API_BASE_URL}/restore/`, data, {
+            headers: { 'Content-Type': 'application/json' },
+        });
+        return response.data;
+    },
+};
+
+export const userService = {
+    async getAll() {
+        const response = await axios.get(`${API_BASE_URL}/users/`);
+        return response.data;
+    },
+
+    async create(userData) {
+        const response = await axios.post(`${API_BASE_URL}/users/`, userData);
+        return response.data;
+    },
+
+    async changePassword(username, currentPassword, newPassword) {
+        const response = await axios.post(`${API_BASE_URL}/change-password/`, {
+            username,
+            current_password: currentPassword,
+            new_password: newPassword,
+        });
+        return response.data;
+    },
+
+    async updateProfile(username, currentPassword, fullName, position, office) {
+        const response = await axios.post(`${API_BASE_URL}/update-profile/`, {
+            username,
+            current_password: currentPassword,
+            fullName: fullName ?? undefined,
+            position: position ?? undefined,
+            office: office ?? undefined,
+        });
+        return response.data;
+    },
+
+    async update(id, userData) {
+        const response = await axios.put(`${API_BASE_URL}/users/${id}/`, userData);
+        return response.data;
+    },
+
+    async patch(id, userData) {
+        const response = await axios.patch(`${API_BASE_URL}/users/${id}/`, userData);
+        return response.data;
+    },
+
+    async delete(id) {
+        const response = await axios.delete(`${API_BASE_URL}/users/${id}/`);
+        return response.data;
+    },
+};

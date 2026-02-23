@@ -1,0 +1,23 @@
+FRONTEND
+- open terminal
+- type "cd frontend"
+- type "npm run dev"
+
+BACKEND
+- open new terminal
+- type "cd backend"
+- type "cd venv"
+- type "Scripts/activate" 
+- should display (venv)./bids_and_award/backend/venv 
+- type "cd .."
+- should display (venv)./bids_and_award/backend/
+- type "python manage.py runserver"
+
+DATABASE
+- open xampp
+- start "Apache", "Mysql"
+- open browser and type "localhost/phpmyadmin" not localhost:5173
+- look for "bids_award" database
+
+
+NOTE: Try to limit 2 terminals only. (Remove terminals that dont have running commands. :)  

@@ -1,0 +1,453 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    /* Green/white theme */
+    --card: #ffffff;
+    --ring: #16a34a;
+    --input: #f0f0f0;
+    --muted: #f5f7f5;
+    --accent: #86efac;
+    --border: #e5e8e5;
+    --radius: 0.5rem;
+    --chart-1: #22c55e;
+    --chart-2: #16a34a;
+    --chart-3: #15803d;
+    --chart-4: #166534;
+    --chart-5: #14532d;
+    --popover: #ffffff;
+    --primary: #16a34a;
+    --sidebar: #fafafa;
+    --font-mono: Source Code Pro, monospace;
+    --font-sans: Montserrat, sans-serif;
+    --secondary: #dcfce7;
+    --background: #ffffff;
+    --font-serif: Merriweather, serif;
+    --foreground: #1a1a1a;
+    --destructive: #c62828;
+    --sidebar-ring: #16a34a;
+    --sidebar-accent: #86efac;
+    --sidebar-border: #e5e8e5;
+    --card-foreground: #1a1a1a;
+    --sidebar-primary: #16a34a;
+    --muted-foreground: #525252;
+    --accent-foreground: #166534;
+    --popover-foreground: #1a1a1a;
+    --primary-foreground: #ffffff;
+    --sidebar-foreground: #1a1a1a;
+    --secondary-foreground: #166534;
+    --destructive-foreground: #ffffff;
+    --sidebar-accent-foreground: #166534;
+    --sidebar-primary-foreground: #ffffff;
+    /* App compatibility (map to theme) */
+    --primary-hover: #15803d;
+    --primary-dark: #166534;
+    --primary-light: #86efac;
+    --primary-muted: #dcfce7;
+    --surface: var(--card);
+    --surface-elevated: var(--card);
+    --background-subtle: var(--muted);
+    --border-light: #f0f0f0;
+    --text: var(--foreground);
+    --text-muted: var(--muted-foreground);
+    --text-subtle: #737373;
+    --radius-sm: var(--radius);
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.08), 0 4px 10px -5px rgb(0 0 0 / 0.04);
+    --focus-ring: 0 0 0 3px rgb(22 163 74 / 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --card: #1e2e22;
+        --ring: #22c55e;
+        --input: #2d3d30;
+        --muted: #1e2e22;
+        --accent: #4ade80;
+        --border: #2d3d30;
+        --chart-1: #4ade80;
+        --chart-2: #22c55e;
+        --chart-3: #16a34a;
+        --chart-4: #15803d;
+        --chart-5: #166534;
+        --popover: #1e2e22;
+        --primary: #22c55e;
+        --sidebar: #172019;
+        --secondary: #2d3d30;
+        --background: #172019;
+        --foreground: #f0fdf4;
+        --destructive: #c62828;
+        --sidebar-ring: #22c55e;
+        --sidebar-accent: #4ade80;
+        --sidebar-border: #2d3d30;
+        --card-foreground: #f0fdf4;
+        --sidebar-primary: #22c55e;
+        --muted-foreground: #bbf7d0;
+        --accent-foreground: #052e16;
+        --popover-foreground: #f0fdf4;
+        --primary-foreground: #052e16;
+        --sidebar-foreground: #f0fdf4;
+        --secondary-foreground: #bbf7d0;
+        --destructive-foreground: #f0fdf4;
+        --sidebar-accent-foreground: #052e16;
+        --sidebar-primary-foreground: #052e16;
+        --primary-hover: #4ade80;
+        --primary-dark: #16a34a;
+        --primary-light: #4ade80;
+        --primary-muted: #2d3d30;
+        --surface: var(--card);
+        --surface-elevated: var(--card);
+        --background-subtle: var(--muted);
+        --border-light: #4a5548;
+        --text: var(--foreground);
+        --text-muted: var(--muted-foreground);
+        --text-subtle: #d7cfc4;
+        --focus-ring: 0 0 0 3px rgb(34 197 94 / 0.4);
+    }
+}
+
+.dark {
+    --card: #1e2e22;
+    --ring: #22c55e;
+    --input: #2d3d30;
+    --muted: #1e2e22;
+    --accent: #4ade80;
+    --border: #2d3d30;
+    --chart-1: #4ade80;
+    --chart-2: #22c55e;
+    --chart-3: #16a34a;
+    --chart-4: #15803d;
+    --chart-5: #166534;
+    --popover: #1e2e22;
+    --primary: #22c55e;
+    --sidebar: #172019;
+    --secondary: #2d3d30;
+    --background: #172019;
+    --foreground: #f0fdf4;
+    --destructive: #c62828;
+    --sidebar-ring: #22c55e;
+    --sidebar-accent: #4ade80;
+    --sidebar-border: #2d3d30;
+    --card-foreground: #f0fdf4;
+    --sidebar-primary: #22c55e;
+    --muted-foreground: #bbf7d0;
+    --accent-foreground: #052e16;
+    --popover-foreground: #f0fdf4;
+    --primary-foreground: #052e16;
+    --sidebar-foreground: #f0fdf4;
+    --secondary-foreground: #bbf7d0;
+    --destructive-foreground: #f0fdf4;
+    --sidebar-accent-foreground: #052e16;
+    --sidebar-primary-foreground: #052e16;
+    /* App compatibility */
+    --primary-hover: #4ade80;
+    --primary-dark: #16a34a;
+    --primary-light: #4ade80;
+    --primary-muted: #2d3d30;
+    --surface: var(--card);
+    --surface-elevated: var(--card);
+    --background-subtle: var(--muted);
+    --border-light: #4a5548;
+    --text: var(--foreground);
+    --text-muted: var(--muted-foreground);
+    --text-subtle: #bbf7d0;
+    --focus-ring: 0 0 0 3px rgb(34 197 94 / 0.4);
+}
+
+@theme inline {
+    --color-card: var(--card);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-muted: var(--muted);
+    --color-accent: var(--accent);
+    --color-border: var(--border);
+    --color-radius: var(--radius);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-popover: var(--popover);
+    --color-primary: var(--primary);
+    --color-sidebar: var(--sidebar);
+    --color-font-mono: var(--font-mono);
+    --color-font-sans: var(--font-sans);
+    --color-secondary: var(--secondary);
+    --color-background: var(--background);
+    --color-font-serif: var(--font-serif);
+    --color-foreground: var(--foreground);
+    --color-destructive: var(--destructive);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-card-foreground: var(--card-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-y: scroll;
+}
+
+body {
+    margin: 0;
+    font-family: inherit;
+    background: var(--background);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    min-width: 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+    min-height: 100vh;
+    width: 100%;
+    display: block;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+@layer components {
+    .card {
+        @apply bg-[var(--surface)] rounded-[var(--radius)] border border-[var(--border-light)] shadow-[var(--shadow)];
+        @apply transition-all duration-300 ease-out;
+        @apply hover:shadow-[var(--shadow-md)];
+    }
+    .card-elevated {
+        @apply bg-[var(--surface-elevated)] rounded-[var(--radius-lg)] border border-[var(--border)] shadow-[var(--shadow-md)];
+        @apply transition-all duration-300 ease-out;
+        @apply hover:shadow-[var(--shadow-lg)];
+    }
+    .btn-primary {
+        @apply bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:bg-[var(--primary-dark)] text-[var(--primary-foreground)] font-semibold py-2.5 px-5 rounded-[var(--radius-sm)] transition-all duration-300 ease-out shadow-sm hover:shadow-md active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--primary)] disabled:hover:shadow-sm disabled:active:scale-100;
+    }
+    .btn-secondary {
+        @apply bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--text-subtle)] active:bg-[var(--border-light)] text-[var(--text)] font-semibold py-2.5 px-5 rounded-[var(--radius-sm)] transition-all duration-300 ease-out hover:shadow-sm active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--border)] focus:ring-offset-2;
+    }
+    .btn-action {
+        @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-1 active:scale-[0.97];
+    }
+    .btn-action-primary {
+        @apply btn-action text-[var(--primary)] hover:text-[var(--primary-hover)] hover:bg-[var(--primary-muted)] active:bg-[var(--primary-light)];
+    }
+    .btn-action-secondary {
+        @apply btn-action text-[var(--text)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--text-subtle)] hover:shadow-sm active:bg-[var(--border-light)];
+    }
+    .input-field {
+        @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius-sm)] outline-none text-[var(--text)] placeholder-[var(--text-subtle)];
+        @apply bg-[var(--surface)] transition-all duration-300 ease-out;
+        @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-sm;
+        @apply hover:border-[var(--text-subtle)];
+    }
+    .label {
+        @apply block text-sm font-medium text-[var(--text)] mb-1.5;
+    }
+    .page-header {
+        @apply flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-start justify-between gap-3 sm:gap-4 min-w-0 mb-6 sm:mb-8;
+    }
+    .page-title {
+        @apply text-xl sm:text-2xl font-bold text-[var(--text)] tracking-tight break-words;
+    }
+    .page-title-lg {
+        @apply text-2xl sm:text-3xl font-bold text-[var(--text)] tracking-tight break-words;
+    }
+    .page-subtitle {
+        @apply text-[var(--text-muted)] mt-1.5 text-sm leading-relaxed break-words;
+    }
+    .table-header {
+        @apply bg-[var(--background-subtle)] border-b border-[var(--border)];
+    }
+    .table-th {
+        @apply px-4 sm:px-6 py-2.5 sm:py-3.5 text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider;
+    }
+    .table-td {
+        @apply px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[var(--text)] transition-colors duration-200;
+    }
+    .table-td-muted {
+        @apply px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[var(--text-muted)] transition-colors duration-200;
+    }
+    .empty-state {
+        @apply py-12 text-center text-[var(--text-muted)] text-sm;
+    }
+    .loading-state {
+        @apply py-12 text-center text-[var(--text-muted)] text-sm;
+    }
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    transition: box-shadow 0.2s ease-out;
+}
+
+/* Hide browser's native password reveal so only our custom eye shows */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: var(--background-subtle);
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+    transition: background 0.2s ease-out;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-subtle);
+}
+
+/* Selection */
+::selection {
+    background: rgb(22 163 74 / 0.3);
+    color: var(--text);
+}
+
+/* App shell: keep sidebar + main layout correct (matches App.jsx) */
+#root > div {
+    display: flex !important;
+    min-height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: var(--background) !important;
+    overflow-x: hidden !important;
+}
+/* Sidebar: always visible on desktop (768px+), fixed width */
+#root aside {
+    flex-shrink: 0 !important;
+    width: 16rem !important;
+    min-width: 16rem !important;
+    z-index: 40;
+}
+@media (min-width: 768px) {
+    #root aside {
+        transform: none !important;
+        visibility: visible !important;
+    }
+}
+#root main {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    min-height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: var(--background) !important;
+    padding: 1rem !important;
+    padding-top: 3.5rem !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+@media (min-width: 640px) {
+    #root main {
+        padding: 1.5rem !important;
+    }
+}
+@media (min-width: 768px) {
+    #root main {
+        margin-left: 16rem !important;
+        padding: 2rem !important;
+        padding-top: 2rem !important;
+        border-left: 1px solid var(--border-light) !important;
+    }
+}
+
+/* Dashboard document-status pie chart (pizza-style circle) */
+.dashboard-pie-container {
+    transition: transform 0.3s ease-out;
+}
+.dashboard-pie-container:hover {
+    transform: scale(1.03);
+}
+.dashboard-pie-svg {
+    transition: opacity 0.25s ease-out;
+}
+.dashboard-pie-wedge {
+    transition: transform 0.25s ease-out, filter 0.2s ease-out;
+    cursor: pointer;
+}
+.dashboard-pie-wedge:hover {
+    filter: brightness(1.08);
+}
+.dashboard-pie-total {
+    animation: dashboard-pie-total-in 0.5s ease-out 0.3s both;
+}
+@keyframes dashboard-pie-total-in {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+.dashboard-pie-legend {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+.dashboard-pie-legend-item {
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+.dashboard-pie-legend-item:hover {
+    background-color: var(--background-subtle);
+    box-shadow: var(--shadow);
+}
+
+/* Toast animation for Profile (and other) notifications */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.animate-fade-in {
+    animation: fade-in 0.25s ease-out;
+}
