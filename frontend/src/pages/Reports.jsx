@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { reportService } from '../services/api';
 import { ROLES } from '../utils/roles';
-import { MdUpload, MdClose, MdDownload, MdVisibility } from 'react-icons/md';
+import { MdUpload, MdClose, MdDownload } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 
 const Reports = ({ user }) => {
@@ -296,14 +296,14 @@ const Reports = ({ user }) => {
                 </div>
                 <div className="overflow-x-auto table-scroll-wrap table-fit">
                     <table className="min-w-full divide-y divide-[var(--border)] border-collapse text-sm w-full table-fixed">
-                        <thead className="bg-[var(--background-subtle)] border-b border-[var(--border)]">
+                        <thead className="table-header">
                             <tr>
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Report Title</th>
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Submitting Office</th>
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Uploaded By</th>
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Date Submitted</th>
+                                <th className="table-th">Report Title</th>
+                                <th className="table-th">Submitting Office</th>
+                                <th className="table-th">Uploaded By</th>
+                                <th className="table-th">Date Submitted</th>
                                 {isAdmin && (
-                                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Actions</th>
+                                    <th className="table-th">Actions</th>
                                 )}
                             </tr>
                         </thead>
@@ -333,30 +333,28 @@ const Reports = ({ user }) => {
                             ) : (
                                 filteredReports.map((r) => (
                                     <tr key={r.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
-                                        <td className="px-4 py-3 text-sm text-[var(--text)] font-medium">{r.title || '—'}</td>
-                                        <td className="px-4 py-3 text-sm text-[var(--text-muted)]">{r.submitting_office || '—'}</td>
-                                        <td className="px-4 py-3 text-sm text-[var(--text-muted)]">{r.uploadedBy || '—'}</td>
-                                        <td className="px-4 py-3 text-sm text-[var(--text-muted)]">{formatDate(r.uploaded_at)}</td>
+                                        <td className="table-td font-medium">{r.title || '—'}</td>
+                                        <td className="table-td-muted">{r.submitting_office || '—'}</td>
+                                        <td className="table-td-muted">{r.uploadedBy || '—'}</td>
+                                        <td className="table-td-muted">{formatDate(r.uploaded_at)}</td>
                                         {isAdmin && (
-                                            <td className="px-4 py-3 text-sm whitespace-nowrap table-cell-actions">
+                                            <td className="table-td whitespace-nowrap">
                                                 {r.file_url ? (
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center justify-center gap-2">
                                                         <button
                                                             type="button"
                                                             onClick={() => openPreview(r)}
-                                                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--border)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
+                                                            className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
                                                             title="View file"
                                                         >
-                                                            <MdVisibility className="w-3.5 h-3.5" />
                                                             View
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => triggerDownload(r)}
-                                                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--border)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
+                                                            className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--border)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
                                                             title="Download file"
                                                         >
-                                                            <MdDownload className="w-3.5 h-3.5" />
                                                             Download
                                                         </button>
                                                     </div>
