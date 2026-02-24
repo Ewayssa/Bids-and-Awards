@@ -122,11 +122,6 @@ const Login = ({ onLogin }) => {
                             {loading ? 'Signing in…' : 'LOGIN'}
                         </button>
 
-                        <div className="flex justify-center mt-4">
-                            <a href="#" className="text-sm text-[#D4140F] hover:underline" onClick={(e) => e.preventDefault()}>
-                                Forgot password?
-                            </a>
-                        </div>
                     </form>
                 </div>
             </div>

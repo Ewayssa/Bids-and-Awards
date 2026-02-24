@@ -345,15 +345,15 @@ const Encode = ({ user }) => {
 
     // Export to CSV
     const exportToCSV = () => {
-        const headers = ['Title', 'PR No', 'Category', 'Sub-document', 'Date', 'Status', 'Uploaded By', 'Uploaded At'];
+        const headers = ['Title', 'PR No', 'Category', 'Sub-document', 'Uploaded By', 'Date', 'Status', 'Uploaded At'];
         const rows = filteredDocuments.map(doc => [
             doc.title || '',
             doc.prNo || '',
             doc.category || '',
             doc.subDoc || '',
+            doc.uploadedBy || '',
             formatDate(doc.date),
             doc.status || '',
-            doc.uploadedBy || '',
             formatDate(doc.uploaded_at)
         ]);
         
@@ -742,11 +742,11 @@ const Encode = ({ user }) => {
                                                         <table className="min-w-full divide-y divide-[var(--border-light)]">
                                                             <thead className="table-header">
                                                                 <tr>
-                                                                    <th className="table-th text-left">Title</th>
-                                                                    <th className="table-th text-left">Category / Sub-doc</th>
-                                                                    <th className="table-th text-left">Date</th>
-                                                                    <th className="table-th text-left">Status</th>
-                                                                    {(canViewAllDocuments || isAdmin) && <th className="table-th text-left">Actions</th>}
+                                                                    <th className="table-th">Title</th>
+                                                                    <th className="table-th uppercase">Category / Sub-doc</th>
+                                                                    <th className="table-th uppercase">Date</th>
+                                                                    <th className="table-th uppercase">Status</th>
+                                                                    {(canViewAllDocuments || isAdmin) && <th className="table-th">Actions</th>}
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
@@ -775,7 +775,7 @@ const Encode = ({ user }) => {
                                                                             {(canViewAllDocuments || isAdmin) && (
                                                                             <td className="table-td">
                                                                                 {doc.file_url ? (
-                                                                                    <div className="flex items-center gap-2">
+                                                                                    <div className="flex items-center justify-center gap-2">
                                                                                         <button
                                                                                             type="button"
                                                                                             onClick={() => openPreview(doc)}
@@ -829,30 +829,30 @@ const Encode = ({ user }) => {
                                 <table className="min-w-full divide-y divide-[var(--border)] w-full">
                                     <thead className="table-header">
                                         <tr>
-                                            <th className="table-th text-left">Title</th>
-                                            <th className="table-th text-left">PR No</th>
-                                            <th className="table-th text-left">
-                                                <button type="button" onClick={() => handleSort('category')} className="inline-flex items-center gap-1 font-semibold hover:text-[var(--primary)]">
+                                            <th className="table-th">Title</th>
+                                            <th className="table-th">PR No</th>
+                                            <th className="table-th">
+                                                <button type="button" onClick={() => handleSort('category')} className="inline-flex items-center justify-center gap-1 font-semibold hover:text-[var(--primary)] uppercase w-full">
                                                     Category / Sub-doc {sortKey === 'category' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
-                                            <th className="table-th text-left">
-                                                <button type="button" onClick={() => handleSort('uploaded_at')} className="inline-flex items-center gap-1 font-semibold hover:text-[var(--primary)]">
+                                            <th className="table-th">Uploaded By</th>
+                                            <th className="table-th">
+                                                <button type="button" onClick={() => handleSort('uploaded_at')} className="inline-flex items-center justify-center gap-1 font-semibold hover:text-[var(--primary)] uppercase w-full">
                                                     Date Submitted {sortKey === 'uploaded_at' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
-                                            <th className="table-th text-left">
-                                                <button type="button" onClick={() => handleSort('updated_at')} className="inline-flex items-center gap-1 font-semibold hover:text-[var(--primary)]">
+                                            <th className="table-th">
+                                                <button type="button" onClick={() => handleSort('updated_at')} className="inline-flex items-center justify-center gap-1 font-semibold hover:text-[var(--primary)] uppercase w-full">
                                                     Last Updated {sortKey === 'updated_at' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
-                                            <th className="table-th text-left">
-                                                <button type="button" onClick={() => handleSort('status')} className="inline-flex items-center gap-1 font-semibold hover:text-[var(--primary)]">
+                                            <th className="table-th">
+                                                <button type="button" onClick={() => handleSort('status')} className="inline-flex items-center justify-center gap-1 font-semibold hover:text-[var(--primary)] uppercase w-full">
                                                     Status {sortKey === 'status' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
-                                            <th className="table-th text-left">Uploaded by</th>
-                                            {(canViewAllDocuments || isAdmin) && <th className="table-th text-left">Actions</th>}
+                                            {(canViewAllDocuments || isAdmin) && <th className="table-th">Actions</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
@@ -873,6 +873,7 @@ const Encode = ({ user }) => {
                                                             {doc.category || '—'} / {doc.subDoc || '—'}
                                                         </div>
                                                     </td>
+                                                    <td className="table-td-muted">{doc.uploadedBy || '—'}</td>
                                                     <td className="table-td-muted text-xs">{formatDate(doc.uploaded_at)}</td>
                                                     <td className="table-td-muted text-xs">{formatDate(doc.updated_at)}</td>
                                                     <td className="table-td">
@@ -880,11 +881,10 @@ const Encode = ({ user }) => {
                                                             {doc.status === 'complete' ? 'Completed' : doc.status === 'ongoing' ? 'Ongoing' : (doc.status || 'Pending')}
                                                         </span>
                                                     </td>
-                                                    <td className="table-td-muted">{doc.uploadedBy || '—'}</td>
                                                     {(canViewAllDocuments || isAdmin) && (
                                                     <td className="table-td">
                                                         {doc.file_url ? (
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center justify-center gap-2">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => openPreview(doc)}

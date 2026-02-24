@@ -16,7 +16,7 @@ const Personnel = ({ user }) => {
     const [successMessage, setSuccessMessage] = useState('');
     const [newUserCredentials, setNewUserCredentials] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
-    const [editForm, setEditForm] = useState({ fullName: '', position: '', office: '', role: '', is_active: true });
+    const [editForm, setEditForm] = useState({ fullName: '', position: '', office: '', role: '', is_active: true, resetPassword: '' });
     const [searchQuery, setSearchQuery] = useState('');
 
     const loadUsers = async () => {
@@ -43,13 +43,13 @@ const Personnel = ({ user }) => {
 
     const openEditModal = (u) => {
         setEditingUser(u);
-        setEditForm({ fullName: u.fullName || '', position: u.position || '', office: u.office || '', role: u.role || ROLES.EMPLOYEE, is_active: u.is_active !== false });
+        setEditForm({ fullName: u.fullName || '', position: u.position || '', office: u.office || '', role: u.role || ROLES.EMPLOYEE, is_active: u.is_active !== false, resetPassword: '' });
         setAddError('');
     };
 
     const closeEditModal = () => {
         setEditingUser(null);
-        setEditForm({ fullName: '', position: '', office: '', role: '', is_active: true });
+        setEditForm({ fullName: '', position: '', office: '', role: '', is_active: true, resetPassword: '' });
         setAddError('');
         setSubmitting(false);
     };
@@ -146,13 +146,17 @@ const Personnel = ({ user }) => {
         
         setSubmitting(true);
         try {
-            await userService.patch(editingUser.id, {
+            const payload = {
                 fullName: editForm.fullName.trim() || undefined,
                 position: editForm.position.trim() || undefined,
                 office: editForm.office.trim() || undefined,
                 role: editForm.role,
                 is_active: editForm.is_active,
-            });
+            };
+            if (editForm.resetPassword && editForm.resetPassword.trim()) {
+                payload.password = editForm.resetPassword.trim();
+            }
+            await userService.patch(editingUser.id, payload);
             closeEditModal();
             setSuccessMessage('User updated successfully.');
             await loadUsers();
@@ -509,6 +513,20 @@ const Personnel = ({ user }) => {
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+                            <div>
+                                <label htmlFor="edit-resetPassword" className="block text-sm font-medium text-[var(--text)] mb-1">Reset password</label>
+                                <input
+                                    id="edit-resetPassword"
+                                    type="text"
+                                    value={editForm.resetPassword}
+                                    onChange={(e) => setEditForm((f) => ({ ...f, resetPassword: e.target.value }))}
+                                    className="input-field w-full"
+                                    placeholder="Leave blank to keep current password"
+                                    disabled={submitting}
+                                    autoComplete="off"
+                                />
+                                <p className="text-xs text-[var(--text-muted)] mt-0.5">Set a new password for this user; they will be required to change it on next login.</p>
                             </div>
                             <div className="flex items-center gap-4 pt-1">
                                 <label htmlFor="edit-status" className="text-sm font-medium text-[var(--text)] shrink-0">Status</label>

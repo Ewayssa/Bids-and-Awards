@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { userService } from '../services/api';
 import PasswordInput from '../components/PasswordInput';
+import { validatePassword, STRICT_PASSWORD_RULES } from '../utils/password';
 
 const ChangePassword = ({ user, onPasswordChanged }) => {
     const [currentPassword, setCurrentPassword] = useState('');
@@ -12,8 +13,9 @@ const ChangePassword = ({ user, onPasswordChanged }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        if (newPassword.length < 8) {
-            setError('New password must be at least 8 characters.');
+        const validation = validatePassword(newPassword);
+        if (!validation.valid) {
+            setError(validation.errors);
             return;
         }
         if (newPassword !== confirmPassword) {
@@ -47,7 +49,15 @@ const ChangePassword = ({ user, onPasswordChanged }) => {
 
                 {error && (
                     <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg mt-4" role="alert">
-                        {error}
+                        {Array.isArray(error) ? (
+                            <ul className="list-disc list-inside space-y-0.5">
+                                {error.map((msg, i) => (
+                                    <li key={i}>{msg}</li>
+                                ))}
+                            </ul>
+                        ) : (
+                            error
+                        )}
                     </div>
                 )}
 
@@ -70,7 +80,8 @@ const ChangePassword = ({ user, onPasswordChanged }) => {
                         placeholder="Enter new password"
                         autoComplete="new-password"
                         variant="rounded"
-                        showRequirementsChecklist
+                        showRequirementsChecklist={newPassword.length > 0}
+                        rules={STRICT_PASSWORD_RULES}
                         required
                         minLength={8}
                     />
