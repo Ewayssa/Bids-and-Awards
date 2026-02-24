@@ -1,8 +1,61 @@
+import re
+from django.utils import timezone
 from rest_framework import serializers
 from .models import User, Document, Report, CalendarEvent, Notification
 
+
+def get_next_transaction_number():
+    """Generate next transaction number in format YYYY-MM-NNN (e.g. 2026-02-001)."""
+    prefix = timezone.now().strftime('%Y-%m')
+    pattern = re.compile(r'^(\d{4}-\d{2})-(\d{3})$')
+    docs = Document.objects.filter(prNo__startswith=prefix + '-')
+    max_num = 0
+    for d in docs:
+        m = pattern.match(d.prNo)
+        if m:
+            max_num = max(max_num, int(m.group(2)))
+    return f"{prefix}-{max_num + 1:03d}"
+
 # Default password for new users; they must change it on first login.
 DEFAULT_USER_PASSWORD = 'password'
+
+
+class RegisterSerializer(serializers.Serializer):
+    """Public self-registration: creates an inactive user (admin must activate)."""
+    username = serializers.CharField(max_length=150, required=True)
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+    fullName = serializers.CharField(max_length=255, required=True, allow_blank=False)
+    position = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
+    office = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
+
+    def validate_username(self, value):
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('Username is required.')
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('A user with this username already exists.')
+        return value
+
+    def create(self, validated_data):
+        username = validated_data['username'].strip()
+        password = validated_data['password']
+        full_name = (validated_data.get('fullName') or '').strip()
+        position = (validated_data.get('position') or '').strip()
+        office = (validated_data.get('office') or '').strip()
+        email = username if '@' in username else ''
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            fullName=full_name or username,
+            position=position,
+            office=office,
+            role='employee',
+            is_active=False,
+        )
+        user.must_change_password = False
+        user.save(update_fields=['must_change_password'])
+        return user
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -18,6 +71,9 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password', None) or DEFAULT_USER_PASSWORD
         username = validated_data.pop('username')
         email = validated_data.pop('email', None) or ''
+        # When username looks like an email, populate email field (used for password reset)
+        if not email and '@' in username:
+            email = username
         # Only pass model fields that create_user accepts as extra_fields
         extra = {k: v for k, v in validated_data.items() if k in ('role', 'fullName', 'position', 'office', 'is_active')}
         extra['must_change_password'] = True
@@ -76,6 +132,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         fields = ('id', 'prNo', 'title', 'date', 'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at', 'status', 'file_url', 'missing_count')
         extra_kwargs = {
             'file': {'required': False},
+            'prNo': {'required': False, 'allow_blank': True},
             'category': {'required': False, 'allow_blank': True},
             'subDoc': {'required': False, 'allow_blank': True},
         }
@@ -95,17 +152,25 @@ class DocumentSerializer(serializers.ModelSerializer):
         return value
 
     def validate_prNo(self, value):
-        """PR No must contain only digits."""
+        """Transaction number: allow empty (auto-generated on create); allow format YYYY-MM-NNN if provided."""
         if value is None or value == '':
             return value
         val = str(value).strip()
-        if val and not val.isdigit():
-            raise serializers.ValidationError('PR No must contain only numbers.')
-        return val
+        if not val:
+            return val
+        # Accept auto-format YYYY-MM-NNN or legacy digits-only
+        if re.match(r'^\d{4}-\d{2}-\d{3}$', val):
+            return val
+        if val.isdigit():
+            return val
+        raise serializers.ValidationError('Transaction number must be in format YYYY-MM-NNN or numbers only.')
 
     def create(self, validated_data):
         # Remove status if provided (it will be auto-calculated)
         validated_data.pop('status', None)
+        # Auto-assign transaction number (prNo) if blank
+        if not (validated_data.get('prNo') or str(validated_data.get('prNo', '')).strip()):
+            validated_data['prNo'] = get_next_transaction_number()
         instance = super().create(validated_data)
         # Status is automatically set in model's save() method and signal
         # Refresh to get the latest status after signal processing
@@ -114,9 +179,9 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         # Never allow changing the original uploader through updates.
-        # This ensures that the user who started the procurement
-        # remains the "owner" for filtering and permissions logic.
         validated_data.pop('uploadedBy', None)
+        # Transaction number is set on create only; do not allow changing it.
+        validated_data.pop('prNo', None)
 
         # Don't clear file if not provided in update
         if 'file' not in validated_data or validated_data.get('file') is None:
@@ -174,4 +239,4 @@ class CalendarEventSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ('id', 'message', 'created_at', 'read', 'link')
+        fields = ('id', 'message', 'created_at', 'read', 'link', 'admin_only')

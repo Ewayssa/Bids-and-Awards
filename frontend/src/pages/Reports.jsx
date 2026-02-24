@@ -372,7 +372,7 @@ const Reports = ({ user }) => {
             </section>
 
             {/* Upload Report modal */}
-            {uploadModalOpen && (
+            {uploadModalOpen && !confirmUpload && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                     aria-modal="true"

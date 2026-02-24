@@ -35,6 +35,20 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+
+class PasswordResetToken(models.Model):
+    """Token for password reset flow; expires after 1 hour."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Reset for {self.user.username}"
+
+
 class Document(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -42,7 +56,7 @@ class Document(models.Model):
         ('complete', 'Complete'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    prNo = models.CharField(max_length=100, blank=True)
+    prNo = models.CharField(max_length=100, blank=True, help_text='Transaction number (auto-generated on create, format YYYY-MM-NNN)')
     title = models.CharField(max_length=255, blank=True)
     date = models.DateField(null=True, blank=True)
     uploadedBy = models.CharField(max_length=255, blank=True)
@@ -170,6 +184,7 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
     link = models.CharField(max_length=255, blank=True)  # e.g. /encode
+    admin_only = models.BooleanField(default=False, help_text='Only visible to admin users')
 
     class Meta:
         ordering = ['-created_at']
