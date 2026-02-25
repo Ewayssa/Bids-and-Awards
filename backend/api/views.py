@@ -209,7 +209,10 @@ def _create_notification(message, link='/encode', admin_only=False):
 
 @api_view(['GET'])
 def next_transaction_number(request):
-    """Return the next transaction number that will be assigned (format YYYY-MM-NNN)."""
+    """Return BAC Folder No. for the given date (query param date=YYYY-MM-DD). Uses today if date omitted."""
+    date_param = request.query_params.get('date', '').strip()
+    if date_param:
+        return Response({'next_transaction_number': get_next_transaction_number(date=date_param)})
     return Response({'next_transaction_number': get_next_transaction_number()})
 
 

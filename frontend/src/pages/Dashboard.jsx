@@ -345,9 +345,9 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 </div>
             </PageHeader>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                {statCards.map(({ value, label, icon: Icon, iconBg, iconColor, link }) => (
-                    <Link key={label} to={link || '#'} className="card overflow-visible p-4 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 dashboard-stat-cards">
+                {statCards.map(({ value, label, icon: Icon, iconBg, iconColor, link }, i) => (
+                    <Link key={label} to={link || '#'} className="card overflow-visible p-4 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0 dashboard-stat-card" style={{ animationDelay: `${i * 0.08}s` }}>
                         <div className="mb-3">
                             <span className={`inline-flex w-9 h-9 rounded-lg items-center justify-center flex-shrink-0 ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
                                 <Icon className="w-4 h-4" />
@@ -360,8 +360,8 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
             </div>
 
             <div className="w-full">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full">
-                    <section className="card overflow-visible min-w-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full dashboard-grid">
+                    <section className="card overflow-visible min-w-0 dashboard-section" style={{ animationDelay: '0.15s' }}>
                         <div className="px-5 py-4 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/30">
                             <h2 className="text-base font-semibold text-[var(--text)]">Calendar</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">BAC events and deadlines</p>
@@ -473,9 +473,9 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                             </div>
                         </div>
                     </section>
-                    <section className="card overflow-visible flex flex-col min-w-0">
+                    <section className="card overflow-visible flex flex-col min-w-0 dashboard-section" style={{ animationDelay: '0.25s' }}>
                         <div className="px-5 py-4 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/30">
-                            <h2 className="text-base font-semibold text-[var(--text)]">Document status</h2>
+                            <h2 className="text-base font-semibold text-[var(--text)]">Procurement Progress</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Overview by completion</p>
                         </div>
                         <div className="p-5 sm:p-6 flex flex-col min-w-0 overflow-visible">
@@ -500,10 +500,10 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                             </linearGradient>
                                         </defs>
                                         {total === 0 ? (
-                                            <circle cx={cx} cy={cy} r={r} fill="var(--border-light)" stroke="var(--border)" strokeWidth="2" />
+                                            <circle cx={cx} cy={cy} r={r} fill="var(--border-light)" stroke="var(--border)" strokeWidth="2" className="dashboard-pie-empty" />
                                         ) : (
                                             <g filter="url(#dashboard-pie-shadow)">
-                                                {pieSlices.map((slice) => slice.path && (
+                                                {pieSlices.map((slice, idx) => slice.path && (
                                                     <path
                                                         key={slice.label}
                                                         d={slice.path}
@@ -511,31 +511,28 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                                         className="dashboard-pie-wedge"
                                                         stroke="rgba(255,255,255,0.4)"
                                                         strokeWidth="1.5"
+                                                        transform={hoveredSlice === slice.label ? `translate(${slice.explodeDx}, ${slice.explodeDy})` : undefined}
                                                         style={{
-                                                            transformOrigin: '50px 50px',
-                                                            transform: hoveredSlice === slice.label ? `translate(${slice.explodeDx}, ${slice.explodeDy})` : 'translate(0, 0)',
+                                                            animationDelay: `${0.35 + idx * 0.1}s`,
                                                         }}
                                                         onMouseEnter={() => setHoveredSlice(slice.label)}
                                                         onMouseLeave={() => setHoveredSlice(null)}
+                                                        aria-label={`${slice.label}: ${slice.value} (${slice.pct.toFixed(0)}%)`}
                                                     />
                                                 ))}
                                             </g>
                                         )}
                                     </svg>
-                                </div>
-                                <div className="flex flex-row flex-nowrap items-center justify-center gap-x-4 pt-5 border-t border-[var(--border-light)] mt-2 w-full overflow-x-auto min-w-0 dashboard-pie-legend">
-                                    {pieSlices.map((slice) => (
-                                        <div
-                                            key={slice.label}
-                                            className="flex flex-nowrap items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[var(--background-subtle)]/60 border border-[var(--border-light)] whitespace-nowrap flex-shrink-0 dashboard-pie-legend-item"
-                                            onMouseEnter={() => setHoveredSlice(slice.label)}
-                                            onMouseLeave={() => setHoveredSlice(null)}
-                                        >
-                                            <span className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: slice.color }} aria-hidden />
-                                            <span className="text-sm font-medium text-[var(--text)]">{slice.label}</span>
-                                            <span className="text-xs text-[var(--text-muted)] tabular-nums">{slice.value} ({slice.pct.toFixed(0)}%)</span>
-                                        </div>
-                                    ))}
+                                    {hoveredSlice && total > 0 && (() => {
+                                        const slice = pieSlices.find((s) => s.label === hoveredSlice);
+                                        return slice ? (
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-2 flex flex-nowrap items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border-light)] shadow-lg whitespace-nowrap z-10 pointer-events-none dashboard-pie-tooltip">
+                                                <span className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: slice.color }} aria-hidden />
+                                                <span className="text-sm font-medium text-[var(--text)]">{slice.label}</span>
+                                                <span className="text-xs text-[var(--text-muted)] tabular-nums">{slice.value} ({slice.pct.toFixed(0)}%)</span>
+                                            </div>
+                                        ) : null;
+                                    })()}
                                 </div>
                             </div>
                         </div>

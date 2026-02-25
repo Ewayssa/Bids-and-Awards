@@ -56,8 +56,25 @@ class Document(models.Model):
         ('complete', 'Complete'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    prNo = models.CharField(max_length=100, blank=True, help_text='Transaction number (auto-generated on create, format YYYY-MM-NNN)')
+    prNo = models.CharField(max_length=100, blank=True, help_text='BAC Folder No. / Transaction number (auto-generated on create, format YYYY-MM-NNN)')
     title = models.CharField(max_length=255, blank=True)
+    user_pr_no = models.CharField(max_length=100, blank=True, help_text='PR No. (user-entered, for Purchase Request)')
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Total amount (for Purchase Request)')
+    source_of_fund = models.CharField(max_length=255, blank=True, help_text='Source of Fund (for Activity Design, PPMP)')
+    ppmp_no = models.CharField(max_length=100, blank=True, help_text='PPMP No. (user-entered, for Project Procurement Management Plan/Supplemental PPMP)')
+    app_no = models.CharField(max_length=100, blank=True, help_text='APP No. (for Annual Procurement Plan)')
+    app_type = models.CharField(max_length=20, blank=True, help_text='APP type: Final or Updated (for Annual Procurement Plan)')
+    certified_true_copy = models.BooleanField(default=False, help_text='Certified True Copy? (for Annual Procurement Plan)')
+    certified_signed_by = models.CharField(max_length=255, blank=True, help_text='Signed by (when Certified True Copy is Yes)')
+    market_budget = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Budget (for Market Scopping)')
+    market_period_from = models.CharField(max_length=20, blank=True, help_text='Period from MM/YY (for Market Scopping)')
+    market_period_to = models.CharField(max_length=20, blank=True, help_text='Period to MM/YY (for Market Scopping)')
+    market_expected_delivery = models.CharField(max_length=20, blank=True, help_text='Expected Delivery MM/YYYY (for Market Scopping)')
+    market_service_provider_1 = models.CharField(max_length=255, blank=True, help_text='Service Provider 1 (for Market Scopping)')
+    market_service_provider_2 = models.CharField(max_length=255, blank=True, help_text='Service Provider 2 (for Market Scopping)')
+    market_service_provider_3 = models.CharField(max_length=255, blank=True, help_text='Service Provider 3 (for Market Scopping)')
+    office_division = models.CharField(max_length=255, blank=True, help_text='Office/Division (for Requisition and Issue Slip)')
+    received_by = models.CharField(max_length=255, blank=True, help_text='Received By (for Requisition and Issue Slip)')
     date = models.DateField(null=True, blank=True)
     uploadedBy = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=255)
@@ -73,7 +90,7 @@ class Document(models.Model):
         Pending = not yet uploaded (no document record). For existing documents:
         - Ongoing: Any detail field is missing or empty
         - Complete: All detail fields are filled out
-        Checks: title, prNo, category, subDoc, date, file, uploadedBy
+        For most sub-docs: requires date. For "Activity Design" and "Project Procurement Management Plan/Supplemental PPMP": requires source_of_fund. For "Annual Procurement Plan": requires app_no, app_type, and Signed by when Certified True Copy.
         """
         # Check title - must have a value
         has_title = bool(self.title and self.title.strip())
@@ -87,8 +104,33 @@ class Document(models.Model):
         # Check subDoc - must have a value (not empty, not just whitespace)
         has_sub_doc = bool(self.subDoc and self.subDoc.strip())
         
-        # Check date - must be set
-        has_date = bool(self.date)
+        # Date / Source of Fund / APP fields depending on subDoc
+        sub_doc_trim = (self.subDoc or '').strip()
+        if sub_doc_trim == 'Annual Procurement Plan':
+            has_app_type = bool(self.app_type and self.app_type.strip())
+            has_app_no = has_app_type and (self.app_type.strip() != 'Updated' or bool(self.app_no and self.app_no.strip()))
+            has_certified = not self.certified_true_copy or bool(self.certified_signed_by and self.certified_signed_by.strip())
+            has_date = has_app_type and has_app_no and has_certified
+        elif sub_doc_trim in ('Activity Design', 'Project Procurement Management Plan/Supplemental PPMP'):
+            has_date = bool(self.source_of_fund and self.source_of_fund.strip())
+        elif sub_doc_trim == 'Market Scopping':
+            has_budget = self.market_budget is not None
+            has_period = bool(self.market_period_from and self.market_period_from.strip()) and bool(self.market_period_to and self.market_period_to.strip())
+            has_expected = bool(self.market_expected_delivery and self.market_expected_delivery.strip())
+            has_all_3 = (
+                bool(self.market_service_provider_1 and self.market_service_provider_1.strip()) and
+                bool(self.market_service_provider_2 and self.market_service_provider_2.strip()) and
+                bool(self.market_service_provider_3 and self.market_service_provider_3.strip())
+            )
+            has_date = has_budget and has_period and has_expected and has_all_3
+        elif sub_doc_trim == 'Requisition and Issue Slip':
+            has_date = (
+                bool(self.date) and
+                bool(self.office_division and self.office_division.strip()) and
+                bool(self.received_by and self.received_by.strip())
+            )
+        else:
+            has_date = bool(self.date)
         
         # Check file - must be uploaded
         # Check if file field has a value (works for both saved and newly uploaded files)

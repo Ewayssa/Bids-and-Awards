@@ -8,8 +8,11 @@ export const documentService = {
         return response.data;
     },
 
-    async getNextTransactionNumber() {
-        const response = await axios.get(`${API_BASE_URL}/next-transaction-number/`);
+    async getNextTransactionNumber(dateOrNull) {
+        const url = dateOrNull
+            ? `${API_BASE_URL}/next-transaction-number/?date=${encodeURIComponent(dateOrNull)}`
+            : `${API_BASE_URL}/next-transaction-number/`;
+        const response = await axios.get(url);
         return response.data.next_transaction_number;
     },
 
