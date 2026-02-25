@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { dashboardService, calendarEventService, documentService } from '../services/api';
 import { ROLES } from '../utils/roles';
-import { MdDescription, MdCheckCircle, MdSchedule, MdChevronLeft, MdChevronRight, MdAdd, MdClose, MdDelete, MdWarning, MdDashboard, MdEdit } from 'react-icons/md';
+import { MdCheckCircle, MdSchedule, MdChevronLeft, MdChevronRight, MdAdd, MdClose, MdWarning, MdDashboard, MdEdit } from 'react-icons/md';
 import NotificationBell from '../components/NotificationBell';
 import PageHeader from '../components/PageHeader';
 import UserAccountDropdown from '../components/UserAccountDropdown';
@@ -314,7 +314,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     const sliceMeta = [
         { start: 0, end: completedEnd, fill: 'url(#pie-completed)', label: 'Completed', value: completed, pct: completedPct, color: '#22c55e' },
         { start: completedEnd, end: ongoingEnd, fill: 'url(#pie-ongoing)', label: 'On-going', value: ongoing, pct: ongoingPct, color: '#facc15' },
-        { start: ongoingEnd, end: pendingEnd, fill: 'url(#pie-pending)', label: 'Pending', value: pending, pct: pendingPct, color: '#ef4444' },
+        { start: ongoingEnd, end: pendingEnd, fill: 'url(#pie-pending)', label: 'Pending', value: pending, pct: pendingPct, color: '#e03d3d' },
     ];
     const pieSlices = sliceMeta.map((s) => {
         const path = wedgePath(s.start, s.end);
@@ -326,9 +326,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     });
     const dateLabel = today.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
-    const totalDocuments = stats.totalDocumentsUploaded ?? (completed + ongoing);  // Documents already uploaded (from backend)
     const statCards = [
-        { value: totalDocuments, label: 'Total documents', icon: MdDescription, iconBg: 'bg-slate-100', iconColor: 'text-slate-600', link: '/encode' },
         { value: completed, label: 'Completed', icon: MdCheckCircle, iconBg: 'bg-green-50', iconColor: 'text-green-600', link: '/encode?status=complete' },
         { value: ongoing, label: 'On-going', icon: MdSchedule, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', link: '/encode?status=ongoing' },
         { value: pending, label: 'Pending', icon: MdWarning, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', link: '/encode?status=pending' },
@@ -342,21 +340,21 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 titleSize="default"
             >
                 <div className="flex items-center gap-3">
-                    <NotificationBell />
+                    <NotificationBell user={user} />
                     <UserAccountDropdown user={user} onLogout={onLogout} />
                 </div>
             </PageHeader>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 {statCards.map(({ value, label, icon: Icon, iconBg, iconColor, link }) => (
-                    <Link key={label} to={link || '#'} className="card overflow-visible p-5 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block">
-                        <div className="mb-4">
-                            <span className={`inline-flex w-10 h-10 rounded-lg items-center justify-center p-2 flex-shrink-0 ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
-                                <Icon className="w-5 h-5" />
+                    <Link key={label} to={link || '#'} className="card overflow-visible p-4 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0">
+                        <div className="mb-3">
+                            <span className={`inline-flex w-9 h-9 rounded-lg items-center justify-center flex-shrink-0 ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
+                                <Icon className="w-4 h-4" />
                             </span>
                         </div>
-                        <p className="text-sm font-medium text-[var(--text-muted)]">{label}</p>
-                        <p className="text-2xl sm:text-3xl font-bold text-[var(--text)] tabular-nums mt-1">{loading ? '—' : value}</p>
+                        <p className="text-xs sm:text-sm font-medium text-[var(--text-muted)]">{label}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-[var(--text)] tabular-nums mt-0.5">{loading ? '—' : value}</p>
                     </Link>
                 ))}
             </div>
@@ -497,8 +495,8 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                                 <stop offset="100%" stopColor="#facc15" />
                                             </linearGradient>
                                             <linearGradient id="pie-pending" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                <stop offset="0%" stopColor="#dc2626" />
-                                                <stop offset="100%" stopColor="#ef4444" />
+                                                <stop offset="0%" stopColor="#e85c5c" />
+                                                <stop offset="100%" stopColor="#e03d3d" />
                                             </linearGradient>
                                         </defs>
                                         {total === 0 ? (
@@ -524,12 +522,6 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                             </g>
                                         )}
                                     </svg>
-                                    {total > 0 && (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                            <span className="text-3xl sm:text-4xl font-bold text-[var(--text)] tabular-nums dashboard-pie-total">{total}</span>
-                                            <span className="text-xs uppercase tracking-wider text-[var(--text-subtle)] font-medium">total</span>
-                                        </div>
-                                    )}
                                 </div>
                                 <div className="flex flex-row flex-nowrap items-center justify-center gap-x-4 pt-5 border-t border-[var(--border-light)] mt-2 w-full overflow-x-auto min-w-0 dashboard-pie-legend">
                                     {pieSlices.map((slice) => (
@@ -550,7 +542,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                     </section>
                 </div>
 
-                {eventModal && (
+                {eventModal && !confirmAddEvent && (
                     <div
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                         aria-modal="true"
@@ -656,10 +648,9 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                                         setConfirmDeleteEvent({ ev, onConfirm: () => performDeleteEvent(ev.id) });
                                                     }}
                                                     disabled={deleteSubmitting}
-                                                    className="rounded-xl px-4 py-2 bg-red-500/10 text-red-600 hover:bg-red-500/20 font-medium disabled:opacity-50 inline-flex items-center gap-2"
+                                                    className="rounded-xl px-4 py-2 bg-red-500/10 text-red-600 hover:bg-red-500/20 font-medium disabled:opacity-50"
                                                 >
-                                                    <MdDelete className="w-4 h-4" />
-                                                    Delete
+                                                    Delete event
                                                 </button>
                                                 <button
                                                     type="button"

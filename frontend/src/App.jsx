@@ -35,17 +35,24 @@ function AppContent() {
             ) : user.must_change_password ? (
                 <ChangePassword user={user} onPasswordChanged={handlePasswordChanged} />
             ) : (
-                <div className="flex min-h-screen w-full max-w-full bg-[var(--background)] overflow-x-hidden">
+                <div className={`flex min-h-screen w-full max-w-full bg-[var(--background)] overflow-x-hidden ${sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
                     <Navigation user={user} onLogout={handleLogout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-                    <main className="flex-1 min-w-0 ml-0 md:ml-64 pt-14 md:pt-0 p-4 sm:p-6 md:p-8 bg-[var(--background)] md:border-l border-[var(--border-light)] min-h-screen w-full max-w-full overflow-x-hidden transition-all duration-300 ease-out" role="main">
-                        <Routes>
+                    {/* Spacer so main content starts right after sidebar (desktop only); avoids double gap with fixed sidebar */}
+                    <div
+                        className="hidden md:block flex-shrink-0 transition-[width] duration-300 ease-out sidebar-spacer"
+                        aria-hidden
+                    />
+                    <main className="flex-1 min-w-0 pt-14 md:pt-0 bg-[var(--background)] md:border-l border-[var(--border-light)] min-h-screen w-full max-w-full overflow-x-hidden main-with-sidebar" role="main">
+                        <div className="page-container h-full w-full overflow-x-hidden">
+                            <Routes>
                             <Route path="/" element={canAccessRoute(userRole, '/') ? <Dashboard user={user} sidebarOpen={true} onLogout={handleLogout} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="/encode" element={canAccessRoute(userRole, '/encode') ? <Encode user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="/reports" element={canAccessRoute(userRole, '/reports') ? <Reports user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="/settings" element={canAccessRoute(userRole, '/settings') ? <Settings user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="*" element={<Navigate to={defaultRoute} replace />} />
-                        </Routes>
+                            </Routes>
+                        </div>
                     </main>
                 </div>
             )}

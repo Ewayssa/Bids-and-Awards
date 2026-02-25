@@ -3,24 +3,28 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { MdNotifications } from 'react-icons/md';
 import { notificationService } from '../services/api';
 
-const NotificationBell = () => {
+const NotificationBell = ({ user }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [notifications, setNotifications] = useState([]);
     const [open, setOpen] = useState(false);
+    const isAdmin = user?.role === 'admin';
 
     useEffect(() => {
         let cancelled = false;
         (async () => {
             try {
                 const list = await notificationService.getAll();
-                if (!cancelled && Array.isArray(list)) setNotifications(list);
+                if (!cancelled && Array.isArray(list)) {
+                    const filtered = isAdmin ? list : list.filter((n) => !n.admin_only);
+                    setNotifications(filtered);
+                }
             } catch {
                 if (!cancelled) setNotifications([]);
             }
         })();
         return () => { cancelled = true; };
-    }, [location.pathname]);
+    }, [location.pathname, isAdmin]);
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 

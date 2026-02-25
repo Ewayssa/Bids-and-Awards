@@ -16,7 +16,7 @@ const Personnel = ({ user }) => {
     const [successMessage, setSuccessMessage] = useState('');
     const [newUserCredentials, setNewUserCredentials] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
-    const [editForm, setEditForm] = useState({ fullName: '', position: '', office: '', role: '', is_active: true, resetPassword: '' });
+    const [editForm, setEditForm] = useState({ fullName: '', position: '', office: '', role: '', is_active: true });
     const [searchQuery, setSearchQuery] = useState('');
 
     const loadUsers = async () => {
@@ -43,13 +43,13 @@ const Personnel = ({ user }) => {
 
     const openEditModal = (u) => {
         setEditingUser(u);
-        setEditForm({ fullName: u.fullName || '', position: u.position || '', office: u.office || '', role: u.role || ROLES.EMPLOYEE, is_active: u.is_active !== false, resetPassword: '' });
+        setEditForm({ fullName: u.fullName || '', position: u.position || '', office: u.office || '', role: u.role || ROLES.EMPLOYEE, is_active: u.is_active !== false });
         setAddError('');
     };
 
     const closeEditModal = () => {
         setEditingUser(null);
-        setEditForm({ fullName: '', position: '', office: '', role: '', is_active: true, resetPassword: '' });
+        setEditForm({ fullName: '', position: '', office: '', role: '', is_active: true });
         setAddError('');
         setSubmitting(false);
     };
@@ -146,17 +146,13 @@ const Personnel = ({ user }) => {
         
         setSubmitting(true);
         try {
-            const payload = {
+            await userService.patch(editingUser.id, {
                 fullName: editForm.fullName.trim() || undefined,
                 position: editForm.position.trim() || undefined,
                 office: editForm.office.trim() || undefined,
                 role: editForm.role,
                 is_active: editForm.is_active,
-            };
-            if (editForm.resetPassword && editForm.resetPassword.trim()) {
-                payload.password = editForm.resetPassword.trim();
-            }
-            await userService.patch(editingUser.id, payload);
+            });
             closeEditModal();
             setSuccessMessage('User updated successfully.');
             await loadUsers();
@@ -264,7 +260,7 @@ const Personnel = ({ user }) => {
                                         <td className="table-td-muted">{u.username}</td>
                                         <td className="table-td-muted">{u.position || '—'}</td>
                                         <td className="table-td-muted">{u.office || '—'}</td>
-                                        <td className="px-6 py-4 text-sm">
+                                        <td className="table-td">
                                             <span className={`inline-flex px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-300 ${u.role === ROLES.ADMIN ? 'bg-[var(--primary-muted)] text-[var(--primary)]' : 'bg-[var(--background-subtle)] text-[var(--text-muted)]'}`}>
                                                 {getRoleDisplayName(u.role)}
                                             </span>
@@ -295,7 +291,7 @@ const Personnel = ({ user }) => {
             </section>
 
             {/* Add User modal (admin only) */}
-            {showAddModal && (
+            {showAddModal && !showConfirmAdd && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                     aria-modal="true"
@@ -513,20 +509,6 @@ const Personnel = ({ user }) => {
                                         </option>
                                     ))}
                                 </select>
-                            </div>
-                            <div>
-                                <label htmlFor="edit-resetPassword" className="block text-sm font-medium text-[var(--text)] mb-1">Reset password</label>
-                                <input
-                                    id="edit-resetPassword"
-                                    type="text"
-                                    value={editForm.resetPassword}
-                                    onChange={(e) => setEditForm((f) => ({ ...f, resetPassword: e.target.value }))}
-                                    className="input-field w-full"
-                                    placeholder="Leave blank to keep current password"
-                                    disabled={submitting}
-                                    autoComplete="off"
-                                />
-                                <p className="text-xs text-[var(--text-muted)] mt-0.5">Set a new password for this user; they will be required to change it on next login.</p>
                             </div>
                             <div className="flex items-center gap-4 pt-1">
                                 <label htmlFor="edit-status" className="text-sm font-medium text-[var(--text)] shrink-0">Status</label>

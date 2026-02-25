@@ -8,6 +8,11 @@ export const documentService = {
         return response.data;
     },
 
+    async getNextTransactionNumber() {
+        const response = await axios.get(`${API_BASE_URL}/next-transaction-number/`);
+        return response.data.next_transaction_number;
+    },
+
     async create(formData) {
         const response = await axios.post(`${API_BASE_URL}/upload/`, formData, {
             headers: {
@@ -123,6 +128,11 @@ export const userService = {
         return response.data;
     },
 
+    async register(data) {
+        const response = await axios.post(`${API_BASE_URL}/register/`, data);
+        return response.data;
+    },
+
     async create(userData) {
         const response = await axios.post(`${API_BASE_URL}/users/`, userData);
         return response.data;
@@ -132,6 +142,22 @@ export const userService = {
         const response = await axios.post(`${API_BASE_URL}/change-password/`, {
             username,
             current_password: currentPassword,
+            new_password: newPassword,
+        });
+        return response.data;
+    },
+
+    async requestPasswordReset(emailOrUsername) {
+        const response = await axios.post(`${API_BASE_URL}/forgot-password/`, {
+            username: emailOrUsername,
+            email: emailOrUsername,
+        });
+        return response.data;
+    },
+
+    async resetPassword(token, newPassword) {
+        const response = await axios.post(`${API_BASE_URL}/reset-password/`, {
+            token,
             new_password: newPassword,
         });
         return response.data;

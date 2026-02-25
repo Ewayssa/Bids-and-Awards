@@ -3,8 +3,20 @@ from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import authenticate
-from .models import User, Document, Report, CalendarEvent, Notification
-from .serializers import UserSerializer, DocumentSerializer, ReportSerializer, CalendarEventSerializer, NotificationSerializer
+from django.utils import timezone
+from datetime import timedelta
+import secrets
+
+from .models import User, Document, Report, CalendarEvent, Notification, PasswordResetToken
+from .serializers import (
+    UserSerializer,
+    RegisterSerializer,
+    DocumentSerializer,
+    ReportSerializer,
+    CalendarEventSerializer,
+    NotificationSerializer,
+    get_next_transaction_number,
+)
 
 
 @api_view(['POST'])
@@ -15,7 +27,7 @@ def login(request):
     
     if user:
         if not user.is_active:
-            return Response({'message': 'Account is disabled.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'message': 'Your account is not yet active. An administrator must activate it before you can log in.'}, status=status.HTTP_403_FORBIDDEN)
         return Response({
             'message': 'Login successful',
             'role': user.role,
@@ -25,6 +37,27 @@ def login(request):
             'must_change_password': getattr(user, 'must_change_password', False),
         })
     return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+def register(request):
+    """Public self-registration. Creates an inactive user; admin is notified and must activate the account."""
+    serializer = RegisterSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user = serializer.save()
+    created_at = timezone.now()
+    from django.utils.timezone import localtime
+    time_str = localtime(created_at).strftime('%B %d, %Y, %I:%M %p')
+    display_name = (user.fullName or user.username or 'Someone').strip()
+    _create_notification(
+        f'New account created: {display_name} at {time_str}. Activate in User Management.',
+        link='/personnel',
+        admin_only=True,
+    )
+    return Response(
+        {'message': 'Account created successfully. You can log in once an administrator activates your account.'},
+        status=status.HTTP_201_CREATED,
+    )
 
 
 @api_view(['POST'])
@@ -91,6 +124,60 @@ def change_password(request):
     return Response({'message': 'Password changed successfully.'})
 
 
+@api_view(['POST'])
+def forgot_password(request):
+    """Request a password reset; returns token so user can be redirected to set new password (no email)."""
+    identifier = (request.data.get('username') or request.data.get('email') or '').strip()
+    if not identifier:
+        return Response(
+            {'detail': 'Email or username is required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    # User management stores the "Email" field as username; try both email and username
+    user = User.objects.filter(username__iexact=identifier).first()
+    if not user and '@' in identifier:
+        user = User.objects.filter(email__iexact=identifier).first()
+    if not user or not user.is_active:
+        return Response({'detail': 'No active account found with that email or username.'}, status=status.HTTP_404_NOT_FOUND)
+    PasswordResetToken.objects.filter(user=user).delete()
+    token = secrets.token_urlsafe(32)
+    PasswordResetToken.objects.create(user=user, token=token)
+    return Response({'message': 'You can now set a new password.', 'token': token})
+
+
+@api_view(['POST'])
+def reset_password(request):
+    """Set a new password using a valid reset token. Notifies admin after successful reset."""
+    token = (request.data.get('token') or '').strip()
+    new_password = request.data.get('new_password')
+    if not token or not new_password:
+        return Response(
+            {'detail': 'Token and new_password are required.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    try:
+        reset = PasswordResetToken.objects.get(token=token)
+    except PasswordResetToken.DoesNotExist:
+        return Response({'detail': 'Invalid or expired reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+    expiry = timezone.now() - timedelta(hours=1)
+    if reset.created_at < expiry:
+        reset.delete()
+        return Response({'detail': 'Reset link has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+    user = reset.user
+    if not user.is_active:
+        reset.delete()
+        return Response({'detail': 'Account is disabled.'}, status=status.HTTP_403_FORBIDDEN)
+    if len(new_password) < 8:
+        return Response({'detail': 'New password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+    user.set_password(new_password)
+    user.must_change_password = False
+    user.save(update_fields=['password', 'must_change_password'])
+    reset.delete()
+    display_name = (user.fullName or user.username or user.email or 'A user').strip()
+    _create_notification(f'{display_name} reset their password.', link='/personnel', admin_only=True)
+    return Response({'message': 'Password reset successfully. You can now log in.'})
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -116,8 +203,14 @@ class UserViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
 
-def _create_notification(message, link='/encode'):
-    Notification.objects.create(message=message, link=link)
+def _create_notification(message, link='/encode', admin_only=False):
+    Notification.objects.create(message=message, link=link, admin_only=admin_only)
+
+
+@api_view(['GET'])
+def next_transaction_number(request):
+    """Return the next transaction number that will be assigned (format YYYY-MM-NNN)."""
+    return Response({'next_transaction_number': get_next_transaction_number()})
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
