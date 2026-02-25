@@ -8,6 +8,8 @@ import {
     MdSettings,
     MdMenu,
     MdClose,
+    MdKeyboardDoubleArrowLeft,
+    MdKeyboardDoubleArrowRight,
 } from 'react-icons/md';
 import { canAccessRoute, ROLES } from '../utils/roles';
 
@@ -30,24 +32,36 @@ const canAccessNavItem = (item, role) => {
 const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
     const location = useLocation();
     const closeSidebar = () => setSidebarOpen?.(false);
+    const toggleSidebar = () => setSidebarOpen?.((prev) => !prev);
+    const isExpanded = sidebarOpen;
 
     const navContent = (
         <>
             <div className="flex flex-col flex-1 min-h-0">
                 {/* Header: Bids and Awards Document Tracking */}
-                <div className="px-4 py-5 border-b border-[var(--border-light)]">
+                <div className="sidebar-header px-3 py-4 md:py-5 border-b border-[var(--border-light)] transition-all duration-300 ease-out">
                     <div className="flex items-center gap-3 min-w-0">
-                        <img src="/dilg-logo.png" alt="DILG Logo" className="flex-shrink-0 max-h-14 w-auto select-none" />
-                        <div className="min-w-0 flex-1">
+                        <img src="/dilg-logo.png" alt="DILG Logo" className="flex-shrink-0 max-h-14 w-auto select-none sidebar-logo-full" />
+                        <img src="/dilg-logo.png" alt="DILG" className="hidden flex-shrink-0 h-9 w-9 object-contain select-none sidebar-logo-collapsed" />
+                        <div className="min-w-0 flex-1 sidebar-header-text">
                             <p className="text-lg font-bold text-[var(--text)] leading-tight tracking-tight">Bids and Awards</p>
                             <p className="text-base text-[var(--text-muted)] leading-snug mt-0.5">Document Tracking</p>
                         </div>
+                        {/* Desktop toggle: collapse / expand */}
+                        <button
+                            type="button"
+                            onClick={toggleSidebar}
+                            className="hidden md:flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] transition-all duration-300 ease-out active:scale-95 sidebar-toggle-btn"
+                            aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+                        >
+                            {isExpanded ? <MdKeyboardDoubleArrowLeft className="w-5 h-5" /> : <MdKeyboardDoubleArrowRight className="w-5 h-5" />}
+                        </button>
                     </div>
                 </div>
 
                 {/* Nav links */}
-                <nav className="flex-1 px-3 py-4 overflow-y-auto" aria-label="Main">
-                    <p className="px-3 mb-3 text-[11px] font-semibold text-[var(--text-subtle)] uppercase tracking-wider">MENU</p>
+                <nav className="flex-1 px-2 md:px-3 py-4 overflow-y-auto overflow-x-hidden" aria-label="Main">
+                    <p className="px-3 mb-3 text-[11px] font-semibold text-[var(--text-subtle)] uppercase tracking-wider sidebar-menu-label">MENU</p>
                     <div className="space-y-1">
                         {NAV_ITEMS.filter((item) => canAccessNavItem(item, user?.role || ROLES.EMPLOYEE)).map(({ path, label, icon: Icon }) => {
                             const active = location.pathname === path;
@@ -57,14 +71,15 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                                     to={path}
                                     onClick={closeSidebar}
                                     className={[
-                                        'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out relative group',
+                                        'flex items-center gap-3 px-2 md:px-3 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out relative group hover:translate-x-0.5 sidebar-link',
                                         active
-                                            ? 'bg-[var(--primary-muted)] text-[var(--primary)] shadow-sm'
-                                            : 'text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] hover:shadow-sm',
+                                            ? 'bg-[var(--primary-muted)] text-[var(--primary)] shadow-md'
+                                            : 'text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] hover:shadow-md',
                                     ].join(' ')}
+                                    title={!isExpanded ? label : undefined}
                                 >
                                     {active && (
-                                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[var(--primary)] rounded-r-full shadow-sm" aria-hidden />
+                                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[var(--primary)] rounded-r-full shadow-sm sidebar-active-bar" aria-hidden />
                                     )}
                                     <span
                                         className={[
@@ -76,7 +91,7 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                                     >
                                         <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                                     </span>
-                                    <span className="truncate font-medium">{label}</span>
+                                    <span className="truncate font-medium sidebar-link-text">{label}</span>
                                 </Link>
                             );
                         })}
@@ -93,7 +108,7 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
             <header className="fixed top-0 left-0 right-0 h-14 bg-[var(--surface)] border-b border-[var(--border)] z-40 flex items-center gap-3 px-4 md:hidden shadow-sm">
                 <button
                     type="button"
-                    onClick={() => setSidebarOpen?.(!sidebarOpen)}
+                    onClick={() => setSidebarOpen?.((prev) => !prev)}
                     className="p-2 -ml-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] transition-all duration-300 ease-out active:scale-95"
                     aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
                     aria-expanded={sidebarOpen}
@@ -115,16 +130,19 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                 />
             )}
 
-            {/* Sidebar: drawer on mobile, fixed on md+ */}
+            {/* Sidebar: fixed drawer on mobile; in-flow on desktop so flex is [sidebar][main], no gap */}
             <aside
                 className={[
-                    'fixed inset-y-0 left-0 w-64 max-w-[85vw] bg-[var(--surface)] flex flex-col border-r border-[var(--border)] shadow-[var(--shadow-md)] z-40',
-                    'transform transition-transform duration-300 ease-out',
-                    'md:translate-x-0',
+                    'fixed inset-y-0 left-0 w-64 max-w-[85vw] flex flex-col z-40 sidebar-shell flex-shrink-0',
+                    'transform transition-[transform,width] duration-300 ease-out',
+                    'md:translate-x-0 md:relative md:left-auto md:top-auto md:bottom-auto md:inset-auto md:min-h-screen',
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+                    isExpanded ? 'sidebar-expanded' : 'sidebar-collapsed',
                 ].join(' ')}
             >
-                {navContent}
+                <div className="sidebar-shell-inner">
+                    {navContent}
+                </div>
             </aside>
         </>
     );
