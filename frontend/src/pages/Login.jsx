@@ -38,7 +38,7 @@ const Login = ({ onLogin }) => {
             const res = await axios.post('/api/login', { username: email, password });
             const role = mapOldRoleToNew(res.data?.role);
             onLogin({
-                username: email,
+                username: res.data?.username ?? email,
                 role,
                 fullName: res.data?.fullName ?? email,
                 position: res.data?.position ?? '',

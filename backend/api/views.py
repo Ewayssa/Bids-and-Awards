@@ -30,6 +30,7 @@ def login(request):
             return Response({'message': 'Your account is not yet active. An administrator must activate it before you can log in.'}, status=status.HTTP_403_FORBIDDEN)
         return Response({
             'message': 'Login successful',
+            'username': user.username,
             'role': user.role,
             'fullName': user.fullName or user.username,
             'position': getattr(user, 'position', '') or '',
@@ -179,7 +180,7 @@ def reset_password(request):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
 
     def create(self, request, *args, **kwargs):
@@ -225,6 +226,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
         context['request'] = self.request
         return context
 
+    def list(self, request, *args, **kwargs):
+        """Return document list with real-time status; prevent caching so counts stay accurate."""
+        response = super().list(request, *args, **kwargs)
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        return response
+
     def partial_update(self, request, *args, **kwargs):
         """Only the user who uploaded the document can update it."""
         instance = self.get_object()
@@ -249,7 +256,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 {'detail': 'Document has no uploader.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        if doc_uploaded_by != user_full_name and doc_uploaded_by != user_username:
+        # Match case-insensitively so "John Doe" / "john doe" and spacing don't block the real uploader
+        doc_by_lower = doc_uploaded_by.lower()
+        if doc_by_lower != (user_full_name or '').lower() and doc_by_lower != (user_username or '').lower():
             return Response(
                 {'detail': 'Only the user who uploaded this document can update it.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -342,18 +351,45 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 # Document types and required sub-documents (must match frontend DOC_TYPES)
 CHECKLIST_DOC_TYPES = [
     ('Initial Documents', ['Purchase Request', 'Activity Design', 'Project Procurement Management Plan/Supplemental PPMP', 'Annual Procurement Plan', 'Market Scopping', 'Requisition and Issue Slip']),
-    ('AFQ Concerns', ['PhilGEPS Posting for RFQ', 'Certificate of DILG R1 Website and Conspicuous for RFQ']),
+    ('RFQ Concerns', [
+        'PHILGEPS - List of Venue',
+        'PHILGEPS - Small Value Procurement',
+        'PHILGEPS - Public Bidding',
+        'Certificate of DILG - List of Venue',
+        'Certificate of DILG - Small Value Procurement',
+        'Certificate of DILG - Public Bidding',
+    ]),
     ('BAC Meeting Documents', ['Certificate of BAC', 'Invitation to COA', 'Attendance Sheet', 'Minutes of the Meeting']),
     ('Award Documents', ['BAC Resolution', 'Abstract of Quotation', 'Lease of Venue: Table Rating Factor', 'Notice of Award', 'Contract Services/Purchase Order', 'Notice to Proceed', 'OSS', "Applicable: Secretary's Certificate and Special Power of Attorney"]),
     ('Award Posting', ['PhilGEPS Posting of Award', 'Certificate of DILG R1 Website Posting of Award', 'Notice of Award (Posted)', 'Abstract of Quotation (Posted)', 'BAC Resolution (Posted)']),
 ]
 
 
+def _document_status_counts(docs_qs):
+    """
+    Count documents by real-time status (calculate_status per document).
+    Returns counts that match what the Encode page shows: total, completed, ongoing, pending.
+    For existing document records, status is always 'complete' or 'ongoing'; pending = 0.
+    """
+    completed = ongoing = pending = 0
+    for doc in docs_qs:
+        s = (doc.calculate_status() or '').lower().strip() or 'ongoing'
+        if s == 'complete':
+            completed += 1
+        elif s == 'pending':
+            pending += 1
+        else:
+            ongoing += 1
+    total = completed + ongoing + pending
+    return {'total': total, 'completed': completed, 'ongoing': ongoing, 'pending': pending}
+
+
 def _checklist_counts(docs_qs):
     """
     Compute checklist counts to match Encode page Update modal checklist.
     One row per (category, subDoc) from CHECKLIST_DOC_TYPES — same 25-slot checklist.
-    Pending = no document for that slot (no check mark). Ongoing = doc exists but incomplete.
+    Pending = no document for that slot. Ongoing = slot has doc(s) but none complete. Completed = at least one doc is complete.
+    For each slot, if ANY matching document is complete, count the slot as completed (not ongoing).
     """
     docs = list(docs_qs)
     completed = ongoing = pending = 0
@@ -361,19 +397,22 @@ def _checklist_counts(docs_qs):
         cat_trim = (category or '').strip()
         for sub_doc in sub_docs:
             sub_trim = (sub_doc or '').strip()
-            match = next(
-                (d for d in docs
-                 if (d.category or '').strip() == cat_trim and (d.subDoc or '').strip() == sub_trim),
-                None
-            )
-            if not match:
-                pending += 1  # No document — "Not yet submitted" (no check mark)
+            matches = [
+                d for d in docs
+                if (d.category or '').strip() == cat_trim and (d.subDoc or '').strip() == sub_trim
+            ]
+            if not matches:
+                pending += 1  # No document — "Not yet submitted"
             else:
-                s = (match.calculate_status() or '').lower().strip() or 'pending'
-                if s == 'complete':
-                    completed += 1  # Check mark
+                # If any document for this slot is complete, count slot as completed
+                any_complete = any(
+                    (m.calculate_status() or '').lower().strip() == 'complete'
+                    for m in matches
+                )
+                if any_complete:
+                    completed += 1
                 else:
-                    ongoing += 1  # Document exists but incomplete (no check mark)
+                    ongoing += 1  # Has doc(s) but none complete
     total = completed + ongoing + pending
     return {'total': total, 'completed': completed, 'ongoing': ongoing, 'pending': pending}
 
@@ -389,10 +428,27 @@ def get_dashboard_data(request):
     if uploaded_by:
         docs_qs = docs_qs.filter(uploadedBy=uploaded_by)
 
-    # Use checklist counts: pending = slots with no document uploaded
+    # Checklist counts: total=25 slots, completed/ongoing/pending by slot (pending = slots with no document yet)
     checklist = _checklist_counts(docs_qs)
     pie_data = [checklist['total'], checklist['completed'], checklist['ongoing'], checklist['pending']]
-    total_documents_uploaded = docs_qs.count()  # Actual count of documents in the system
+    total_documents_uploaded = docs_qs.count()
+
+    # Counts for RFQ procurement methods (List of Venue, Small Value Procurement, Public Bidding)
+    def _count_subdoc(docs, pattern):
+        if pattern == 'List of Venue':
+            return sum(1 for d in docs if (d.subDoc or '').strip() == 'List of Venue' or ((d.subDoc or '').strip().endswith(' - List of Venue')))
+        if pattern == 'Small Value Procurement':
+            return sum(1 for d in docs if (d.subDoc or '').strip() == 'Small Value Procurement' or ((d.subDoc or '').strip().endswith(' - Small Value Procurement')))
+        if pattern == 'Public Bidding':
+            return sum(1 for d in docs if (d.subDoc or '').strip() == 'Public Bidding' or ((d.subDoc or '').strip().endswith(' - Public Bidding')))
+        return 0
+
+    docs_list = list(docs_qs)
+    procurement_method_counts = {
+        'List of Venue': _count_subdoc(docs_list, 'List of Venue'),
+        'Small Value Procurement': _count_subdoc(docs_list, 'Small Value Procurement'),
+        'Public Bidding': _count_subdoc(docs_list, 'Public Bidding'),
+    }
 
     today = timezone.now().date()
     start_date = today - timedelta(days=365)
@@ -431,6 +487,7 @@ def get_dashboard_data(request):
         {
             'pieData': pie_data,
             'totalDocumentsUploaded': total_documents_uploaded,
+            'procurementMethodCounts': procurement_method_counts,
             'calendarEvents': calendar_events,
             'recentSubmissions': recent_submissions,
             'recentActivity': recent_activity,

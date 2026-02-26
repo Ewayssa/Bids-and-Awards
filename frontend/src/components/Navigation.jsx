@@ -39,11 +39,11 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                 {/* Header: Bids and Awards Document Tracking */}
                 <div className="sidebar-header px-3 py-4 md:py-5 border-b border-[var(--border-light)] transition-all duration-300 ease-out">
                     <div className="flex items-center gap-3 min-w-0">
-                        {/* Desktop toggle: fixed position — right when expanded, top when collapsed */}
+                        {/* Desktop toggle: left when expanded or collapsed */}
                         <button
                             type="button"
                             onClick={toggleSidebar}
-                            className={`hidden md:flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] transition-all duration-300 ease-out active:scale-95 sidebar-toggle-btn ${isExpanded ? 'order-last' : 'order-first'}`}
+                            className={`hidden md:flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] transition-all duration-300 ease-out active:scale-95 sidebar-toggle-btn order-first`}
                             aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
                         >
                             <MdMenu className="w-5 h-5 shrink-0" />

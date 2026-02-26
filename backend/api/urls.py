@@ -11,9 +11,13 @@ router.register(r'notifications', views.NotificationViewSet, basename='notificat
 
 urlpatterns = [
     path('login', views.login),
+    path('register/', views.register),
     path('change-password/', views.change_password),
+    path('forgot-password/', views.forgot_password),
+    path('reset-password/', views.reset_password),
     path('update-profile/', views.update_profile),
     path('dashboard', views.get_dashboard_data),
+    path('next-transaction-number/', views.next_transaction_number),
     path('uploaded-documents/', views.DocumentViewSet.as_view({'get': 'list'})),
     path('backup/', views.backup_data),
     path('restore/', views.restore_data),

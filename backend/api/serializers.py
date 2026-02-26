@@ -1,4 +1,5 @@
 import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
 from rest_framework import serializers
 from .models import User, Document, Report, CalendarEvent, Notification
@@ -147,14 +148,27 @@ def _document_missing_count(obj):
             count += 1
         if not (obj.received_by and str(obj.received_by).strip()):
             count += 1
+    elif sub_doc_trim == 'List of Venue':
+        # Philgeps List of Venue: no date, no file required
+        pass
+    elif sub_doc_trim.endswith(' - List of Venue'):
+        # RFQ List of Venue variants: no date, no file required
+        pass
+    elif sub_doc_trim in ('Public Bidding', 'Small Value Procurement', 'PHILGEPS', 'Certificate of DILG'):
+        if not obj.date:
+            count += 1
+    elif sub_doc_trim.endswith(' - Small Value Procurement') or sub_doc_trim.endswith(' - Public Bidding'):
+        if not obj.date:
+            count += 1
     else:
         if not obj.date:
             count += 1
-    has_file = bool(obj.file)
-    if has_file and hasattr(obj.file, 'name'):
-        has_file = bool(obj.file.name and str(obj.file.name).strip())
-    if not has_file:
-        count += 1
+    if (obj.subDoc or '').strip() != 'List of Venue' and not (obj.subDoc or '').strip().endswith(' - List of Venue'):
+        has_file = bool(obj.file)
+        if has_file and hasattr(obj.file, 'name'):
+            has_file = bool(obj.file.name and str(obj.file.name).strip())
+        if not has_file:
+            count += 1
     if not (obj.uploadedBy and str(obj.uploadedBy).strip()):
         count += 1
     return count
@@ -215,16 +229,32 @@ class DocumentSerializer(serializers.ModelSerializer):
         return value
 
     def validate_total_amount(self, value):
-        """Allow empty string from form data to become None"""
+        """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
         if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
             return None
-        return value
+        if isinstance(value, str):
+            value = value.replace(',', '').strip()
+            if value == '' or value == '.':
+                return None
+        try:
+            d = Decimal(value) if not isinstance(value, Decimal) else value
+            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, ValueError, TypeError):
+            return None
 
     def validate_market_budget(self, value):
-        """Allow empty string from form data to become None"""
+        """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
         if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
             return None
-        return value
+        if isinstance(value, str):
+            value = value.replace(',', '').strip()
+            if value == '' or value == '.':
+                return None
+        try:
+            d = Decimal(value) if not isinstance(value, Decimal) else value
+            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, ValueError, TypeError):
+            return None
 
     def validate_certified_true_copy(self, value):
         """Accept form string 'true'/'false' for checkbox/radio"""

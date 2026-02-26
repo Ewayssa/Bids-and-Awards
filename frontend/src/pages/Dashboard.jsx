@@ -6,13 +6,14 @@ import { MdCheckCircle, MdSchedule, MdChevronLeft, MdChevronRight, MdAdd, MdClos
 import NotificationBell from '../components/NotificationBell';
 import PageHeader from '../components/PageHeader';
 import UserAccountDropdown from '../components/UserAccountDropdown';
+import { formatNumber } from '../utils/formatNumber';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     const location = useLocation();
-    const [stats, setStats] = useState({ pieData: [0, 0, 0, 0], totalDocumentsUploaded: 0, calendarEvents: [] });
+    const [stats, setStats] = useState({ pieData: [0, 0, 0, 0], totalDocumentsUploaded: 0, calendarEvents: [], procurementMethodCounts: { 'List of Venue': 0, 'Small Value Procurement': 0, 'Public Bidding': 0 } });
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewDate, setViewDate] = useState(() => new Date());
@@ -39,14 +40,16 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 documentService.getAll(),
             ]);
             const list = Array.isArray(docsResponse) ? docsResponse : (docsResponse?.results ?? []);
+            const sorted = [...list].sort((a, b) => (new Date(b.uploaded_at || 0).getTime() - new Date(a.uploaded_at || 0).getTime()));
             setStats({
                 pieData: data?.pieData ?? [0, 0, 0, 0],
                 totalDocumentsUploaded: typeof data?.totalDocumentsUploaded === 'number' ? data.totalDocumentsUploaded : (data?.pieData ? (Number(data.pieData[1]) + Number(data.pieData[2])) : 0),
                 calendarEvents: data?.calendarEvents ?? [],
+                procurementMethodCounts: data?.procurementMethodCounts ?? { 'List of Venue': 0, 'Small Value Procurement': 0, 'Public Bidding': 0 },
             });
-            setDocuments(list);
+            setDocuments(sorted);
         } catch {
-            setStats({ pieData: [0, 0, 0, 0], totalDocumentsUploaded: 0, calendarEvents: [] });
+            setStats({ pieData: [0, 0, 0, 0], totalDocumentsUploaded: 0, calendarEvents: [], procurementMethodCounts: { 'List of Venue': 0, 'Small Value Procurement': 0, 'Public Bidding': 0 } });
             setDocuments([]);
         } finally {
             setLoading(false);
@@ -97,7 +100,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
         return () => clearInterval(interval);
     }, [location.pathname, loadData]);
 
-    // Use backend checklist counts (single source of truth): pending = slots not yet uploaded
+    // Backend: total=25 checklist slots, completed/ongoing = slots with doc (by status), pending = slots with no doc yet
     const [total, completed, ongoing, pending] = (stats.pieData ?? [0, 0, 0, 0]).map(Number);
     const totalNorm = total || 1;
     const completedPct = (completed / totalNorm) * 100;
@@ -188,6 +191,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 pieData: data?.pieData ?? prev.pieData,
                 totalDocumentsUploaded: typeof data?.totalDocumentsUploaded === 'number' ? data.totalDocumentsUploaded : prev.totalDocumentsUploaded,
                 calendarEvents: data?.calendarEvents ?? prev.calendarEvents,
+                procurementMethodCounts: data?.procurementMethodCounts ?? prev.procurementMethodCounts,
             }));
         } catch (err) {
             const data = err.response?.data;
@@ -210,6 +214,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 pieData: data?.pieData ?? [0, 0, 0, 0],
                 totalDocumentsUploaded: typeof data?.totalDocumentsUploaded === 'number' ? data.totalDocumentsUploaded : (data?.pieData ? (Number(data.pieData[1]) + Number(data.pieData[2])) : 0),
                 calendarEvents: data?.calendarEvents ?? [],
+                procurementMethodCounts: data?.procurementMethodCounts ?? { 'List of Venue': 0, 'Small Value Procurement': 0, 'Public Bidding': 0 },
             });
             setConfirmDeleteEvent(null);
             setEditEventModal(null);
@@ -262,6 +267,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 pieData: data?.pieData ?? prev.pieData,
                 totalDocumentsUploaded: typeof data?.totalDocumentsUploaded === 'number' ? data.totalDocumentsUploaded : prev.totalDocumentsUploaded,
                 calendarEvents: data?.calendarEvents ?? prev.calendarEvents,
+                procurementMethodCounts: data?.procurementMethodCounts ?? prev.procurementMethodCounts,
             }));
         } catch (err) {
             const data = err.response?.data;
@@ -326,6 +332,12 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     });
     const dateLabel = today.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
+    const procurementMethodCounts = stats.procurementMethodCounts ?? { 'List of Venue': 0, 'Small Value Procurement': 0, 'Public Bidding': 0 };
+    const barLabels = ['List of Venue', 'Small Value Procurement', 'Public Bidding'];
+    const barColors = ['#22c55e', '#3b82f6', '#8b5cf6'];
+    const barValues = barLabels.map((label) => Number(procurementMethodCounts[label]) || 0);
+    const barMax = Math.max(1, ...barValues);
+
     const statCards = [
         { value: completed, label: 'Completed', icon: MdCheckCircle, iconBg: 'bg-green-50', iconColor: 'text-green-600', link: '/encode?status=complete' },
         { value: ongoing, label: 'On-going', icon: MdSchedule, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', link: '/encode?status=ongoing' },
@@ -354,7 +366,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                             </span>
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-[var(--text-muted)]">{label}</p>
-                        <p className="text-xl sm:text-2xl font-bold text-[var(--text)] tabular-nums mt-0.5">{loading ? '—' : value}</p>
+                        <p className="text-xl sm:text-2xl font-bold text-[var(--text)] tabular-nums mt-0.5">{loading ? '—' : formatNumber(value)}</p>
                     </Link>
                 ))}
             </div>
@@ -478,8 +490,8 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                             <h2 className="text-base font-semibold text-[var(--text)]">Procurement Progress</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Overview by completion</p>
                         </div>
-                        <div className="p-5 sm:p-6 flex flex-col min-w-0 overflow-visible">
-                            <div className="flex flex-col items-center py-4 sm:py-6">
+                        <div className="p-5 sm:p-6 flex flex-col sm:flex-row gap-6 min-w-0 overflow-visible items-center sm:items-stretch">
+                            <div className="flex flex-col items-center py-4 sm:py-0 flex-shrink-0">
                                 <div className="relative w-52 h-52 sm:w-64 sm:h-64 flex-shrink-0 dashboard-pie-container">
                                     <svg viewBox="0 0 100 100" className="w-full h-full dashboard-pie-svg" aria-hidden>
                                         <defs>
@@ -517,7 +529,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                                         }}
                                                         onMouseEnter={() => setHoveredSlice(slice.label)}
                                                         onMouseLeave={() => setHoveredSlice(null)}
-                                                        aria-label={`${slice.label}: ${slice.value} (${slice.pct.toFixed(0)}%)`}
+                                                        aria-label={`${slice.label}: ${formatNumber(slice.value)} (${formatNumber(slice.pct, 0)}%)`}
                                                     />
                                                 ))}
                                             </g>
@@ -529,10 +541,33 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-2 flex flex-nowrap items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border-light)] shadow-lg whitespace-nowrap z-10 pointer-events-none dashboard-pie-tooltip">
                                                 <span className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: slice.color }} aria-hidden />
                                                 <span className="text-sm font-medium text-[var(--text)]">{slice.label}</span>
-                                                <span className="text-xs text-[var(--text-muted)] tabular-nums">{slice.value} ({slice.pct.toFixed(0)}%)</span>
+                                                <span className="text-xs text-[var(--text-muted)] tabular-nums">{formatNumber(slice.value)} ({formatNumber(slice.pct, 0)}%)</span>
                                             </div>
                                         ) : null;
                                     })()}
+                                </div>
+                            </div>
+                            <div className="w-full min-w-0 flex-1 sm:min-w-[200px] border-t sm:border-t-0 sm:border-l border-[var(--border-light)] pt-6 sm:pt-0 sm:pl-6">
+                                <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">Procurement methods</p>
+                                <div className="space-y-4" role="img" aria-label="Bar chart: List of Venue, Small Value Procurement, Public Bidding document counts">
+                                    {barLabels.map((label, i) => (
+                                        <div key={label} className="flex flex-col gap-1.5 min-w-0">
+                                            <div className="flex justify-between items-baseline gap-2 min-w-0">
+                                                <span className="text-sm font-medium text-[var(--text)] truncate">{label}</span>
+                                                <span className="text-sm font-semibold text-[var(--text)] tabular-nums flex-shrink-0">{loading ? '—' : formatNumber(barValues[i])}</span>
+                                            </div>
+                                            <div className="h-6 w-full rounded-lg bg-[var(--background-subtle)] overflow-hidden border border-[var(--border-light)]">
+                                                <div
+                                                    className="h-full rounded-l-lg transition-all duration-500 ease-out"
+                                                    style={{
+                                                        width: barValues[i] > 0 ? `${Math.max((barValues[i] / barMax) * 100, 6)}%` : '0%',
+                                                        backgroundColor: barColors[i],
+                                                    }}
+                                                    aria-hidden
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>

@@ -28,7 +28,8 @@ const Reports = ({ user }) => {
         try {
             const data = await reportService.getAll();
             const list = Array.isArray(data) ? data : (data?.results ?? []);
-            setReports(list);
+            const sorted = [...list].sort((a, b) => (new Date(b.uploaded_at || 0).getTime() - new Date(a.uploaded_at || 0).getTime()));
+            setReports(sorted);
         } catch (e) {
             setReports([]);
         } finally {

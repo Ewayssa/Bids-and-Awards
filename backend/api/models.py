@@ -129,16 +129,24 @@ class Document(models.Model):
                 bool(self.office_division and self.office_division.strip()) and
                 bool(self.received_by and self.received_by.strip())
             )
+        elif sub_doc_trim == 'List of Venue':
+            has_date = True  # No date required for Philgeps List of Venue
+        elif sub_doc_trim.endswith(' - List of Venue'):
+            has_date = True  # RFQ List of Venue variants
+        elif sub_doc_trim in ('Public Bidding', 'Small Value Procurement', 'PHILGEPS', 'Certificate of DILG'):
+            has_date = bool(self.date)
+        elif sub_doc_trim.endswith(' - Small Value Procurement') or sub_doc_trim.endswith(' - Public Bidding'):
+            has_date = bool(self.date)
         else:
             has_date = bool(self.date)
         
-        # Check file - must be uploaded
-        # Check if file field has a value (works for both saved and newly uploaded files)
-        has_file = bool(self.file)
-        # If file exists, verify it's not just an empty string
-        if has_file and hasattr(self.file, 'name'):
-            # For saved files, check that name is not empty
-            has_file = bool(self.file.name and str(self.file.name).strip())
+        # Check file - must be uploaded (except List of Venue: no file required)
+        has_file = True
+        if sub_doc_trim != 'List of Venue' and not sub_doc_trim.endswith(' - List of Venue'):
+            has_file = bool(self.file)
+            if has_file and hasattr(self.file, 'name'):
+                # For saved files, check that name is not empty
+                has_file = bool(self.file.name and str(self.file.name).strip())
         
         # Check uploadedBy - must have a value
         has_uploaded_by = bool(self.uploadedBy and self.uploadedBy.strip())
