@@ -61,6 +61,8 @@ const Encode = ({ user }) => {
         market_period_from: '',
         market_period_to: '',
         market_expected_delivery: '',
+        deadline_date: '',
+        deadline_time: '',
         market_service_provider_1: '',
         market_service_provider_2: '',
         market_service_provider_3: '',
@@ -95,6 +97,17 @@ const Encode = ({ user }) => {
     const [nextTransactionNumber, setNextTransactionNumber] = useState(null);
     const [activeChecklistCategoryId, setActiveChecklistCategoryId] = useState(null); // which folder is selected in Manage Documents
     const [lastAutoPreviewFolderId, setLastAutoPreviewFolderId] = useState(null); // to auto-open first doc preview once per folder
+    const [certificateServiceProviders, setCertificateServiceProviders] = useState(['', '', '']); // For Certificate of DILG - SVP
+
+    const computeRFQNoFromDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (Number.isNaN(d.getTime())) return '';
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const seq = String(d.getMonth() + 1).padStart(3, '0'); // 001 = Jan, 002 = Feb, etc.
+        return `${month}/${day}/${seq}`;
+    };
     const load = async () => {
         try {
             const data = await documentService.getAll();
@@ -155,7 +168,14 @@ const Encode = ({ user }) => {
             if (form.market_budget !== undefined && form.market_budget !== '') fd.append('market_budget', form.market_budget);
             if (form.market_period_from !== undefined) fd.append('market_period_from', form.market_period_from || '');
             if (form.market_period_to !== undefined) fd.append('market_period_to', form.market_period_to || '');
-            if (form.market_expected_delivery !== undefined) fd.append('market_expected_delivery', form.market_expected_delivery || '');
+            if (form.market_expected_delivery !== undefined) {
+                let value = form.market_expected_delivery || '';
+                if (!value && form.deadline_date) {
+                    // Combine separate date & time into a single string for backend
+                    value = `${form.deadline_date}${form.deadline_time ? ' ' + form.deadline_time : ''}`;
+                }
+                if (value) fd.append('market_expected_delivery', value);
+            }
             if (form.market_service_provider_1 !== undefined) fd.append('market_service_provider_1', form.market_service_provider_1 || '');
             if (form.market_service_provider_2 !== undefined) fd.append('market_service_provider_2', form.market_service_provider_2 || '');
             if (form.market_service_provider_3 !== undefined) fd.append('market_service_provider_3', form.market_service_provider_3 || '');
@@ -166,7 +186,7 @@ const Encode = ({ user }) => {
             await documentService.create(fd);
 
             setSelectedDoc(null);
-            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
+            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
             // Small delay to ensure backend has processed status calculation
             setTimeout(() => {
                 load();
@@ -209,6 +229,45 @@ const Encode = ({ user }) => {
                 setNewError('Upload is required for this PHILGEPS document.');
                 return;
             }
+        }
+
+        // Certificate of DILG RFQ Concerns - Small Value Procurement: validate Date, RFQ No., Deadline, Service Providers
+        if (
+            selectedDocType?.name === 'RFQ Concerns' &&
+            selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement')
+        ) {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for this Certificate of DILG document.');
+                return;
+            }
+            const autoRFQ = form.user_pr_no && form.user_pr_no.trim()
+                ? form.user_pr_no.trim()
+                : computeRFQNoFromDate(form.date);
+            if (!autoRFQ) {
+                setNewError('RFQ No. could not be generated. Please check the date.');
+                return;
+            }
+            if (!(form.deadline_date && form.deadline_date.trim())) {
+                setNewError('Deadline date is required for this Certificate of DILG document.');
+                return;
+            }
+            if (!(form.deadline_time && form.deadline_time.trim())) {
+                setNewError('Deadline time is required for this Certificate of DILG document.');
+                return;
+            }
+            const trimmedProviders = certificateServiceProviders.map((p) => (p || '').trim());
+            if (trimmedProviders.slice(0, 3).some((p) => !p)) {
+                setNewError('Please enter at least 3 service providers.');
+                return;
+            }
+            // Sync first three providers into the form fields so they are saved
+            setForm((f) => ({
+                ...f,
+                user_pr_no: autoRFQ,
+                market_service_provider_1: trimmedProviders[0] || '',
+                market_service_provider_2: trimmedProviders[1] || '',
+                market_service_provider_3: trimmedProviders.slice(2).join('; ') || '',
+            }));
         }
 
         if (selectedSubDocType === 'Market Scopping') {
@@ -286,7 +345,7 @@ const Encode = ({ user }) => {
             await documentService.update(selectedDoc.id, fd);
 
             setSelectedDoc(null);
-            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: form.status });
+            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: form.status });
             // Small delay to ensure backend has processed status calculation
             setTimeout(() => {
                 load();
@@ -771,6 +830,7 @@ const Encode = ({ user }) => {
         setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
         setNewError('');
         setNewFormErrors({});
+        setCertificateServiceProviders(['', '', '']);
     };
     const openUpdate = () => {
         setActiveModal('updateList');
@@ -780,6 +840,9 @@ const Encode = ({ user }) => {
     const handleChecklistSubDocClick = (subDocWithStatus) => {
         if (!subDocWithStatus.doc) return;
         setSelectedDoc(subDocWithStatus.doc);
+        const rawDeadline = subDocWithStatus.doc.market_expected_delivery || '';
+        const deadlineDate = rawDeadline ? rawDeadline.slice(0, 10) : '';
+        const deadlineTime = rawDeadline && rawDeadline.length > 11 ? rawDeadline.slice(11, 16) : '';
         setForm({
             title: subDocWithStatus.doc.title || '',
             prNo: subDocWithStatus.doc.prNo || '',
@@ -795,6 +858,8 @@ const Encode = ({ user }) => {
             market_period_from: subDocWithStatus.doc.market_period_from ?? '',
             market_period_to: subDocWithStatus.doc.market_period_to ?? '',
             market_expected_delivery: subDocWithStatus.doc.market_expected_delivery ?? '',
+            deadline_date: deadlineDate,
+            deadline_time: deadlineTime,
             market_service_provider_1: subDocWithStatus.doc.market_service_provider_1 ?? '',
             market_service_provider_2: subDocWithStatus.doc.market_service_provider_2 ?? '',
             market_service_provider_3: subDocWithStatus.doc.market_service_provider_3 ?? '',
@@ -1344,7 +1409,7 @@ const Encode = ({ user }) => {
                                     </p>
                                 </div>
 
-                                {/* PHILGEPS RFQ Concerns special handling */}
+                                {/* PHILGEPS & Certificate of DILG RFQ Concerns special handling */}
                                 {selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('PHILGEPS - List of Venue') ? (
                                     <>
                                         <div className="text-sm text-[var(--text-muted)]">
@@ -1355,6 +1420,64 @@ const Encode = ({ user }) => {
                                 ) : selectedDocType?.name === 'RFQ Concerns' &&
                                   selectedSubDocType?.startsWith('PHILGEPS - ') &&
                                   !selectedSubDocType.includes('List of Venue') ? (
+                                    <>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    const newDate = e.target.value;
+                                                    setForm((f) => ({
+                                                        ...f,
+                                                        date: newDate,
+                                                        user_pr_no: computeRFQNoFromDate(newDate),
+                                                    }));
+                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                                aria-describedby={newFormErrors.date ? 'err-date' : undefined}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p id="err-date" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input
+                                                    type="file"
+                                                    onChange={(e) => {
+                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                    }}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                                    aria-invalid={!!newFormErrors.file}
+                                                    aria-describedby={newFormErrors.file ? 'err-file' : undefined}
+                                                />
+                                            </div>
+                                            {newFormErrors.file && (
+                                                <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.file}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('Certificate of DILG - List of Venue') ? (
+                                    <>
+                                        <div className="text-sm text-[var(--text-muted)]">
+                                            No additional details are required for this Certificate of DILG - Lease of Venue entry. Click
+                                            &nbsp;<span className="font-semibold text-[var(--text)]">Submit</span> below to save it.
+                                        </div>
+                                    </>
+                                ) : selectedDocType?.name === 'RFQ Concerns' &&
+                                  selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement') ? (
                                     <>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
@@ -1375,6 +1498,65 @@ const Encode = ({ user }) => {
                                                     {newFormErrors.date}
                                                 </p>
                                             )}
+                                        </div>
+                                        <div>
+                                            <label className="label">RFQ No.</label>
+                                            <input
+                                                type="text"
+                                                value={form.user_pr_no}
+                                                readOnly
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                placeholder={form.date ? computeRFQNoFromDate(form.date) : 'Auto-generated from date'}
+                                                aria-readonly="true"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="label">Deadline Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                                <input
+                                                    type="date"
+                                                    value={form.deadline_date}
+                                                    onChange={(e) => setForm((f) => ({ ...f, deadline_date: e.target.value }))}
+                                                    className="input-field"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="label">Deadline Time <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                                <input
+                                                    type="time"
+                                                    value={form.deadline_time}
+                                                    onChange={(e) => setForm((f) => ({ ...f, deadline_time: e.target.value }))}
+                                                    className="input-field"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="label">Service Providers <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="space-y-2">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                    {certificateServiceProviders.map((sp, idx) => (
+                                                        <input
+                                                            key={idx}
+                                                            type="text"
+                                                            value={sp}
+                                                            onChange={(e) => {
+                                                                const next = [...certificateServiceProviders];
+                                                                next[idx] = e.target.value;
+                                                                setCertificateServiceProviders(next);
+                                                            }}
+                                                            className="input-field"
+                                                            placeholder={`Provider ${idx + 1}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCertificateServiceProviders((prev) => [...prev, ''])}
+                                                    className="text-xs font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] hover:underline"
+                                                >
+                                                    + Add another provider
+                                                </button>
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
