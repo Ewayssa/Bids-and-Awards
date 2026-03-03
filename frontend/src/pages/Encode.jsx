@@ -7,7 +7,6 @@ import {
     MdEdit,
     MdClose,
     MdCheckCircle,
-    MdDownload,
     MdVisibility,
     MdSearch,
     MdComment,
@@ -988,14 +987,6 @@ const Encode = ({ user }) => {
                                                                                         <>
                                                                                         <button
                                                                                             type="button"
-                                                                                            onClick={() => triggerDownload(doc)}
-                                                                                            className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)]"
-                                                                                            title="Download document"
-                                                                                        >
-                                                                                            <MdDownload className="w-3.5 h-3.5" />
-                                                                                        </button>
-                                                                                        <button
-                                                                                            type="button"
                                                                                             onClick={() => openCommentModal(doc)}
                                                                                             className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)]"
                                                                                             title="Add comment"
@@ -1098,14 +1089,6 @@ const Encode = ({ user }) => {
                                                                 </button>
                                                                 {isAdmin && (
                                                                 <>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => triggerDownload(doc)}
-                                                                    className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--border)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
-                                                                    title="Download document"
-                                                                >
-                                                                    Download
-                                                                </button>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => openCommentModal(doc)}
