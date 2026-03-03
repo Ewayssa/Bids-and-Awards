@@ -983,21 +983,7 @@ const Encode = ({ user }) => {
                                                                                         >
                                                                                             <MdVisibility className="w-3.5 h-3.5" />
                                                                                         </button>
-                                                                                        {isAdmin && (
-                                                                                        <>
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => openCommentModal(doc)}
-                                                                                            className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)]"
-                                                                                            title="Add comment"
-                                                                                        >
-                                                                                            <MdComment className="w-3.5 h-3.5" />
-                                                                                            {comments[doc.id]?.length > 0 && (
-                                                                                                <span className="ml-1 text-xs">({comments[doc.id].length})</span>
-                                                                                            )}
-                                                                                        </button>
-                                                                                        </>
-                                                                                        )}
+                                                                                        {isAdmin && null}
                                                                                     </div>
                                                                                 ) : (
                                                                                     <span className="text-[var(--text-muted)] text-xs italic">No file</span>
@@ -1087,21 +1073,7 @@ const Encode = ({ user }) => {
                                                                 >
                                                                     View
                                                                 </button>
-                                                                {isAdmin && (
-                                                                <>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => openCommentModal(doc)}
-                                                                    className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--background-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--border)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
-                                                                    title="Add comment"
-                                                                >
-                                                                    <MdComment className="w-3.5 h-3.5" />
-                                                                    {comments[doc.id]?.length > 0 && (
-                                                                        <span className="ml-1 text-xs">({comments[doc.id].length})</span>
-                                                                    )}
-                                                                </button>
-                                                                </>
-                                                                )}
+                                                                {isAdmin && null}
                                                             </div>
                                                         ) : (
                                                             <span className="text-[var(--text-muted)] text-xs italic">No file</span>
