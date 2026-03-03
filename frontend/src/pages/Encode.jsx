@@ -21,7 +21,7 @@ import {
     MdFolder,
 } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
-import { DOC_TYPES } from '../constants/docTypes';
+import { DOC_TYPES, RFQ_PROCUREMENT_METHODS } from '../constants/docTypes';
 
 const REQUIRED_NEW_FIELDS = ['title', 'date', 'file'];
 const CHECKLIST_ITEMS = [
@@ -189,10 +189,28 @@ const Encode = ({ user }) => {
 
     const handleNewSubmit = (e) => {
         e.preventDefault();
+
         if (!validateNewForm()) {
             setNewError('Please complete required fields (Title).');
             return;
         }
+
+        // PHILGEPS RFQ Concerns: require Date + Upload for SVP / Public Bidding only
+        if (
+            selectedDocType?.name === 'RFQ Concerns' &&
+            selectedSubDocType?.startsWith('PHILGEPS - ') &&
+            !selectedSubDocType.includes('List of Venue')
+        ) {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for this PHILGEPS document.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for this PHILGEPS document.');
+                return;
+            }
+        }
+
         if (selectedSubDocType === 'Market Scopping') {
             const s1 = (form.market_service_provider_1 || '').trim();
             const s2 = (form.market_service_provider_2 || '').trim();
@@ -1195,42 +1213,96 @@ const Encode = ({ user }) => {
                                     Choose the specific sub-document you are uploading.
                                 </p>
                                 <div className="grid gap-2">
-                                    {selectedDocType.subDocs.map((sd) => {
-                                        const alreadyUploaded = (form.prNo || '') && documents.some(
-                                            (d) =>
-                                                (d.prNo || '') === (form.prNo || '') &&
-                                                (d.category || '').trim() === (selectedDocType.name || '').trim() &&
-                                                (d.subDoc || '').trim() === (sd || '').trim()
-                                        );
-                                        return (
-                                            <button
-                                                key={sd}
-                                                type="button"
-                                                disabled={alreadyUploaded}
-                                                onClick={() => {
-                                                    if (alreadyUploaded) return;
-                                                    setSelectedSubDocType(sd);
-                                                    setForm((f) => ({ ...f, subDoc: sd }));
-                                                    setNewStep('form');
-                                                }}
-                                                aria-disabled={alreadyUploaded}
-                                                aria-describedby={alreadyUploaded ? `subdoc-${sd.replace(/\s/g, '-')}-hint` : undefined}
-                                                className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-all duration-300 ease-out text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center justify-between gap-3 ${
-                                                    alreadyUploaded
-                                                        ? 'border-[var(--border)] bg-[var(--background-subtle)] text-[var(--text-muted)] opacity-75 cursor-not-allowed'
-                                                        : 'border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)]/50 active:bg-[var(--primary-muted)] text-[var(--text)] hover:shadow-sm focus:ring-[var(--primary)] active:scale-[0.98]'
-                                                }`}
-                                            >
-                                                <span>{sd}</span>
-                                                {alreadyUploaded && (
-                                                    <span id={`subdoc-${sd.replace(/\s/g, '-')}-hint`} className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-100 px-2.5 py-1 rounded-md shrink-0">
-                                                        <MdCheckCircle className="w-4 h-4" aria-hidden />
-                                                        Already submitted
-                                                    </span>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
+                                    {selectedDocType.name === 'RFQ Concerns'
+                                        ? (
+                                            selectedDocType.subDocs.map((header) => (
+                                                <div key={header} className="space-y-2">
+                                                    <p className="text-sm font-semibold text-[var(--text)]">{header}</p>
+                                                    <div className="grid gap-2">
+                                                        {RFQ_PROCUREMENT_METHODS.map(({ value, label }) => {
+                                                            const sd = `${header} - ${value}`;
+                                                            const alreadyUploaded =
+                                                                (form.prNo || '') &&
+                                                                documents.some(
+                                                                    (d) =>
+                                                                        (d.prNo || '') === (form.prNo || '') &&
+                                                                        (d.category || '').trim() === (selectedDocType.name || '').trim() &&
+                                                                        (d.subDoc || '').trim() === (sd || '').trim()
+                                                                );
+                                                            return (
+                                                                <button
+                                                                    key={sd}
+                                                                    type="button"
+                                                                    disabled={alreadyUploaded}
+                                                                    onClick={() => {
+                                                                        if (alreadyUploaded) return;
+                                                                        setSelectedSubDocType(sd);
+                                                                        // Auto-fill a sensible title for RFQ PHILGEPS/CERT docs
+                                                                        setForm((f) => ({ ...f, subDoc: sd, title: f.title || sd }));
+                                                                        setNewStep('form');
+                                                                    }}
+                                                                    aria-disabled={alreadyUploaded}
+                                                                    aria-describedby={alreadyUploaded ? `subdoc-${sd.replace(/\s/g, '-')}-hint` : undefined}
+                                                                    className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-all duration-300 ease-out text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center justify-between gap-3 ${
+                                                                        alreadyUploaded
+                                                                            ? 'border-[var(--border)] bg-[var(--background-subtle)] text-[var(--text-muted)] opacity-75 cursor-not-allowed'
+                                                                            : 'border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)]/50 active:bg-[var(--primary-muted)] text-[var(--text)] hover:shadow-sm focus:ring-[var(--primary)] active:scale-[0.98]'
+                                                                    }`}
+                                                                >
+                                                                    <span>{label}</span>
+                                                                    {alreadyUploaded && (
+                                                                        <span id={`subdoc-${sd.replace(/\s/g, '-')}-hint`} className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-100 px-2.5 py-1 rounded-md shrink-0">
+                                                                            <MdCheckCircle className="w-4 h-4" aria-hidden />
+                                                                            Already submitted
+                                                                        </span>
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )
+                                        : (
+                                            selectedDocType.subDocs.map((sd) => {
+                                                const alreadyUploaded =
+                                                    (form.prNo || '') &&
+                                                    documents.some(
+                                                        (d) =>
+                                                            (d.prNo || '') === (form.prNo || '') &&
+                                                            (d.category || '').trim() === (selectedDocType.name || '').trim() &&
+                                                            (d.subDoc || '').trim() === (sd || '').trim()
+                                                    );
+                                                return (
+                                                    <button
+                                                        key={sd}
+                                                        type="button"
+                                                        disabled={alreadyUploaded}
+                                                        onClick={() => {
+                                                            if (alreadyUploaded) return;
+                                                            setSelectedSubDocType(sd);
+                                                            setForm((f) => ({ ...f, subDoc: sd }));
+                                                            setNewStep('form');
+                                                        }}
+                                                        aria-disabled={alreadyUploaded}
+                                                        aria-describedby={alreadyUploaded ? `subdoc-${sd.replace(/\s/g, '-')}-hint` : undefined}
+                                                        className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-all duration-300 ease-out text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 flex items-center justify-between gap-3 ${
+                                                            alreadyUploaded
+                                                                ? 'border-[var(--border)] bg-[var(--background-subtle)] text-[var(--text-muted)] opacity-75 cursor-not-allowed'
+                                                                : 'border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)]/50 active:bg-[var(--primary-muted)] text-[var(--text)] hover:shadow-sm focus:ring-[var(--primary)] active:scale-[0.98]'
+                                                        }`}
+                                                    >
+                                                        <span>{sd}</span>
+                                                        {alreadyUploaded && (
+                                                            <span id={`subdoc-${sd.replace(/\s/g, '-')}-hint`} className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-100 px-2.5 py-1 rounded-md shrink-0">
+                                                                <MdCheckCircle className="w-4 h-4" aria-hidden />
+                                                                Already submitted
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })
+                                        )}
                                 </div>
                                 <div className="flex justify-between pt-2">
                                     <button
@@ -1272,8 +1344,62 @@ const Encode = ({ user }) => {
                                     </p>
                                 </div>
 
-                                {/* Purchase Request: Purpose, BAC Folder No., PR No., Date, Total amount, Upload */}
-                                {selectedSubDocType === 'Purchase Request' ? (
+                                {/* PHILGEPS RFQ Concerns special handling */}
+                                {selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('PHILGEPS - List of Venue') ? (
+                                    <>
+                                        <div className="text-sm text-[var(--text-muted)]">
+                                            No additional details are required for this PHILGEPS - Lease of Venue entry. Click
+                                            &nbsp;<span className="font-semibold text-[var(--text)]">Submit</span> below to save it.
+                                        </div>
+                                    </>
+                                ) : selectedDocType?.name === 'RFQ Concerns' &&
+                                  selectedSubDocType?.startsWith('PHILGEPS - ') &&
+                                  !selectedSubDocType.includes('List of Venue') ? (
+                                    <>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                                aria-describedby={newFormErrors.date ? 'err-date' : undefined}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p id="err-date" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input
+                                                    type="file"
+                                                    onChange={(e) => {
+                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                    }}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                                    aria-invalid={!!newFormErrors.file}
+                                                    aria-describedby={newFormErrors.file ? 'err-file' : undefined}
+                                                />
+                                            </div>
+                                            {newFormErrors.file && (
+                                                <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.file}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : /* Purchase Request: Purpose, BAC Folder No., PR No., Date, Total amount, Upload */ selectedSubDocType === 'Purchase Request' ? (
                                     <>
                                         <div>
                                             <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
