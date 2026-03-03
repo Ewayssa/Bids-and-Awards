@@ -56,7 +56,7 @@ class Document(models.Model):
         ('complete', 'Complete'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    prNo = models.CharField(max_length=100, blank=True, help_text='BAC Folder No. / Transaction number (auto-generated on create, format YYYY-MM-NNN)')
+    prNo = models.CharField(max_length=100, blank=True, help_text='BAC Folder No. (auto-generated on create, format YYYY-MM-NNN)')
     title = models.CharField(max_length=255, blank=True)
     user_pr_no = models.CharField(max_length=100, blank=True, help_text='PR No. (user-entered, for Purchase Request)')
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Total amount (for Purchase Request)')

@@ -2,7 +2,25 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { documentService } from '../services/api';
 import { ROLES } from '../utils/roles';
-import { MdUpload, MdEdit, MdClose, MdCheckCircle, MdDownload, MdVisibility, MdSearch, MdComment, MdExpandMore, MdExpandLess, MdTimeline, MdDescription, MdPostAdd, MdError, MdSchedule, MdWarning } from 'react-icons/md';
+import {
+    MdUpload,
+    MdEdit,
+    MdClose,
+    MdCheckCircle,
+    MdDownload,
+    MdVisibility,
+    MdSearch,
+    MdComment,
+    MdExpandMore,
+    MdExpandLess,
+    MdTimeline,
+    MdDescription,
+    MdPostAdd,
+    MdError,
+    MdSchedule,
+    MdWarning,
+    MdFolder,
+} from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 import { DOC_TYPES } from '../constants/docTypes';
 
@@ -72,9 +90,12 @@ const Encode = ({ user }) => {
     const [commentText, setCommentText] = useState('');
     const [comments, setComments] = useState({}); // { docId: [{ text, author, date }] }
     const [previewDoc, setPreviewDoc] = useState(null); // { id, title, file_url, previewBlobUrl, previewBlobType }
+    const [previewSequence, setPreviewSequence] = useState(null); // { docs, currentIndex } when navigating within a folder
     const updateFileInputRef = useRef(null);
     const [workflowPRNo, setWorkflowPRNo] = useState(null);
     const [nextTransactionNumber, setNextTransactionNumber] = useState(null);
+    const [activeChecklistCategoryId, setActiveChecklistCategoryId] = useState(null); // which folder is selected in Manage Documents
+    const [lastAutoPreviewFolderId, setLastAutoPreviewFolderId] = useState(null); // to auto-open first doc preview once per folder
     const load = async () => {
         try {
             const data = await documentService.getAll();
@@ -392,7 +413,7 @@ const Encode = ({ user }) => {
         if (!doc) return [];
         const missing = [];
         if (!(doc.title && String(doc.title).trim())) missing.push('Title');
-        if (!(doc.prNo && String(doc.prNo).trim())) missing.push('Transaction number');
+        if (!(doc.prNo && String(doc.prNo).trim())) missing.push('BAC Folder No.');
         if (!(doc.category && String(doc.category).trim())) missing.push('Category');
         if (!(doc.subDoc && String(doc.subDoc).trim())) missing.push('Sub-document');
         const isActivityDesign = (doc.subDoc || '').trim() === 'Activity Design';
@@ -445,14 +466,54 @@ const Encode = ({ user }) => {
                         (d.category || '').trim() === (docType.name || '').trim() &&
                         (d.subDoc || '').trim() === (subDocName || '').trim()
                 );
-                return { name: subDocName, done: doc && doc.status === 'complete', doc, canUpdate: doc ? isUserUploader(doc) : false };
+                return {
+                    name: subDocName,
+                    done: doc && doc.status === 'complete',
+                    doc,
+                    canUpdate: doc ? isUserUploader(doc) : false,
+                };
             }),
         }));
     }, [updateListDocs, user]);
 
+    // Auto-open the first file's preview when a folder is selected in Manage Documents (same viewer as main table)
+    useEffect(() => {
+        if (!activeChecklistCategoryId) {
+            setLastAutoPreviewFolderId(null);
+            return;
+        }
+        if (lastAutoPreviewFolderId === activeChecklistCategoryId) return;
+        const activeType = checklistData.find((dt) => dt.id === activeChecklistCategoryId);
+        if (!activeType) return;
+        const folderName = (activeType.name || '').toLowerCase().trim();
+        const typeSubDocs = new Set((activeType.subDocs || []).map((s) => (s || '').trim().toLowerCase()));
+        const folderDocs = documents.filter((d) => {
+            const catRaw = (d.category || '').trim();
+            const cat = catRaw.toLowerCase();
+            const sub = (d.subDoc || '').trim().toLowerCase();
+            const matchesCategoryName =
+                folderName &&
+                cat &&
+                (cat === folderName || cat.includes(folderName) || folderName.includes(cat));
+            const matchesCategoryId =
+                activeType.id && cat && cat.includes(String(activeType.id).toLowerCase());
+            const matchesSubDoc = sub && typeSubDocs.has(sub);
+            return matchesCategoryName || matchesCategoryId || matchesSubDoc;
+        });
+        if (!folderDocs.length) return;
+        const docsWithFiles = folderDocs.filter((d) => d.file_url);
+        if (!docsWithFiles.length) return;
+        const firstWithFile = docsWithFiles[0];
+        // Store full sequence for this folder so user can navigate all its files
+        setPreviewSequence({ docs: docsWithFiles, currentIndex: 0 });
+        // Reuse existing viewer behavior; only admins can preview files
+        openPreview(firstWithFile);
+        setLastAutoPreviewFolderId(activeChecklistCategoryId);
+    }, [activeChecklistCategoryId, checklistData, documents, lastAutoPreviewFolderId]);
+
     // Export to CSV
     const exportToCSV = () => {
-        const headers = ['Title', 'Transaction number', 'Category', 'Sub-document', 'Uploaded By', 'Date', 'Status', 'Uploaded At'];
+        const headers = ['Title', 'BAC Folder No.', 'Category', 'Sub-document', 'Uploaded By', 'Date', 'Status', 'Uploaded At'];
         const rows = filteredDocuments.map(doc => [
             doc.title || '',
             doc.prNo || '',
@@ -578,7 +639,9 @@ const Encode = ({ user }) => {
 
     const getFetchUrl = (url) => {
         if (!url) return url;
+        // If it's already a relative path (e.g. /media/...), use as-is so Vite proxy can route to Django.
         if (url.startsWith('/')) return url;
+        // If it's a full URL (http/https), strip host/port and keep only path + query
         try {
             const parsed = new URL(url);
             return parsed.pathname + parsed.search;
@@ -652,7 +715,10 @@ const Encode = ({ user }) => {
             }
         } catch (err) {
             console.error('Download failed:', err);
-            if (r?.file_url) window.open(r.file_url, '_blank', 'noopener');
+            if (r?.file_url) {
+                const url = getFetchUrl(r.file_url);
+                window.open(url, '_blank', 'noopener');
+            }
         }
     };
 
@@ -760,6 +826,13 @@ const Encode = ({ user }) => {
                                     </span>
                                 )}
                             </h2>
+                            <button
+                                type="button"
+                                onClick={openUpdate}
+                                className="btn-secondary whitespace-nowrap"
+                            >
+                                Manage Documents
+                            </button>
                         </div>
                             
                             {/* Search bar */}
@@ -838,7 +911,7 @@ const Encode = ({ user }) => {
                                                             )}
                                                             <div className="min-w-0 flex-1">
                                                                 <p className="font-semibold text-[var(--text)]">
-                                                                    Transaction number: {prNo}
+                                                                    BAC Folder No.: {prNo}
                                                                 </p>
                                                                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
                                                                     {docs.length} document{docs.length !== 1 ? 's' : ''} • 
@@ -867,7 +940,7 @@ const Encode = ({ user }) => {
                                                             <thead className="table-header">
                                                                 <tr>
                                                                     <th className="table-th">Title</th>
-                                                                    <th className="table-th uppercase">Category / Sub-doc</th>
+                                                                    <th className="table-th uppercase">Procurement Type</th>
                                                                     <th className="table-th uppercase">Date</th>
                                                                     <th className="table-th uppercase">Status</th>
                                                                     {(canViewAllDocuments || isAdmin) && <th className="table-th">Actions</th>}
@@ -885,12 +958,12 @@ const Encode = ({ user }) => {
                                                                     return (
                                                                         <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
                                                                             <td className="table-td font-medium">{doc.title || '—'}</td>
-                                                                            <td className="table-td-muted text-xs">
+                                                                            <td className="table-td-muted">
                                                                                 <div className="max-w-[200px] truncate" title={`${doc.category || '—'} / ${doc.subDoc || '—'}`}>
                                                                                     {doc.category || '—'} / {doc.subDoc || '—'}
                                                                                 </div>
                                                                             </td>
-                                                                            <td className="table-td-muted text-xs">{formatDate(doc.date)}</td>
+                                                                            <td className="table-td-muted">{formatDate(doc.date)}</td>
                                                                             <td className="table-td">
                                                                                 <span className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium border w-fit ${statusColor} capitalize`}>
                                                                                     {doc.status || 'pending'}
@@ -902,7 +975,10 @@ const Encode = ({ user }) => {
                                                                                     <div className="flex items-center justify-center gap-2">
                                                                                         <button
                                                                                             type="button"
-                                                                                            onClick={() => openPreview(doc)}
+                                                                                            onClick={() => {
+                                                                                                setPreviewSequence(null);
+                                                                                                openPreview(doc);
+                                                                                            }}
                                                                                             className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all duration-300 ease-out hover:scale-105 active:scale-95"
                                                                                             title="View document"
                                                                                         >
@@ -954,10 +1030,10 @@ const Encode = ({ user }) => {
                                     <thead className="table-header">
                                         <tr>
                                             <th className="table-th">Title</th>
-                                            <th className="table-th">Transaction number</th>
+                                            <th className="table-th">BAC Folder No.</th>
                                             <th className="table-th">
                                                 <button type="button" onClick={() => handleSort('category')} className="inline-flex items-center justify-center gap-1 font-semibold hover:text-[var(--primary)] uppercase w-full">
-                                                    Category / Sub-doc {sortKey === 'category' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
+                                                    Procurement Type {sortKey === 'category' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
                                             <th className="table-th">Uploaded By</th>
@@ -992,14 +1068,14 @@ const Encode = ({ user }) => {
                                                 <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
                                                     <td className="table-td font-medium">{doc.title || '—'}</td>
                                                     <td className="table-td-muted">{doc.prNo || '—'}</td>
-                                                    <td className="table-td-muted text-xs">
+                                                    <td className="table-td-muted">
                                                         <div className="max-w-[200px] truncate" title={`${doc.category || '—'} / ${doc.subDoc || '—'}`}>
                                                             {doc.category || '—'} / {doc.subDoc || '—'}
                                                         </div>
                                                     </td>
                                                     <td className="table-td-muted">{doc.uploadedBy || '—'}</td>
-                                                    <td className="table-td-muted text-xs">{formatDate(doc.uploaded_at)}</td>
-                                                    <td className="table-td-muted text-xs">{formatDate(doc.updated_at)}</td>
+                                                    <td className="table-td-muted">{formatDate(doc.uploaded_at)}</td>
+                                                    <td className="table-td-muted">{formatDate(doc.updated_at)}</td>
                                                     <td className="table-td">
                                                         <span className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium border w-fit ${statusColor} capitalize`}>
                                                             {doc.status === 'complete' ? 'Completed' : doc.status === 'ongoing' ? 'Ongoing' : (doc.status || 'Pending')}
@@ -1011,7 +1087,10 @@ const Encode = ({ user }) => {
                                                             <div className="flex items-center justify-center gap-2">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => openPreview(doc)}
+                                                                    onClick={() => {
+                                                                        setPreviewSequence(null);
+                                                                        openPreview(doc);
+                                                                    }}
                                                                     className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
                                                                     title="View document"
                                                                 >
@@ -1738,7 +1817,7 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                         <div>
-                                            <label className="label">Transaction number (BAC Folder No.)</label>
+                                            <label className="label">BAC Folder No.</label>
                                             <input
                                                 type="text"
                                                 readOnly
@@ -1834,7 +1913,7 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                         <div>
-                                            <label className="label">Transaction number (BAC Folder No.)</label>
+                                            <label className="label">BAC Folder No.</label>
                                             <input
                                                 type="text"
                                                 readOnly
@@ -1929,10 +2008,10 @@ const Encode = ({ user }) => {
                     aria-modal="true"
                     role="dialog"
                 >
-                    <div className="card-elevated max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0">
+                    <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0">
                         <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
                             <h2 className="text-lg font-semibold text-[var(--text)]">
-                                Document Checklist
+                                Manage Documents
                             </h2>
                             <button
                                 type="button"
@@ -1948,75 +2027,75 @@ const Encode = ({ user }) => {
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-5">
                             {loading ? (
                                 <div className="py-16 text-center">
                                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] mx-auto mb-3" />
                                     <p className="text-sm text-[var(--text-muted)]">Loading documents...</p>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
+                                <>
                                     {documents.length === 0 && (
                                         <p className="text-sm text-[var(--text-muted)] text-center rounded-xl bg-[var(--background-subtle)] px-4 py-3">
-                                            No documents uploaded yet. All items below are pending.
+                                            No documents uploaded yet. All folders below are empty for now.
                                         </p>
                                     )}
-                                    <div className="space-y-4">
-                                        {checklistData.map((docType) => (
-                                            <div key={docType.id} className="rounded-xl border border-[var(--border)] overflow-hidden">
-                                                <div className="px-4 py-2.5 bg-[var(--background-subtle)]/80 border-b border-[var(--border-light)]">
-                                                    <p className="text-sm font-semibold text-[var(--text)]">{docType.name}</p>
-                                                </div>
-                                                <ul className="divide-y divide-[var(--border-light)]">
-                                                    {docType.subDocsWithStatus.map((sub) => {
-                                                        const isClickable = !!sub.doc && sub.canUpdate;
-                                                        const missingFields = sub.doc && !sub.done ? getMissingFields(sub.doc) : [];
-                                                        return (
-                                                            <li key={sub.name}>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleChecklistSubDocClick(sub)}
-                                                                    disabled={!isClickable}
-                                                                    className={`w-full text-left px-4 py-3 flex items-center gap-3 text-sm focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--primary)] ${
-                                                                        isClickable
-                                                                            ? 'hover:bg-[var(--background-subtle)]/50 transition-colors cursor-pointer'
-                                                                            : 'cursor-default'
-                                                                    }`}
-                                                                >
-                                                                    <span
-                                                                        className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center text-xs font-bold ${
-                                                                            sub.done
-                                                                                ? 'bg-green-500 border-green-500 text-white'
-                                                                                : 'border-[var(--border)] bg-[var(--surface)]'
-                                                                        }`}
-                                                                    >
-                                                                        {sub.done ? '✓' : ''}
-                                                                    </span>
-                                                                    <span className={sub.done ? 'text-[var(--text-muted)]' : 'text-[var(--text)]'}>{sub.name}</span>
-                                                                    {sub.done && (
-                                                                        <span className="ml-auto flex-shrink-0 text-xs font-medium text-green-600">Submitted</span>
-                                                                    )}
-                                                                    {sub.doc && !sub.done && sub.canUpdate && (
-                                                                        <span className="ml-auto text-right flex-shrink-0 flex items-center gap-2">
-                                                                            <span className="text-xs font-medium text-yellow-700">Ongoing</span>
-                                                                            <span className="text-xs text-yellow-700/90">— missing: {missingFields.join(', ')}</span>
-                                                                        </span>
-                                                                    )}
-                                                                    {sub.doc && !sub.done && !sub.canUpdate && (
-                                                                        <span className="ml-auto flex-shrink-0 text-xs font-medium text-yellow-700">Ongoing</span>
-                                                                    )}
-                                                                    {!sub.doc && (
-                                                                        <span className="ml-auto text-xs text-[var(--text-subtle)]">Not yet submitted</span>
-                                                                    )}
-                                                                </button>
-                                                            </li>
-                                                        );
-                                                    })}
-                                                </ul>
-                                            </div>
-                                        ))}
+
+                                    {/* Folder grid for document types (file-management style) */}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                                        {checklistData.map((docType) => {
+                                            const allSubs = docType.subDocsWithStatus || [];
+                                            const total = allSubs.length;
+                                            const completed = allSubs.filter((s) => s.done).length;
+                                            const pending = allSubs.filter((s) => !s.done && s.doc).length;
+                                            const notStarted = allSubs.filter((s) => !s.doc).length;
+                                            const isActive = !activeChecklistCategoryId || activeChecklistCategoryId === docType.id;
+                                            const hasAny = completed + pending > 0;
+                                            return (
+                                                <button
+                                                    key={docType.id}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setActiveChecklistCategoryId((prev) =>
+                                                            prev === docType.id ? null : docType.id
+                                                        )
+                                                    }
+                                                    className={`flex flex-col items-stretch rounded-2xl border px-3.5 py-3.5 text-left transition-all duration-200 shadow-sm ${
+                                                        isActive
+                                                            ? 'border-[var(--primary)] bg-[var(--primary-muted)]/60 ring-1 ring-[var(--primary)]/40'
+                                                            : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--background-subtle)]'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[var(--primary)] ${isActive ? 'bg-[var(--primary-muted)]' : 'bg-[var(--background-subtle)]'}`}>
+                                                            <MdFolder className="w-6 h-6" />
+                                                        </div>
+                                                        <div className="ml-auto flex items-center justify-center w-9 h-9 rounded-full bg-white/80 border border-[var(--border-light)] text-[var(--text)] text-sm font-semibold shadow-sm">
+                                                            {completed}
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-2 min-w-0 flex-1">
+                                                        <p className="text-sm font-semibold text-[var(--text)] truncate leading-snug">
+                                                            {docType.name}
+                                                        </p>
+                                                        <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                                                            {total} item{total !== 1 ? 's' : ''}
+                                                            {hasAny && (
+                                                                <>
+                                                                    {' '}• {completed} done, {pending} ongoing
+                                                                </>
+                                                            )}
+                                                            {notStarted === total && !hasAny && ' • not yet submitted'}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-                                </div>
+
+                                    {/* Folder documents list intentionally removed from Manage Documents view */}
+
+                                </>
                             )}
                         </div>
                     </div>
@@ -2377,7 +2456,7 @@ const Encode = ({ user }) => {
                             ) : selectedDoc?.subDoc === 'Requisition and Issue Slip' ? (
                                 <>
                                     <div>
-                                        <label className="label">Transaction number</label>
+                                        <label className="label">BAC Folder No.</label>
                                         <input
                                             type="text"
                                             readOnly
@@ -2429,7 +2508,7 @@ const Encode = ({ user }) => {
                             ) : (
                                 <>
                                     <div>
-                                        <label className="label">Transaction number</label>
+                                        <label className="label">BAC Folder No.</label>
                                         <input
                                             type="text"
                                             readOnly
@@ -2642,7 +2721,10 @@ const Encode = ({ user }) => {
                             <h2 className="text-lg font-semibold text-[var(--text)]">{previewDoc.title}</h2>
                             <button
                                 type="button"
-                                onClick={closePreview}
+                                onClick={() => {
+                                    setPreviewSequence(null);
+                                    closePreview();
+                                }}
                                 className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg"
                                 aria-label="Close"
                             >
@@ -2697,7 +2779,10 @@ const Encode = ({ user }) => {
                         <div className="p-4 border-t border-[var(--border-light)] bg-[var(--surface)] flex justify-end gap-3">
                             <button
                                 type="button"
-                                onClick={closePreview}
+                                onClick={() => {
+                                    setPreviewSequence(null);
+                                    closePreview();
+                                }}
                                 className="btn-primary"
                             >
                                 Close
@@ -2799,7 +2884,7 @@ const Encode = ({ user }) => {
                         <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
                             <div>
                                 <h2 className="text-lg font-semibold text-[var(--text)]">Procurement Workflow</h2>
-                                <p className="text-sm text-[var(--text-muted)] mt-1">Transaction number: {workflowPRNo}</p>
+                                <p className="text-sm text-[var(--text-muted)] mt-1">BAC Folder No.: {workflowPRNo}</p>
                             </div>
                             <button
                                 type="button"

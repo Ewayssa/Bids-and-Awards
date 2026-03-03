@@ -267,7 +267,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         return bool(value)
 
     def validate_prNo(self, value):
-        """Transaction number: allow empty (auto-generated on create); allow format YYYY-MM-NNN if provided."""
+        """BAC Folder No.: allow empty (auto-generated on create); allow format YYYY-MM-NNN if provided."""
         if value is None or value == '':
             return value
         val = str(value).strip()
@@ -278,7 +278,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             return val
         if val.isdigit():
             return val
-        raise serializers.ValidationError('Transaction number must be in format YYYY-MM-NNN or numbers only.')
+        raise serializers.ValidationError('BAC Folder No. must be in format YYYY-MM-NNN or numbers only.')
 
     def create(self, validated_data):
         # Remove status if provided (it will be auto-calculated)
@@ -318,9 +318,12 @@ class DocumentSerializer(serializers.ModelSerializer):
         return instance
 
     def get_file_url(self, obj):
-        request = self.context.get('request')
-        if obj.file and request:
-            return request.build_absolute_uri(obj.file.url)
+        """
+        Return a path relative to the current host (e.g. /media/...)
+        so the frontend always hits whichever localhost/port it is running on.
+        """
+        if obj.file:
+            return obj.file.url
         return None
 
 
@@ -332,9 +335,8 @@ class ReportSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'uploaded_at', 'uploadedBy', 'submitting_office', 'file', 'file_url')
 
     def get_file_url(self, obj):
-        request = self.context.get('request')
-        if obj.file and request:
-            return request.build_absolute_uri(obj.file.url)
+        if obj.file:
+            return obj.file.url
         return None
 
 
