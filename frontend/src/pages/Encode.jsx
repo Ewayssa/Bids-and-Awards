@@ -546,6 +546,23 @@ const Encode = ({ user }) => {
         setExpandedGroups(newExpanded);
     };
 
+    const getProcurementType = (doc) => {
+        const sub = (doc?.subDoc || '').trim();
+        if (!sub) return '—';
+
+        if (sub === 'Small Value Procurement' || sub.endsWith(' - Small Value Procurement')) {
+            return 'Small Value Procurement';
+        }
+        if (sub === 'Public Bidding' || sub.endsWith(' - Public Bidding')) {
+            return 'Public Bidding';
+        }
+        if (sub === 'Lease of Venue: Table Rating Factor' || sub.includes('Lease of Venue')) {
+            return 'Lease of Venue';
+        }
+
+        return '—';
+    };
+
     const clearFilters = () => {
         setSearchQuery('');
         setFilterCategory('');
@@ -953,13 +970,14 @@ const Encode = ({ user }) => {
                                                                         pending: 'bg-red-100 text-red-800 border-red-200',
                                                                     };
                                                                     const statusColor = statusColors[doc.status] || statusColors.pending;
-                                                                    
+                                                                    const procurementType = getProcurementType(doc);
+
                                                                     return (
                                                                         <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
                                                                             <td className="table-td font-medium">{doc.title || '—'}</td>
                                                                             <td className="table-td-muted">
-                                                                                <div className="max-w-[200px] truncate" title={`${doc.category || '—'} / ${doc.subDoc || '—'}`}>
-                                                                                    {doc.category || '—'} / {doc.subDoc || '—'}
+                                                                                <div className="max-w-[200px] truncate" title={procurementType}>
+                                                                                    {procurementType}
                                                                                 </div>
                                                                             </td>
                                                                             <td className="table-td-muted">{formatDate(doc.date)}</td>
@@ -1046,8 +1064,8 @@ const Encode = ({ user }) => {
                                                     <td className="table-td font-medium">{doc.title || '—'}</td>
                                                     <td className="table-td-muted">{doc.prNo || '—'}</td>
                                                     <td className="table-td-muted">
-                                                        <div className="max-w-[200px] truncate" title={`${doc.category || '—'} / ${doc.subDoc || '—'}`}>
-                                                            {doc.category || '—'} / {doc.subDoc || '—'}
+                                                        <div className="max-w-[200px] truncate" title={getProcurementType(doc)}>
+                                                            {getProcurementType(doc)}
                                                         </div>
                                                     </td>
                                                     <td className="table-td-muted">{doc.uploadedBy || '—'}</td>

@@ -333,7 +333,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     const dateLabel = today.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
     const procurementMethodCounts = stats.procurementMethodCounts ?? { 'List of Venue': 0, 'Small Value Procurement': 0, 'Public Bidding': 0 };
-    const barLabels = ['List of Venue', 'Small Value Procurement', 'Public Bidding'];
+    const barLabels = ['Lease of Venue', 'Small Value Procurement', 'Public Bidding'];
     const barColors = ['#22c55e', '#3b82f6', '#8b5cf6'];
     const barValues = barLabels.map((label) => Number(procurementMethodCounts[label]) || 0);
     const barMax = Math.max(1, ...barValues);
@@ -548,7 +548,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                 </div>
                             </div>
                             <div className="w-full min-w-0 flex-1 sm:min-w-[200px] border-t sm:border-t-0 sm:border-l border-[var(--border-light)] pt-6 sm:pt-0 sm:pl-6">
-                                <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">Procurement methods</p>
+                                <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">Procurement Types</p>
                                 <div className="space-y-4" role="img" aria-label="Bar chart: List of Venue, Small Value Procurement, Public Bidding document counts">
                                     {barLabels.map((label, i) => (
                                         <div key={label} className="flex flex-col gap-1.5 min-w-0">
