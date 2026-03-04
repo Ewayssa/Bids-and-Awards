@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { documentService } from '../services/api';
 import { ROLES } from '../utils/roles';
@@ -32,6 +32,9 @@ const CHECKLIST_ITEMS = [
     { key: 'file', label: 'File uploaded' },
 ];
 
+const toLettersOnly = (value) => value.replace(/[^A-Za-z\s]/g, '');
+const toNumbersOnly = (value) => value.replace(/[^0-9.]/g, '');
+
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
     const [documents, setDocuments] = useState([]);
@@ -41,7 +44,7 @@ const Encode = ({ user }) => {
     const [newError, setNewError] = useState('');
     const [updateError, setUpdateError] = useState('');
     const [newFormErrors, setNewFormErrors] = useState({}); // { title: 'required', ... }
-    const [activeModal, setActiveModal] = useState(null); // 'new' | 'update' | 'updateList' | null
+    const [activeModal, setActiveModal] = useState(null); // 'new' | 'update' | 'updateList' | 'manage' | null
     const [newStep, setNewStep] = useState('docType'); // 'docType' | 'subDoc' | 'form'
     const [selectedDocType, setSelectedDocType] = useState(null);
     const [selectedSubDocType, setSelectedSubDocType] = useState(null);
@@ -68,6 +71,25 @@ const Encode = ({ user }) => {
         market_service_provider_3: '',
         office_division: '',
         received_by: '',
+        date_received: '',
+        attendance_members: '',
+        resolution_no: '',
+        winning_bidder: '',
+        resolution_option: '',
+        venue: '',
+        aoq_no: '',
+        abstract_bidders: '',
+        contract_received_by_coa: false,
+        contract_amount: '',
+        notarized_place: '',
+        notarized_date: '',
+        ntp_service_provider: '',
+        ntp_authorized_rep: '',
+        ntp_received_by: '',
+        oss_service_provider: '',
+        oss_authorized_rep: '',
+        secretary_service_provider: '',
+        secretary_owner_rep: '',
         category: '',
         subDoc: '',
         date: '',
@@ -98,6 +120,13 @@ const Encode = ({ user }) => {
     const [activeChecklistCategoryId, setActiveChecklistCategoryId] = useState(null); // which folder is selected in Manage Documents
     const [lastAutoPreviewFolderId, setLastAutoPreviewFolderId] = useState(null); // to auto-open first doc preview once per folder
     const [certificateServiceProviders, setCertificateServiceProviders] = useState(['', '', '']); // For Certificate of DILG - SVP
+    const [attendanceMembers, setAttendanceMembers] = useState([]); // For Attendance Sheet: [{ id, name, present }]
+    const [abstractBidders, setAbstractBidders] = useState([]); // For Abstract of Quotation: [{ id, name, amount, remarks }]
+    const [manageSelectedTypeId, setManageSelectedTypeId] = useState(null); // Manage modal: selected document type (DOC_TYPES id)
+    const [manageSelectedPrNo, setManageSelectedPrNo] = useState(null); // Manage modal: selected BAC Folder No.
+    const [manageFolderPopup, setManageFolderPopup] = useState(null); // { typeId, prNo } when set, show popup with all docs in that BAC folder
+    const [manageFolderPopupPreview, setManageFolderPopupPreview] = useState(null); // { doc, previewBlobUrl, previewBlobType } for inline file display
+    const [manageFolderPopupIndex, setManageFolderPopupIndex] = useState(0); // which doc (with file) is shown when multiple
 
     const computeRFQNoFromDate = (dateStr) => {
         if (!dateStr) return '';
@@ -181,18 +210,57 @@ const Encode = ({ user }) => {
             if (form.market_service_provider_3 !== undefined) fd.append('market_service_provider_3', form.market_service_provider_3 || '');
             if (form.office_division !== undefined) fd.append('office_division', form.office_division || '');
             if (form.received_by !== undefined) fd.append('received_by', form.received_by || '');
+            if (form.date_received) fd.append('date_received', form.date_received);
+            if (selectedSubDocType === 'Attendance Sheet' && attendanceMembers.length > 0) {
+                const members = attendanceMembers
+                    .filter((m) => (m.name || '').trim())
+                    .map((m) => ({ name: (m.name || '').trim(), present: !!m.present }));
+                if (members.length > 0) fd.append('attendance_members', JSON.stringify(members));
+            }
+            if (form.resolution_no !== undefined) fd.append('resolution_no', form.resolution_no || '');
+            if (form.winning_bidder !== undefined) fd.append('winning_bidder', form.winning_bidder || '');
+            if (form.resolution_option !== undefined) fd.append('resolution_option', form.resolution_option || '');
+            if (form.venue !== undefined) fd.append('venue', form.venue || '');
+            if (selectedSubDocType === 'Abstract of Quotation' && abstractBidders.length >= 3) {
+                const bidders = abstractBidders
+                    .filter((b) => (b.name || '').trim() && (b.amount !== undefined && b.amount !== '') && (b.remarks || '').trim())
+                    .map((b) => ({ name: (b.name || '').trim(), amount: b.amount === undefined || b.amount === null ? '' : String(b.amount).trim(), remarks: (b.remarks || '').trim() }));
+                if (bidders.length >= 3) fd.append('abstract_bidders', JSON.stringify(bidders));
+            }
+            if (form.aoq_no !== undefined) fd.append('aoq_no', form.aoq_no || '');
+            if (selectedSubDocType === 'Contract Services/Purchase Order') {
+                fd.append('contract_received_by_coa', form.contract_received_by_coa ? 'true' : 'false');
+                if (form.contract_amount !== undefined && form.contract_amount !== '') fd.append('contract_amount', form.contract_amount);
+                if (form.notarized_place !== undefined) fd.append('notarized_place', form.notarized_place || '');
+                if (form.notarized_date) fd.append('notarized_date', form.notarized_date);
+            }
+            if (selectedSubDocType === 'Notice to Proceed') {
+                if (form.ntp_service_provider !== undefined) fd.append('ntp_service_provider', form.ntp_service_provider || '');
+                if (form.ntp_authorized_rep !== undefined) fd.append('ntp_authorized_rep', form.ntp_authorized_rep || '');
+                if (form.ntp_received_by !== undefined) fd.append('ntp_received_by', form.ntp_received_by || '');
+            }
+            if (selectedSubDocType === 'OSS') {
+                if (form.oss_service_provider !== undefined) fd.append('oss_service_provider', form.oss_service_provider || '');
+                if (form.oss_authorized_rep !== undefined) fd.append('oss_authorized_rep', form.oss_authorized_rep || '');
+            }
+            if (selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney") {
+                if (form.secretary_service_provider !== undefined) fd.append('secretary_service_provider', form.secretary_service_provider || '');
+                if (form.secretary_owner_rep !== undefined) fd.append('secretary_owner_rep', form.secretary_owner_rep || '');
+            }
             if (form.file) fd.append('file', form.file);
 
             await documentService.create(fd);
 
             setSelectedDoc(null);
-            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
+            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', date_received: '', attendance_members: '', resolution_no: '', winning_bidder: '', resolution_option: '', venue: '', aoq_no: '', abstract_bidders: '', contract_received_by_coa: false, contract_amount: '', notarized_place: '', notarized_date: '', ntp_service_provider: '', ntp_authorized_rep: '', ntp_received_by: '', oss_service_provider: '', oss_authorized_rep: '', secretary_service_provider: '', secretary_owner_rep: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
             // Small delay to ensure backend has processed status calculation
             setTimeout(() => {
                 load();
             }, 300);
             setActiveModal(null);
             setAlertMessage('New procurement document saved.');
+            setAttendanceMembers([]);
+            setAbstractBidders([]);
         } catch (err) {
             setNewError(err.response?.data?.detail || err.message || 'Failed to save.');
         } finally {
@@ -202,7 +270,8 @@ const Encode = ({ user }) => {
 
     const validateNewForm = () => {
         const err = {};
-        if (!(form.title && form.title.trim())) err.title = 'This field is required';
+        const isLeaseOfVenue = selectedSubDocType === 'Lease of Venue: Table Rating Factor' || (selectedSubDocType && (selectedSubDocType.includes('Lease of Venue') || selectedSubDocType.includes('List of Venue')));
+        if (selectedSubDocType !== 'Invitation to COA' && !isLeaseOfVenue && !(form.title && form.title.trim())) err.title = 'This field is required';
         setNewFormErrors(err);
         return Object.keys(err).length === 0;
     };
@@ -293,6 +362,235 @@ const Encode = ({ user }) => {
                 return;
             }
         }
+        if (selectedSubDocType === 'Notice of BAC Meeting') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Notice of BAC Meeting.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for Notice of BAC Meeting.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Invitation to COA') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Invitation to COA.');
+                return;
+            }
+            if (!(form.date_received && form.date_received.trim())) {
+                setNewError('Date received is required for Invitation to COA.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for Invitation to COA.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Attendance Sheet') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Attendance Sheet.');
+                return;
+            }
+            const withNames = attendanceMembers.filter((m) => (m.name || '').trim());
+            if (withNames.length === 0) {
+                setNewError('Add at least one BAC member with a name.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for Attendance Sheet.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Minutes of the Meeting') {
+            if (!(form.title && form.title.trim())) {
+                setNewError('Agenda/Others is required for Minutes of the Meeting.');
+                return;
+            }
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Minutes of the Meeting.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'BAC Resolution') {
+            if (!(form.resolution_no && form.resolution_no.trim())) {
+                setNewError('Resolution No. is required for BAC Resolution.');
+                return;
+            }
+            if (!(form.title && form.title.trim())) {
+                setNewError('Title is required for BAC Resolution.');
+                return;
+            }
+            if (!(form.winning_bidder && form.winning_bidder.trim())) {
+                setNewError('Winning Bidder is required for BAC Resolution.');
+                return;
+            }
+            if (form.total_amount === '' || form.total_amount === undefined || form.total_amount === null) {
+                setNewError('Amount is required for BAC Resolution.');
+                return;
+            }
+            if (!(form.resolution_option && form.resolution_option.trim())) {
+                setNewError('Options is required for BAC Resolution.');
+                return;
+            }
+            if (!(form.office_division && form.office_division.trim())) {
+                setNewError('Office/Division is required for BAC Resolution.');
+                return;
+            }
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date of Adoption is required for BAC Resolution.');
+                return;
+            }
+            if (!(form.venue && form.venue.trim())) {
+                setNewError('Venue is required for BAC Resolution.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for BAC Resolution.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Abstract of Quotation') {
+            if (!(form.aoq_no && form.aoq_no.trim())) {
+                setNewError('AOQ No. is required for Abstract of Quotation.');
+                return;
+            }
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Abstract of Quotation.');
+                return;
+            }
+            if (!(form.title && form.title.trim())) {
+                setNewError('Purpose is required for Abstract of Quotation.');
+                return;
+            }
+            if (abstractBidders.length < 3) {
+                setNewError('At least 3 bidders are required. Add bidders and fill Bidder name, Amount, and Remarks for each.');
+                return;
+            }
+            const filled = abstractBidders.filter((b) => (b.name || '').trim() && (b.amount !== undefined && b.amount !== '') && (b.remarks || '').trim());
+            if (filled.length < 3) {
+                setNewError('All 3 required bidder rows must have Bidder name, Amount, and Remarks filled. You cannot proceed until all 3 are complete.');
+                return;
+            }
+            const hasIncomplete = abstractBidders.some((b) => !(b.name || '').trim() || (b.amount === undefined || b.amount === '') || !(b.remarks || '').trim());
+            if (hasIncomplete) {
+                setNewError('Every bidder row must have Bidder name, Amount, and Remarks filled. Complete all rows or remove empty ones.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for Abstract of Quotation.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Contract Services/Purchase Order') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Contract Services.');
+                return;
+            }
+            if (form.contract_received_by_coa !== true && form.contract_received_by_coa !== false) {
+                setNewError('Received by COA (Yes or No) is required for Contract Services.');
+                return;
+            }
+            if (form.contract_amount === '' || form.contract_amount === undefined || form.contract_amount === null) {
+                setNewError('Contract Amount is required for Contract Services.');
+                return;
+            }
+            if (!(form.notarized_place && form.notarized_place.trim())) {
+                setNewError('Notarized (place) is required for Contract Services.');
+                return;
+            }
+            if (!(form.notarized_date && form.notarized_date.trim())) {
+                setNewError('Notarized (date) is required for Contract Services.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for Contract Services.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Notice to Proceed') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Notice to Proceed.');
+                return;
+            }
+            if (!(form.ntp_service_provider && form.ntp_service_provider.trim())) {
+                setNewError('Service Provider is required for Notice to Proceed.');
+                return;
+            }
+            if (!(form.ntp_authorized_rep && form.ntp_authorized_rep.trim())) {
+                setNewError('Authorized Representative/Owner is required for Notice to Proceed.');
+                return;
+            }
+            if (!(form.ntp_received_by && form.ntp_received_by.trim())) {
+                setNewError('Received By is required for Notice to Proceed.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for Notice to Proceed.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'OSS') {
+            if (!(form.oss_service_provider && form.oss_service_provider.trim())) {
+                setNewError('Service Provider is required for OSS.');
+                return;
+            }
+            if (!(form.oss_authorized_rep && form.oss_authorized_rep.trim())) {
+                setNewError('Authorized Representative/Owner is required for OSS.');
+                return;
+            }
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for OSS.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for OSS.');
+                return;
+            }
+        }
+        if (selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney") {
+            if (!(form.secretary_service_provider && form.secretary_service_provider.trim())) {
+                setNewError("Service Provider is required for Secretary's Certificate.");
+                return;
+            }
+            if (!(form.secretary_owner_rep && form.secretary_owner_rep.trim())) {
+                setNewError("Owner/Authorized Representative is required for Secretary's Certificate.");
+                return;
+            }
+            if (!(form.date && form.date.trim())) {
+                setNewError("Date is required for Secretary's Certificate.");
+                return;
+            }
+            if (!form.file) {
+                setNewError("Upload is required for Secretary's Certificate.");
+                return;
+            }
+        }
+        if (selectedSubDocType === 'PhilGEPS Posting of Award') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for PhilGEPS Posting of Award.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for PhilGEPS Posting of Award.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Certificate of DILG R1 Website Posting of Award') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for Certificate of DILG R1 Website Posting of Award.');
+                return;
+            }
+            if (!form.file) {
+                setNewError('Upload is required for Certificate of DILG R1 Website Posting of Award.');
+                return;
+            }
+        }
+        if (selectedSubDocType === 'Notice of Award (Posted)' || selectedSubDocType === 'Abstract of Quotation (Posted)' || selectedSubDocType === 'BAC Resolution (Posted)') {
+            if (!(form.date && form.date.trim())) {
+                setNewError('Date is required for this document.');
+                return;
+            }
+        }
         setNewError('');
         setConfirmDialog({
             message: 'Are you sure you want to submit this new procurement?',
@@ -336,6 +634,47 @@ const Encode = ({ user }) => {
             if (form.market_service_provider_3 !== undefined) fd.append('market_service_provider_3', form.market_service_provider_3 || '');
             if (form.office_division !== undefined) fd.append('office_division', form.office_division || '');
             if (form.received_by !== undefined) fd.append('received_by', form.received_by || '');
+            if (form.date_received) fd.append('date_received', form.date_received);
+            if (selectedDoc?.subDoc === 'Attendance Sheet' && attendanceMembers.length > 0) {
+                const members = attendanceMembers
+                    .filter((m) => (m.name || '').trim())
+                    .map((m) => ({ name: (m.name || '').trim(), present: !!m.present }));
+                if (members.length > 0) fd.append('attendance_members', JSON.stringify(members));
+            } else if (form.attendance_members !== undefined && form.attendance_members !== '') {
+                fd.append('attendance_members', form.attendance_members);
+            }
+            if (form.resolution_no !== undefined) fd.append('resolution_no', form.resolution_no || '');
+            if (form.winning_bidder !== undefined) fd.append('winning_bidder', form.winning_bidder || '');
+            if (form.resolution_option !== undefined) fd.append('resolution_option', form.resolution_option || '');
+            if (form.venue !== undefined) fd.append('venue', form.venue || '');
+            if (selectedDoc?.subDoc === 'Abstract of Quotation' && abstractBidders.length >= 3) {
+                const bidders = abstractBidders
+                    .filter((b) => (b.name || '').trim() && (b.amount !== undefined && b.amount !== '') && (b.remarks || '').trim())
+                    .map((b) => ({ name: (b.name || '').trim(), amount: b.amount === undefined || b.amount === null ? '' : String(b.amount).trim(), remarks: (b.remarks || '').trim() }));
+                if (bidders.length >= 3) fd.append('abstract_bidders', JSON.stringify(bidders));
+            } else if (form.abstract_bidders !== undefined && form.abstract_bidders !== '') {
+                fd.append('abstract_bidders', form.abstract_bidders);
+            }
+            if (form.aoq_no !== undefined) fd.append('aoq_no', form.aoq_no || '');
+            if (selectedDoc?.subDoc === 'Contract Services/Purchase Order') {
+                fd.append('contract_received_by_coa', form.contract_received_by_coa ? 'true' : 'false');
+                if (form.contract_amount !== undefined && form.contract_amount !== '') fd.append('contract_amount', form.contract_amount);
+                if (form.notarized_place !== undefined) fd.append('notarized_place', form.notarized_place || '');
+                if (form.notarized_date) fd.append('notarized_date', form.notarized_date);
+            }
+            if (selectedDoc?.subDoc === 'Notice to Proceed') {
+                if (form.ntp_service_provider !== undefined) fd.append('ntp_service_provider', form.ntp_service_provider || '');
+                if (form.ntp_authorized_rep !== undefined) fd.append('ntp_authorized_rep', form.ntp_authorized_rep || '');
+                if (form.ntp_received_by !== undefined) fd.append('ntp_received_by', form.ntp_received_by || '');
+            }
+            if (selectedDoc?.subDoc === 'OSS') {
+                if (form.oss_service_provider !== undefined) fd.append('oss_service_provider', form.oss_service_provider || '');
+                if (form.oss_authorized_rep !== undefined) fd.append('oss_authorized_rep', form.oss_authorized_rep || '');
+            }
+            if (selectedDoc?.subDoc === "Applicable: Secretary's Certificate and Special Power of Attorney") {
+                if (form.secretary_service_provider !== undefined) fd.append('secretary_service_provider', form.secretary_service_provider || '');
+                if (form.secretary_owner_rep !== undefined) fd.append('secretary_owner_rep', form.secretary_owner_rep || '');
+            }
             // Do NOT change uploadedBy on update. The original uploader
             // (who started the procurement) remains the owner with
             // the right to update the document.
@@ -345,7 +684,7 @@ const Encode = ({ user }) => {
             await documentService.update(selectedDoc.id, fd);
 
             setSelectedDoc(null);
-            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: form.status });
+            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', date_received: '', attendance_members: '', resolution_no: '', winning_bidder: '', resolution_option: '', venue: '', aoq_no: '', abstract_bidders: '', contract_received_by_coa: false, contract_amount: '', notarized_place: '', notarized_date: '', ntp_service_provider: '', ntp_authorized_rep: '', ntp_received_by: '', oss_service_provider: '', oss_authorized_rep: '', secretary_service_provider: '', secretary_owner_rep: '', category: '', subDoc: '', date: '', file: null, status: form.status });
             // Small delay to ensure backend has processed status calculation
             setTimeout(() => {
                 load();
@@ -552,8 +891,9 @@ const Encode = ({ user }) => {
         }));
     }, [updateListDocs, user]);
 
-    // Auto-open the first file's preview when a folder is selected in Manage Documents (same viewer as main table)
+    // Auto-open the first file's preview when a folder is selected (only when not in Manage Documents checklist)
     useEffect(() => {
+        if (activeModal === 'updateList') return;
         if (!activeChecklistCategoryId) {
             setLastAutoPreviewFolderId(null);
             return;
@@ -585,16 +925,17 @@ const Encode = ({ user }) => {
         // Reuse existing viewer behavior; only admins can preview files
         openPreview(firstWithFile);
         setLastAutoPreviewFolderId(activeChecklistCategoryId);
-    }, [activeChecklistCategoryId, checklistData, documents, lastAutoPreviewFolderId]);
+    }, [activeModal, activeChecklistCategoryId, checklistData, documents, lastAutoPreviewFolderId]);
 
     // Export to CSV
     const exportToCSV = () => {
-        const headers = ['Title', 'BAC Folder No.', 'Category', 'Sub-document', 'Uploaded By', 'Date', 'Status', 'Uploaded At'];
+        const headers = ['Title', 'BAC Folder No.', 'Category', 'Sub-document', 'Procurement Type', 'Uploaded By', 'Date', 'Status', 'Uploaded At'];
         const rows = filteredDocuments.map(doc => [
             doc.title || '',
             doc.prNo || '',
             doc.category || '',
             doc.subDoc || '',
+            getProcurementType(doc),
             doc.uploadedBy || '',
             formatDate(doc.date),
             doc.status || '',
@@ -633,7 +974,7 @@ const Encode = ({ user }) => {
         if (sub === 'Public Bidding' || sub.endsWith(' - Public Bidding')) {
             return 'Public Bidding';
         }
-        if (sub === 'Lease of Venue: Table Rating Factor' || sub.includes('Lease of Venue')) {
+        if (sub === 'Lease of Venue: Table Rating Factor' || sub.includes('Lease of Venue') || sub === 'List of Venue' || sub.endsWith(' - List of Venue')) {
             return 'Lease of Venue';
         }
 
@@ -729,6 +1070,68 @@ const Encode = ({ user }) => {
         }
         setPreviewDoc(null);
     };
+
+    // Fetch a doc's file for the Manage BAC folder popup (inline preview, no View/Update)
+    const fetchDocForManagePopup = useCallback(async (doc) => {
+        if (!doc?.file_url) {
+            setManageFolderPopupPreview({ doc, previewBlobUrl: 'failed', previewBlobType: null });
+            return;
+        }
+        setManageFolderPopupPreview({ doc, previewBlobUrl: null, previewBlobType: null });
+        const tryFetch = async (url) => {
+            const res = await fetch(url, { credentials: 'include' });
+            if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
+            return res;
+        };
+        try {
+            const fetchUrl = getFetchUrl(doc.file_url);
+            let res;
+            try {
+                res = await tryFetch(fetchUrl);
+            } catch {
+                res = await tryFetch(doc.file_url);
+            }
+            const contentType = res.headers.get('content-type') || '';
+            const blob = await res.blob();
+            const blobType = blob.type || (contentType.split(';')[0].trim()) || 'application/octet-stream';
+            const blobForView = blob.type ? blob : new Blob([blob], { type: blobType });
+            const blobUrl = URL.createObjectURL(blobForView);
+            setManageFolderPopupPreview((prev) => {
+                if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed') URL.revokeObjectURL(prev.previewBlobUrl);
+                return { doc, previewBlobUrl: blobUrl, previewBlobType: blobType };
+            });
+        } catch (err) {
+            console.error('Manage popup view failed:', err);
+            setManageFolderPopupPreview((prev) => {
+                if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed') URL.revokeObjectURL(prev.previewBlobUrl);
+                return { doc, previewBlobUrl: 'failed', previewBlobType: null };
+            });
+        }
+    }, []);
+
+    // When BAC folder popup opens: load first doc with file; when it closes: revoke and clear
+    useEffect(() => {
+        if (!manageFolderPopup) {
+            setManageFolderPopupPreview((prev) => {
+                if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed') URL.revokeObjectURL(prev.previewBlobUrl);
+                return null;
+            });
+            setManageFolderPopupIndex(0);
+            return;
+        }
+        const docType = DOC_TYPES.find((d) => d.id === manageFolderPopup.typeId);
+        const categoryName = docType?.name || '';
+        const docs = documents.filter(
+            (d) => (d.category || '').trim() === categoryName && (d.prNo || '').trim() === manageFolderPopup.prNo
+        );
+        const withFile = docs.filter((d) => d.file_url);
+        if (withFile.length === 0) {
+            setManageFolderPopupPreview(null);
+            return;
+        }
+        const index = Math.min(manageFolderPopupIndex, withFile.length - 1);
+        fetchDocForManagePopup(withFile[index]);
+    }, [manageFolderPopup, documents, manageFolderPopupIndex, fetchDocForManagePopup]);
 
     const getFetchUrl = (url) => {
         if (!url) return url;
@@ -827,7 +1230,7 @@ const Encode = ({ user }) => {
         setNewStep('docType');
         setSelectedDocType(null);
         setSelectedSubDocType(null);
-        setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
+        setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', date_received: '', attendance_members: '', resolution_no: '', winning_bidder: '', resolution_option: '', venue: '', aoq_no: '', abstract_bidders: '', contract_received_by_coa: false, contract_amount: '', notarized_place: '', notarized_date: '', ntp_service_provider: '', ntp_authorized_rep: '', ntp_received_by: '', oss_service_provider: '', oss_authorized_rep: '', secretary_service_provider: '', secretary_owner_rep: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
         setNewError('');
         setNewFormErrors({});
         setCertificateServiceProviders(['', '', '']);
@@ -835,6 +1238,13 @@ const Encode = ({ user }) => {
     const openUpdate = () => {
         setActiveModal('updateList');
         setUpdateError('');
+    };
+
+    const openManage = () => {
+        setActiveModal('manage');
+        setManageSelectedTypeId(null);
+        setManageSelectedPrNo(null);
+        setManageFolderPopup(null);
     };
 
     const handleChecklistSubDocClick = (subDocWithStatus) => {
@@ -865,12 +1275,43 @@ const Encode = ({ user }) => {
             market_service_provider_3: subDocWithStatus.doc.market_service_provider_3 ?? '',
             office_division: subDocWithStatus.doc.office_division ?? '',
             received_by: subDocWithStatus.doc.received_by ?? '',
+            date_received: formatDate(subDocWithStatus.doc.date_received) || '',
+            attendance_members: subDocWithStatus.doc.attendance_members ?? '',
+            resolution_no: subDocWithStatus.doc.resolution_no ?? '',
+            winning_bidder: subDocWithStatus.doc.winning_bidder ?? '',
+            resolution_option: subDocWithStatus.doc.resolution_option ?? '',
+            venue: subDocWithStatus.doc.venue ?? '',
+            contract_received_by_coa: !!subDocWithStatus.doc.contract_received_by_coa,
+            contract_amount: subDocWithStatus.doc.contract_amount != null ? String(subDocWithStatus.doc.contract_amount) : '',
+            notarized_place: subDocWithStatus.doc.notarized_place ?? '',
+            notarized_date: formatDate(subDocWithStatus.doc.notarized_date) || '',
+            ntp_service_provider: subDocWithStatus.doc.ntp_service_provider ?? '',
+            ntp_authorized_rep: subDocWithStatus.doc.ntp_authorized_rep ?? '',
+            ntp_received_by: subDocWithStatus.doc.ntp_received_by ?? '',
+            oss_service_provider: subDocWithStatus.doc.oss_service_provider ?? '',
+            oss_authorized_rep: subDocWithStatus.doc.oss_authorized_rep ?? '',
+            secretary_service_provider: subDocWithStatus.doc.secretary_service_provider ?? '',
+            secretary_owner_rep: subDocWithStatus.doc.secretary_owner_rep ?? '',
             category: subDocWithStatus.doc.category || '',
             subDoc: subDocWithStatus.doc.subDoc || '',
             date: formatDate(subDocWithStatus.doc.date) || '',
             file: null,
             status: subDocWithStatus.doc.status || 'pending',
         });
+        if ((subDocWithStatus.doc.subDoc || '').trim() === 'Attendance Sheet' && subDocWithStatus.doc.attendance_members) {
+            try {
+                const parsed = JSON.parse(subDocWithStatus.doc.attendance_members);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setAttendanceMembers(parsed.map((m, i) => ({ id: m.id ?? Date.now() + i, name: m.name || '', present: !!m.present })));
+                } else {
+                    setAttendanceMembers([]);
+                }
+            } catch {
+                setAttendanceMembers([]);
+            }
+        } else {
+            setAttendanceMembers([]);
+        }
         setUpdateError('');
         setActiveModal('update');
     };
@@ -927,7 +1368,7 @@ const Encode = ({ user }) => {
                             </h2>
                             <button
                                 type="button"
-                                onClick={openUpdate}
+                                onClick={openManage}
                                 className="btn-secondary whitespace-nowrap"
                             >
                                 Manage Documents
@@ -1204,7 +1645,7 @@ const Encode = ({ user }) => {
                                 <h2 className="text-lg font-semibold text-[var(--text)]">
                                     {newStep === 'docType' && 'Choose Document Type'}
                                     {newStep === 'subDoc' && 'Choose Sub-document'}
-                                    {newStep === 'form' && (selectedSubDocType === 'Purchase Request' ? 'Fill Out Purchase Request Details' : selectedSubDocType === 'Activity Design' ? 'Fill Out Activity Design Details' : selectedSubDocType === 'Project Procurement Management Plan/Supplemental PPMP' ? 'Fill Out PPMP Details' : selectedSubDocType === 'Annual Procurement Plan' ? 'Fill Out Annual Procurement Plan Details' : selectedSubDocType === 'Market Scopping' ? 'Fill Out Market Scoping Details' : selectedSubDocType === 'Requisition and Issue Slip' ? 'Fill Out Requisition and Issue Slip Details' : 'Fill Out Procurement Details')}
+                                    {newStep === 'form' && (selectedSubDocType === 'Purchase Request' ? 'Fill Out Purchase Request Details' : selectedSubDocType === 'Activity Design' ? 'Fill Out Activity Design Details' : selectedSubDocType === 'Project Procurement Management Plan/Supplemental PPMP' ? 'Fill Out PPMP Details' : selectedSubDocType === 'Annual Procurement Plan' ? 'Fill Out Annual Procurement Plan Details' : selectedSubDocType === 'Market Scopping' ? 'Fill Out Market Scoping Details' : selectedSubDocType === 'Requisition and Issue Slip' ? 'Fill Out Requisition and Issue Slip Details' : selectedSubDocType === 'Notice of BAC Meeting' ? 'Fill Out Notice of BAC Meeting Details' : selectedSubDocType === 'Invitation to COA' ? 'Fill Out Invitation to COA Details' : selectedSubDocType === 'Attendance Sheet' ? 'Fill Out Attendance Sheet Details' : selectedSubDocType === 'Minutes of the Meeting' ? 'Fill Out Minutes of the Meeting Details' : selectedSubDocType === 'BAC Resolution' ? 'Fill Out BAC Resolution Details' : selectedSubDocType === 'Contract Services/Purchase Order' ? 'Fill Out Contract Services Details' : selectedSubDocType === 'Notice to Proceed' ? 'Fill Out Notice to Proceed Details' : selectedSubDocType === 'OSS' ? 'Fill Out OSS Details' : selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney" ? "Fill Out Secretary's Certificate Details" : selectedSubDocType === 'PhilGEPS Posting of Award' ? 'Fill Out PhilGEPS Posting Details' : selectedSubDocType === 'Certificate of DILG R1 Website Posting of Award' ? 'Fill Out Certificate of DILG R1 Posting Details' : selectedSubDocType === 'Notice of Award (Posted)' ? 'Fill Out Notice of Award (Posted) Details' : selectedSubDocType === 'Abstract of Quotation (Posted)' ? 'Fill Out Abstract of Quotation (Posted) Details' : selectedSubDocType === 'BAC Resolution (Posted)' ? 'Fill Out BAC Resolution (Posted) Details' : 'Fill Out Procurement Details')}
                                 </h2>
                                 <button
                                     type="button"
@@ -1213,6 +1654,8 @@ const Encode = ({ user }) => {
                                         setSelectedDocType(null);
                                         setSelectedSubDocType(null);
                                         setNewError('');
+                                        setAttendanceMembers([]);
+                                        setAbstractBidders([]);
                                     }}
                                     className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-lg transition-all duration-300 ease-out hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--border)] focus:ring-offset-1"
                                     aria-label="Close"
@@ -1302,8 +1745,8 @@ const Encode = ({ user }) => {
                                                                     onClick={() => {
                                                                         if (alreadyUploaded) return;
                                                                         setSelectedSubDocType(sd);
-                                                                        // Auto-fill a sensible title for RFQ PHILGEPS/CERT docs
-                                                                        setForm((f) => ({ ...f, subDoc: sd, title: f.title || sd }));
+                                                                        // Title/purpose is encoded by the user; leave input empty
+                                                                        setForm((f) => ({ ...f, subDoc: sd }));
                                                                         setNewStep('form');
                                                                     }}
                                                                     aria-disabled={alreadyUploaded}
@@ -1581,15 +2024,26 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                     </>
-                                ) : /* Purchase Request: Purpose, BAC Folder No., PR No., Date, Total amount, Upload */ selectedSubDocType === 'Purchase Request' ? (
+                                ) : /* Purchase Request: BAC Folder No., Purpose, PR No., Date, Total amount, Upload */ selectedSubDocType === 'Purchase Request' ? (
                                     <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
                                         <div>
                                             <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
-                                                    setForm((f) => ({ ...f, title: e.target.value }));
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
                                                     if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
@@ -1603,16 +2057,6 @@ const Encode = ({ user }) => {
                                                     {newFormErrors.title}
                                                 </p>
                                             )}
-                                        </div>
-                                        <div>
-                                            <label className="label">BAC Folder No.</label>
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={nextTransactionNumber ?? '…'}
-                                                className="input-field bg-[var(--background-subtle)] cursor-default"
-                                                aria-readonly="true"
-                                            />
                                         </div>
                                         <div>
                                             <label className="label">PR No.</label>
@@ -1653,7 +2097,7 @@ const Encode = ({ user }) => {
                                                     step="0.01"
                                                     min="0"
                                                     value={form.total_amount}
-                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
+                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
                                                 />
@@ -1685,12 +2129,23 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'Activity Design' ? (
                                     <>
                                         <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
-                                                    setForm((f) => ({ ...f, title: e.target.value }));
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
                                                     if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
@@ -1704,16 +2159,6 @@ const Encode = ({ user }) => {
                                                     {newFormErrors.title}
                                                 </p>
                                             )}
-                                        </div>
-                                        <div>
-                                            <label className="label">Transaction No.</label>
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={nextTransactionNumber ?? '…'}
-                                                className="input-field bg-[var(--background-subtle)] cursor-default"
-                                                aria-readonly="true"
-                                            />
                                         </div>
                                         <div>
                                             <label className="label">PR No.</label>
@@ -1730,7 +2175,7 @@ const Encode = ({ user }) => {
                                             <input
                                                 type="text"
                                                 value={form.source_of_fund}
-                                                onChange={(e) => setForm((f) => ({ ...f, source_of_fund: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, source_of_fund: toLettersOnly(e.target.value) }))}
                                                 className="input-field"
                                                 placeholder="Source of fund"
                                             />
@@ -1744,7 +2189,7 @@ const Encode = ({ user }) => {
                                                     step="0.01"
                                                     min="0"
                                                     value={form.total_amount}
-                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
+                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
                                                 />
@@ -1776,12 +2221,23 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'Project Procurement Management Plan/Supplemental PPMP' ? (
                                     <>
                                         <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
-                                                    setForm((f) => ({ ...f, title: e.target.value }));
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
                                                     if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
@@ -1797,21 +2253,11 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                         <div>
-                                            <label className="label">Transaction No.</label>
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={nextTransactionNumber ?? '…'}
-                                                className="input-field bg-[var(--background-subtle)] cursor-default"
-                                                aria-readonly="true"
-                                            />
-                                        </div>
-                                        <div>
                                             <label className="label">PPMP No.</label>
                                             <input
                                                 type="text"
                                                 value={form.ppmp_no}
-                                                onChange={(e) => setForm((f) => ({ ...f, ppmp_no: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, ppmp_no: toNumbersOnly(e.target.value) }))}
                                                 className="input-field"
                                                 placeholder="Enter PPMP number"
                                             />
@@ -1821,7 +2267,7 @@ const Encode = ({ user }) => {
                                             <input
                                                 type="text"
                                                 value={form.source_of_fund}
-                                                onChange={(e) => setForm((f) => ({ ...f, source_of_fund: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, source_of_fund: toLettersOnly(e.target.value) }))}
                                                 className="input-field"
                                                 placeholder="Source of fund"
                                             />
@@ -1835,7 +2281,7 @@ const Encode = ({ user }) => {
                                                     step="0.01"
                                                     min="0"
                                                     value={form.total_amount}
-                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
+                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
                                                 />
@@ -1867,12 +2313,23 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'Annual Procurement Plan' ? (
                                     <>
                                         <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
-                                                    setForm((f) => ({ ...f, title: e.target.value }));
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
                                                     if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
@@ -1894,6 +2351,7 @@ const Encode = ({ user }) => {
                                                 onChange={(e) => setForm((f) => ({ ...f, app_type: e.target.value }))}
                                                 className="input-field"
                                             >
+                                                <option value="">Select</option>
                                                 <option value="Final">Final</option>
                                                 <option value="Updated">Updated</option>
                                             </select>
@@ -1961,12 +2419,23 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'Market Scopping' ? (
                                     <>
                                         <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
-                                                    setForm((f) => ({ ...f, title: e.target.value }));
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
                                                     if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
@@ -1989,7 +2458,7 @@ const Encode = ({ user }) => {
                                                     step="0.01"
                                                     min="0"
                                                     value={form.market_budget}
-                                                    onChange={(e) => setForm((f) => ({ ...f, market_budget: e.target.value }))}
+                                                    onChange={(e) => setForm((f) => ({ ...f, market_budget: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
                                                 />
@@ -2032,21 +2501,21 @@ const Encode = ({ user }) => {
                                             <input
                                                 type="text"
                                                 value={form.market_service_provider_1}
-                                                onChange={(e) => setForm((f) => ({ ...f, market_service_provider_1: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, market_service_provider_1: toLettersOnly(e.target.value) }))}
                                                 className="input-field"
                                                 placeholder="Service Provider 1"
                                             />
                                             <input
                                                 type="text"
                                                 value={form.market_service_provider_2}
-                                                onChange={(e) => setForm((f) => ({ ...f, market_service_provider_2: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, market_service_provider_2: toLettersOnly(e.target.value) }))}
                                                 className="input-field mt-2"
                                                 placeholder="Service Provider 2"
                                             />
                                             <input
                                                 type="text"
                                                 value={form.market_service_provider_3}
-                                                onChange={(e) => setForm((f) => ({ ...f, market_service_provider_3: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, market_service_provider_3: toLettersOnly(e.target.value) }))}
                                                 className="input-field mt-2"
                                                 placeholder="Service Provider 3"
                                             />
@@ -2077,12 +2546,23 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'Requisition and Issue Slip' ? (
                                     <>
                                         <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
-                                                    setForm((f) => ({ ...f, title: e.target.value }));
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
                                                     if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
@@ -2098,21 +2578,11 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                         <div>
-                                            <label className="label">BAC Folder No.</label>
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={nextTransactionNumber ?? '…'}
-                                                className="input-field bg-[var(--background-subtle)] cursor-default"
-                                                aria-readonly="true"
-                                            />
-                                        </div>
-                                        <div>
                                             <label className="label">Office/Division <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.office_division}
-                                                onChange={(e) => setForm((f) => ({ ...f, office_division: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, office_division: toLettersOnly(e.target.value) }))}
                                                 className="input-field"
                                                 placeholder="Office or division"
                                             />
@@ -2122,7 +2592,7 @@ const Encode = ({ user }) => {
                                             <input
                                                 type="text"
                                                 value={form.received_by}
-                                                onChange={(e) => setForm((f) => ({ ...f, received_by: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, received_by: toLettersOnly(e.target.value) }))}
                                                 className="input-field"
                                                 placeholder="Name of recipient"
                                             />
@@ -2170,15 +2640,566 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                     </>
+                                ) : selectedSubDocType === 'Notice of BAC Meeting' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Agenda <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Agenda of the BAC meeting"
+                                                aria-invalid={!!newFormErrors.title}
+                                                aria-describedby={newFormErrors.title ? 'err-title' : undefined}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p id="err-title" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                                aria-describedby={newFormErrors.date ? 'err-date' : undefined}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p id="err-date" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input
+                                                    type="file"
+                                                    onChange={(e) => {
+                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                    }}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                                    aria-invalid={!!newFormErrors.file}
+                                                    aria-describedby={newFormErrors.file ? 'err-file' : undefined}
+                                                />
+                                            </div>
+                                            {newFormErrors.file && (
+                                                <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.file}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Invitation to COA' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input
+                                                    type="file"
+                                                    onChange={(e) => {
+                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                    }}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                                    aria-invalid={!!newFormErrors.file}
+                                                />
+                                            </div>
+                                            {newFormErrors.file && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.file}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date received <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date_received}
+                                                onChange={(e) => setForm((f) => ({ ...f, date_received: e.target.value }))}
+                                                className="input-field"
+                                            />
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Attendance Sheet' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Agenda <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Agenda"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">List of BAC Members <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <p className="text-xs text-[var(--text-muted)] mb-2">Add members and check Present if they attended, or leave unchecked for absent.</p>
+                                            {attendanceMembers.map((m) => (
+                                                <div key={m.id} className="flex items-center gap-3 mb-2">
+                                                    <input
+                                                        type="text"
+                                                        value={m.name}
+                                                        onChange={(e) => setAttendanceMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)))}
+                                                        className="input-field flex-1 min-w-0"
+                                                        placeholder="Member name"
+                                                    />
+                                                    <label className="flex items-center gap-2 shrink-0 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={m.present}
+                                                            onChange={(e) => setAttendanceMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, present: e.target.checked } : x)))}
+                                                            className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
+                                                        />
+                                                        <span className="text-sm text-[var(--text)]">Present</span>
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAttendanceMembers((prev) => prev.filter((x) => x.id !== m.id))}
+                                                        className="p-2 text-[var(--text-muted)] hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                        aria-label="Remove member"
+                                                    >
+                                                        <MdClose className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => setAttendanceMembers((prev) => [...prev, { id: Date.now(), name: '', present: true }])}
+                                                className="text-sm text-[var(--primary)] hover:underline font-medium"
+                                            >
+                                                + Add BAC member
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input
+                                                    type="file"
+                                                    onChange={(e) => {
+                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                    }}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                                    aria-invalid={!!newFormErrors.file}
+                                                />
+                                            </div>
+                                            {newFormErrors.file && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.file}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Minutes of the Meeting' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Agenda/Others <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Agenda or other details"
+                                                aria-invalid={!!newFormErrors.title}
+                                                aria-describedby={newFormErrors.title ? 'err-title' : undefined}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p id="err-title" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                                aria-describedby={newFormErrors.date ? 'err-date' : undefined}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p id="err-date" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'BAC Resolution' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Resolution No. <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.resolution_no} onChange={(e) => { const value = toNumbersOnly(e.target.value); setForm((f) => ({ ...f, resolution_no: value })); if (newFormErrors.resolution_no) setNewFormErrors((e2) => ({ ...e2, resolution_no: '' })); }} className={`input-field ${newFormErrors.resolution_no ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Resolution number" aria-invalid={!!newFormErrors.resolution_no} />
+                                            {newFormErrors.resolution_no && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.resolution_no}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.title} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, title: value })); if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' })); }} className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Title" aria-invalid={!!newFormErrors.title} />
+                                            {newFormErrors.title && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.title}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Winning Bidder <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.winning_bidder} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, winning_bidder: value })); if (newFormErrors.winning_bidder) setNewFormErrors((e2) => ({ ...e2, winning_bidder: '' })); }} className={`input-field ${newFormErrors.winning_bidder ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Winning bidder name" aria-invalid={!!newFormErrors.winning_bidder} />
+                                            {newFormErrors.winning_bidder && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.winning_bidder}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Amount <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                                <input type="number" step="0.01" min="0" value={form.total_amount} onChange={(e) => { const value = toNumbersOnly(e.target.value); setForm((f) => ({ ...f, total_amount: value })); if (newFormErrors.total_amount) setNewFormErrors((e2) => ({ ...e2, total_amount: '' })); }} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                            </div>
+                                            {newFormErrors.total_amount && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.total_amount}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Options <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <select value={form.resolution_option} onChange={(e) => { setForm((f) => ({ ...f, resolution_option: e.target.value })); if (newFormErrors.resolution_option) setNewFormErrors((e2) => ({ ...e2, resolution_option: '' })); }} className={`input-field ${newFormErrors.resolution_option ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.resolution_option}>
+                                                <option value="">Select option</option>
+                                                <option value="LCB">LCB</option>
+                                                <option value="LCRB">LCRB</option>
+                                                <option value="SCB">SCB</option>
+                                                <option value="SCRB">SCRB</option>
+                                            </select>
+                                            {newFormErrors.resolution_option && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.resolution_option}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Office/Division <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.office_division} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, office_division: value })); if (newFormErrors.office_division) setNewFormErrors((e2) => ({ ...e2, office_division: '' })); }} className={`input-field ${newFormErrors.office_division ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Office or division" aria-invalid={!!newFormErrors.office_division} />
+                                            {newFormErrors.office_division && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.office_division}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date of Adoption <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Venue <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.venue} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, venue: value })); if (newFormErrors.venue) setNewFormErrors((e2) => ({ ...e2, venue: '' })); }} className={`input-field ${newFormErrors.venue ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Venue" aria-invalid={!!newFormErrors.venue} />
+                                            {newFormErrors.venue && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.venue}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                            </div>
+                                            {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Contract Services/Purchase Order' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Received by COA <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <select value={form.contract_received_by_coa === true ? 'yes' : form.contract_received_by_coa === false ? 'no' : ''} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, contract_received_by_coa: v === 'yes' ? true : v === 'no' ? false : null })); if (newFormErrors.contract_received_by_coa) setNewFormErrors((e2) => ({ ...e2, contract_received_by_coa: '' })); }} className={`input-field ${newFormErrors.contract_received_by_coa ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.contract_received_by_coa}>
+                                                <option value="">Select</option>
+                                                <option value="yes">Yes</option>
+                                                <option value="no">No</option>
+                                            </select>
+                                            {newFormErrors.contract_received_by_coa && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.contract_received_by_coa}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Contract Amount <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                                <input type="number" step="0.01" min="0" value={form.contract_amount} onChange={(e) => { const value = toNumbersOnly(e.target.value); setForm((f) => ({ ...f, contract_amount: value })); if (newFormErrors.contract_amount) setNewFormErrors((e2) => ({ ...e2, contract_amount: '' })); }} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                            </div>
+                                            {newFormErrors.contract_amount && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.contract_amount}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Notarized (place) <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.notarized_place} onChange={(e) => { setForm((f) => ({ ...f, notarized_place: e.target.value })); if (newFormErrors.notarized_place) setNewFormErrors((e2) => ({ ...e2, notarized_place: '' })); }} className={`input-field ${newFormErrors.notarized_place ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Place of notarization" aria-invalid={!!newFormErrors.notarized_place} />
+                                            {newFormErrors.notarized_place && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.notarized_place}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Notarized (date) <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.notarized_date} onChange={(e) => { setForm((f) => ({ ...f, notarized_date: e.target.value })); if (newFormErrors.notarized_date) setNewFormErrors((e2) => ({ ...e2, notarized_date: '' })); }} className={`input-field ${newFormErrors.notarized_date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.notarized_date} />
+                                            {newFormErrors.notarized_date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.notarized_date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                            </div>
+                                            {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Notice to Proceed' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Service Provider <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.ntp_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_service_provider: value })); if (newFormErrors.ntp_service_provider) setNewFormErrors((e2) => ({ ...e2, ntp_service_provider: '' })); }} className={`input-field ${newFormErrors.ntp_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.ntp_service_provider} />
+                                            {newFormErrors.ntp_service_provider && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.ntp_service_provider}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Authorized Representative/Owner <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.ntp_authorized_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_authorized_rep: value })); if (newFormErrors.ntp_authorized_rep) setNewFormErrors((e2) => ({ ...e2, ntp_authorized_rep: '' })); }} className={`input-field ${newFormErrors.ntp_authorized_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Authorized representative or owner" aria-invalid={!!newFormErrors.ntp_authorized_rep} />
+                                            {newFormErrors.ntp_authorized_rep && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.ntp_authorized_rep}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Received By <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.ntp_received_by} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_received_by: value })); if (newFormErrors.ntp_received_by) setNewFormErrors((e2) => ({ ...e2, ntp_received_by: '' })); }} className={`input-field ${newFormErrors.ntp_received_by ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Received by" aria-invalid={!!newFormErrors.ntp_received_by} />
+                                            {newFormErrors.ntp_received_by && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.ntp_received_by}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                            </div>
+                                            {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'OSS' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Service Provider <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.oss_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, oss_service_provider: value })); if (newFormErrors.oss_service_provider) setNewFormErrors((e2) => ({ ...e2, oss_service_provider: '' })); }} className={`input-field ${newFormErrors.oss_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.oss_service_provider} />
+                                            {newFormErrors.oss_service_provider && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.oss_service_provider}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Authorized Representative/Owner <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.oss_authorized_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, oss_authorized_rep: value })); if (newFormErrors.oss_authorized_rep) setNewFormErrors((e2) => ({ ...e2, oss_authorized_rep: '' })); }} className={`input-field ${newFormErrors.oss_authorized_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Authorized representative or owner" aria-invalid={!!newFormErrors.oss_authorized_rep} />
+                                            {newFormErrors.oss_authorized_rep && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.oss_authorized_rep}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                            </div>
+                                            {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney" ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Service Provider <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.secretary_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, secretary_service_provider: value })); if (newFormErrors.secretary_service_provider) setNewFormErrors((e2) => ({ ...e2, secretary_service_provider: '' })); }} className={`input-field ${newFormErrors.secretary_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.secretary_service_provider} />
+                                            {newFormErrors.secretary_service_provider && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.secretary_service_provider}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Owner/Authorized Representative <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="text" value={form.secretary_owner_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, secretary_owner_rep: value })); if (newFormErrors.secretary_owner_rep) setNewFormErrors((e2) => ({ ...e2, secretary_owner_rep: '' })); }} className={`input-field ${newFormErrors.secretary_owner_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Owner or authorized representative" aria-invalid={!!newFormErrors.secretary_owner_rep} />
+                                            {newFormErrors.secretary_owner_rep && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.secretary_owner_rep}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                            </div>
+                                            {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'PhilGEPS Posting of Award' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                            </div>
+                                            {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Certificate of DILG R1 Website Posting of Award' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                            </div>
+                                            {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Notice of Award (Posted)' || selectedSubDocType === 'Abstract of Quotation (Posted)' || selectedSubDocType === 'BAC Resolution (Posted)' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Lease of Venue: Table Rating Factor' ? (
+                                    <>
+                                        <div className="text-sm text-[var(--text-muted)]">
+                                            No file is required for Lease of Venue. Click <span className="font-semibold text-[var(--text)]">Submit</span> below to save; the document will be marked complete.
+                                        </div>
+                                    </>
                                 ) : (
                                     <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
                                         <div>
                                             <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
-                                                    setForm((f) => ({ ...f, title: e.target.value }));
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
                                                     if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
@@ -2192,16 +3213,6 @@ const Encode = ({ user }) => {
                                                     {newFormErrors.title}
                                                 </p>
                                             )}
-                                        </div>
-                                        <div>
-                                            <label className="label">BAC Folder No.</label>
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={nextTransactionNumber ?? '…'}
-                                                className="input-field bg-[var(--background-subtle)] cursor-default"
-                                                aria-readonly="true"
-                                            />
                                         </div>
                                         <div>
                                             <label className="label">Date</label>
@@ -2282,6 +3293,220 @@ const Encode = ({ user }) => {
                 </div>
             )}
 
+            {/* Manage Documents modal – document type folders → BAC Folder No. → documents */}
+            {activeModal === 'manage' && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    aria-modal="true"
+                    role="dialog"
+                >
+                    <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl rounded-2xl border-0">
+                        <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between shrink-0 bg-[var(--surface)] rounded-t-2xl">
+                            <div className="flex items-center gap-3 min-w-0">
+                                {manageSelectedTypeId && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setManageSelectedTypeId(null)}
+                                        className="p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] shrink-0"
+                                        aria-label="Back"
+                                    >
+                                        <MdExpandLess className="w-5 h-5 rotate-90" />
+                                    </button>
+                                )}
+                                <h2 className="text-lg font-semibold text-[var(--text)] truncate">
+                                    {!manageSelectedTypeId ? 'Manage Documents' : (DOC_TYPES.find((d) => d.id === manageSelectedTypeId)?.name || 'Documents')}
+                                </h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setActiveModal(null); setManageSelectedTypeId(null); setManageFolderPopup(null); }}
+                                className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-lg transition-colors shrink-0"
+                                aria-label="Close"
+                            >
+                                <MdClose className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-auto p-6">
+                            {!manageSelectedTypeId ? (
+                                /* Level 1: Document type folders */
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {DOC_TYPES.map((docType) => {
+                                        const docsInType = documents.filter((d) => (d.category || '').trim() === (docType.name || '').trim());
+                                        const folderCount = new Set(docsInType.map((d) => (d.prNo || '').trim()).filter(Boolean)).size;
+                                        return (
+                                            <button
+                                                key={docType.id}
+                                                type="button"
+                                                onClick={() => setManageSelectedTypeId(docType.id)}
+                                                className="flex flex-col items-stretch rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)]/20 p-4 text-left transition-all shadow-sm"
+                                            >
+                                                <div className="w-12 h-12 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] mb-3">
+                                                    <MdFolder className="w-7 h-7" />
+                                                </div>
+                                                <p className="font-semibold text-[var(--text)] truncate">{docType.name}</p>
+                                                <p className="text-xs text-[var(--text-muted)] mt-0.5">{folderCount} BAC folder{folderCount !== 1 ? 's' : ''}</p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : !manageSelectedPrNo ? (
+                                /* Level 2: BAC Folder No. list (sorted) for this document type */
+                                (() => {
+                                    const docType = DOC_TYPES.find((d) => d.id === manageSelectedTypeId);
+                                    const categoryName = docType?.name || '';
+                                    const docsInCategory = documents.filter((d) => (d.category || '').trim() === categoryName);
+                                    const prNoList = [...new Set(docsInCategory.map((d) => (d.prNo || '').trim()).filter(Boolean))].sort();
+                                    if (prNoList.length === 0) {
+                                        return (
+                                            <p className="text-sm text-[var(--text-muted)] text-center py-8">No BAC folders yet for this document type.</p>
+                                        );
+                                    }
+                                    return (
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-[var(--text-muted)] mb-4">Click a BAC Folder to see all documents in a popup.</p>
+                                            <ul className="divide-y divide-[var(--border)] border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]">
+                                                {prNoList.map((prNo) => {
+                                                    const count = docsInCategory.filter((d) => (d.prNo || '').trim() === prNo).length;
+                                                    return (
+                                                        <li key={prNo}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setManageFolderPopup({ typeId: manageSelectedTypeId, prNo });
+                                                                    setManageFolderPopupIndex(0);
+                                                                }}
+                                                                className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-[var(--primary-muted)]/30 transition-colors"
+                                                            >
+                                                                <span className="font-medium text-[var(--text)]">BAC Folder No. {prNo}</span>
+                                                                <span className="text-sm text-[var(--text-muted)]">{count} document{count !== 1 ? 's' : ''}</span>
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        </div>
+                                    );
+                                })()
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Manage: popup when a BAC Folder is clicked – shows the file itself automatically (no View/Update) */}
+            {activeModal === 'manage' && manageFolderPopup && (() => {
+                const docType = DOC_TYPES.find((d) => d.id === manageFolderPopup.typeId);
+                const categoryName = docType?.name || '';
+                const docs = documents.filter(
+                    (d) => (d.category || '').trim() === categoryName && (d.prNo || '').trim() === manageFolderPopup.prNo
+                );
+                const docsWithFile = docs.filter((d) => d.file_url);
+                const currentIndex = Math.min(manageFolderPopupIndex, Math.max(0, docsWithFile.length - 1));
+                const showNav = docsWithFile.length > 1;
+                return (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" aria-modal="true" role="dialog">
+                        <div className="bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0">
+                                <h3 className="text-base font-semibold text-[var(--text)]">BAC Folder No. {manageFolderPopup.prNo}</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setManageFolderPopup(null);
+                                    }}
+                                    className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg"
+                                    aria-label="Close"
+                                >
+                                    <MdClose className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                                {docsWithFile.length === 0 ? (
+                                    <div className="p-6 text-center text-[var(--text-muted)]">No documents with files in this folder.</div>
+                                ) : (
+                                    <>
+                                        {showNav && (
+                                            <div className="px-4 py-2 border-b border-[var(--border)] flex items-center justify-center gap-3 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setManageFolderPopupIndex((i) => Math.max(0, i - 1))}
+                                                    disabled={currentIndex === 0}
+                                                    className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                                    aria-label="Previous file"
+                                                >
+                                                    <MdExpandLess className="w-5 h-5 rotate-90" />
+                                                </button>
+                                                <span className="text-sm text-[var(--text-muted)]">
+                                                    {currentIndex + 1} of {docsWithFile.length}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setManageFolderPopupIndex((i) => Math.min(docsWithFile.length - 1, i + 1))}
+                                                    disabled={currentIndex >= docsWithFile.length - 1}
+                                                    className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                                    aria-label="Next file"
+                                                >
+                                                    <MdExpandLess className="w-5 h-5 -rotate-90" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div className="flex-1 overflow-auto bg-gray-100 p-4 min-h-0">
+                                            {!manageFolderPopupPreview ? (
+                                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
+                                                    <span>Loading file…</span>
+                                                </div>
+                                            ) : manageFolderPopupPreview.previewBlobUrl === 'failed' ? (
+                                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                                                    <p>Could not load file.</p>
+                                                </div>
+                                            ) : manageFolderPopupPreview.previewBlobUrl ? (
+                                                (() => {
+                                                    const ct = manageFolderPopupPreview.previewBlobType || '';
+                                                    const isPdf = ct.includes('pdf');
+                                                    const isImage = /^image\//.test(ct);
+                                                    if (isPdf) {
+                                                        return (
+                                                            <embed
+                                                                src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
+                                                                type="application/pdf"
+                                                                className="w-full min-h-[500px] flex-1 border-0 rounded-lg"
+                                                                title={manageFolderPopupPreview.doc?.title || 'Document'}
+                                                            />
+                                                        );
+                                                    }
+                                                    if (isImage) {
+                                                        return (
+                                                            <img
+                                                                src={manageFolderPopupPreview.previewBlobUrl}
+                                                                alt={manageFolderPopupPreview.doc?.title || 'Document'}
+                                                                className="max-w-full max-h-[70vh] object-contain mx-auto"
+                                                            />
+                                                        );
+                                                    }
+                                                    return (
+                                                        <iframe
+                                                            src={manageFolderPopupPreview.previewBlobUrl}
+                                                            title={manageFolderPopupPreview.doc?.title || 'Document'}
+                                                            className="w-full min-h-[500px] flex-1 border-0 rounded-lg bg-white"
+                                                            sandbox="allow-same-origin"
+                                                        />
+                                                    );
+                                                })()
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
+                                                    <span>Loading file…</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Update documents selection modal – checklist by document type and sub-document */}
             {activeModal === 'updateList' && (
                 <div
@@ -2292,7 +3517,7 @@ const Encode = ({ user }) => {
                     <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0">
                         <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
                             <h2 className="text-lg font-semibold text-[var(--text)]">
-                                Manage Documents
+                                Update Documents
                             </h2>
                             <button
                                 type="button"
@@ -2318,64 +3543,62 @@ const Encode = ({ user }) => {
                                 <>
                                     {documents.length === 0 && (
                                         <p className="text-sm text-[var(--text-muted)] text-center rounded-xl bg-[var(--background-subtle)] px-4 py-3">
-                                            No documents uploaded yet. All folders below are empty for now.
+                                            No documents uploaded yet.
                                         </p>
                                     )}
 
-                                    {/* Folder grid for document types (file-management style) */}
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                                    {/* Document checklist – grouped by document type, click a document to update it */}
+                                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                                        <p className="text-xs text-[var(--text-muted)]">Click a document to update it.</p>
                                         {checklistData.map((docType) => {
-                                            const allSubs = docType.subDocsWithStatus || [];
-                                            const total = allSubs.length;
-                                            const completed = allSubs.filter((s) => s.done).length;
-                                            const pending = allSubs.filter((s) => !s.done && s.doc).length;
-                                            const notStarted = allSubs.filter((s) => !s.doc).length;
-                                            const isActive = !activeChecklistCategoryId || activeChecklistCategoryId === docType.id;
-                                            const hasAny = completed + pending > 0;
+                                            const subs = docType.subDocsWithStatus || [];
+                                            const completed = subs.filter((s) => s.done).length;
+                                            const ongoing = subs.filter((s) => !s.done && s.doc).length;
+                                            const pending = subs.filter((s) => !s.doc).length;
+                                            const total = subs.length;
                                             return (
-                                                <button
+                                                <div
                                                     key={docType.id}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setActiveChecklistCategoryId((prev) =>
-                                                            prev === docType.id ? null : docType.id
-                                                        )
-                                                    }
-                                                    className={`flex flex-col items-stretch rounded-2xl border px-3.5 py-3.5 text-left transition-all duration-200 shadow-sm ${
-                                                        isActive
-                                                            ? 'border-[var(--primary)] bg-[var(--primary-muted)]/60 ring-1 ring-[var(--primary)]/40'
-                                                            : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--background-subtle)]'
-                                                    }`}
+                                                    className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
                                                 >
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[var(--primary)] ${isActive ? 'bg-[var(--primary-muted)]' : 'bg-[var(--background-subtle)]'}`}>
-                                                            <MdFolder className="w-6 h-6" />
-                                                        </div>
-                                                        <div className="ml-auto flex items-center justify-center w-9 h-9 rounded-full bg-white/80 border border-[var(--border-light)] text-[var(--text)] text-sm font-semibold shadow-sm">
-                                                            {completed}
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-2 min-w-0 flex-1">
-                                                        <p className="text-sm font-semibold text-[var(--text)] truncate leading-snug">
-                                                            {docType.name}
-                                                        </p>
-                                                        <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                                                            {total} item{total !== 1 ? 's' : ''}
-                                                            {hasAny && (
-                                                                <>
-                                                                    {' '}• {completed} done, {pending} ongoing
-                                                                </>
-                                                            )}
-                                                            {notStarted === total && !hasAny && ' • not yet submitted'}
+                                                    <div className="px-4 py-3 bg-[var(--primary)]/10 border-b border-[var(--border)]">
+                                                        <p className="text-sm font-semibold text-[var(--text)]">{docType.name}</p>
+                                                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                                                            {total} document{total !== 1 ? 's' : ''}:{' '}
+                                                            <span className="text-green-700 font-medium">{completed} Complete</span>
+                                                            {ongoing > 0 && <><span className="text-[var(--text-muted)]"> · </span><span className="text-amber-700 font-medium">{ongoing} Ongoing</span></>}
+                                                            {pending > 0 && <><span className="text-[var(--text-muted)]"> · </span><span className="text-[var(--text-muted)] font-medium">{pending} Pending</span></>}
                                                         </p>
                                                     </div>
-                                                </button>
+                                                    <ul className="divide-y divide-[var(--border)]">
+                                                        {subs.map((sub) => {
+                                                            const hasDoc = !!sub.doc;
+                                                            const status = sub.done ? 'complete' : hasDoc ? 'ongoing' : 'pending';
+                                                            return (
+                                                                <li key={`${docType.id}-${sub.name}`}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => hasDoc && handleChecklistSubDocClick(sub)}
+                                                                        disabled={!hasDoc}
+                                                                        className={`w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left transition-colors text-sm ${hasDoc ? 'hover:bg-[var(--primary-muted)]/30 cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                                                                    >
+                                                                        <span className="font-medium text-[var(--text)] truncate">{sub.name}</span>
+                                                                        <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                                                                            status === 'complete' ? 'bg-green-100 text-green-800' :
+                                                                            status === 'ongoing' ? 'bg-amber-100 text-amber-800' :
+                                                                            'bg-[var(--background-subtle)] text-[var(--text-muted)]'
+                                                                        }`}>
+                                                                            {status === 'complete' ? 'Complete' : status === 'ongoing' ? 'Ongoing' : 'Not started'}
+                                                                        </span>
+                                                                    </button>
+                                                                </li>
+                                                            );
+                                                        })}
+                                                    </ul>
+                                                </div>
                                             );
                                         })}
                                     </div>
-
-                                    {/* Folder documents list intentionally removed from Manage Documents view */}
-
                                 </>
                             )}
                         </div>
@@ -2433,7 +3656,7 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.title}
-                                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Purpose of the purchase request"
                                         />
@@ -2457,26 +3680,26 @@ const Encode = ({ user }) => {
                                             className="input-field"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="label">Total amount</label>
-                                        <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                                            <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={form.total_amount}
-                                                onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
-                                                className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
-                                                placeholder="0.00"
-                                            />
+                                        <div>
+                                            <label className="label">Total amount</label>
+                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={form.total_amount}
+                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
+                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
                                 </>
                             ) : selectedDoc?.subDoc === 'Activity Design' ? (
                                 <>
                                     <div>
-                                        <label className="label">Transaction No.</label>
+                                        <label className="label">BAC Folder No.</label>
                                         <input
                                             type="text"
                                             readOnly
@@ -2490,7 +3713,7 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.title}
-                                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Document title"
                                         />
@@ -2510,31 +3733,31 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.source_of_fund}
-                                            onChange={(e) => setForm((f) => ({ ...f, source_of_fund: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, source_of_fund: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Source of fund"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="label">Total Amount</label>
-                                        <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                                            <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={form.total_amount}
-                                                onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
-                                                className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
-                                                placeholder="0.00"
-                                            />
+                                        <div>
+                                            <label className="label">Total Amount</label>
+                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={form.total_amount}
+                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
+                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
                                 </>
                             ) : selectedDoc?.subDoc === 'Project Procurement Management Plan/Supplemental PPMP' ? (
                                 <>
                                     <div>
-                                        <label className="label">Transaction No.</label>
+                                        <label className="label">BAC Folder No.</label>
                                         <input
                                             type="text"
                                             readOnly
@@ -2548,7 +3771,7 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.title}
-                                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Document title"
                                         />
@@ -2558,7 +3781,7 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.ppmp_no}
-                                            onChange={(e) => setForm((f) => ({ ...f, ppmp_no: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, ppmp_no: toNumbersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Enter PPMP number"
                                         />
@@ -2568,26 +3791,26 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.source_of_fund}
-                                            onChange={(e) => setForm((f) => ({ ...f, source_of_fund: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, source_of_fund: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Source of fund"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="label">Total Budget</label>
-                                        <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                                            <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={form.total_amount}
-                                                onChange={(e) => setForm((f) => ({ ...f, total_amount: e.target.value }))}
-                                                className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
-                                                placeholder="0.00"
-                                            />
+                                        <div>
+                                            <label className="label">Total Budget</label>
+                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={form.total_amount}
+                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
+                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
                                 </>
                             ) : selectedDoc?.subDoc === 'Annual Procurement Plan' ? (
                                 <>
@@ -2596,7 +3819,7 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.title}
-                                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Document title"
                                         />
@@ -2608,6 +3831,7 @@ const Encode = ({ user }) => {
                                             onChange={(e) => setForm((f) => ({ ...f, app_type: e.target.value }))}
                                             className="input-field"
                                         >
+                                            <option value="">Select</option>
                                             <option value="Final">Final</option>
                                             <option value="Updated">Updated</option>
                                         </select>
@@ -2657,7 +3881,7 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.title}
-                                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Document title"
                                         />
@@ -2671,7 +3895,7 @@ const Encode = ({ user }) => {
                                                 step="0.01"
                                                 min="0"
                                                 value={form.market_budget}
-                                                onChange={(e) => setForm((f) => ({ ...f, market_budget: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, market_budget: toNumbersOnly(e.target.value) }))}
                                                 className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                 placeholder="0.00"
                                             />
@@ -2714,21 +3938,21 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.market_service_provider_1}
-                                            onChange={(e) => setForm((f) => ({ ...f, market_service_provider_1: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, market_service_provider_1: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Service Provider 1"
                                         />
                                         <input
                                             type="text"
                                             value={form.market_service_provider_2}
-                                            onChange={(e) => setForm((f) => ({ ...f, market_service_provider_2: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, market_service_provider_2: toLettersOnly(e.target.value) }))}
                                             className="input-field mt-2"
                                             placeholder="Service Provider 2"
                                         />
                                         <input
                                             type="text"
                                             value={form.market_service_provider_3}
-                                            onChange={(e) => setForm((f) => ({ ...f, market_service_provider_3: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, market_service_provider_3: toLettersOnly(e.target.value) }))}
                                             className="input-field mt-2"
                                             placeholder="Service Provider 3"
                                         />
@@ -2751,7 +3975,7 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.title}
-                                            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Purpose of the requisition"
                                         />
@@ -2761,19 +3985,41 @@ const Encode = ({ user }) => {
                                         <input
                                             type="text"
                                             value={form.office_division}
-                                            onChange={(e) => setForm((f) => ({ ...f, office_division: e.target.value }))}
+                                            onChange={(e) => setForm((f) => ({ ...f, office_division: toLettersOnly(e.target.value) }))}
                                             className="input-field"
                                             placeholder="Office or division"
                                         />
                                     </div>
+                                        <div>
+                                            <label className="label">Received By</label>
+                                            <input
+                                                type="text"
+                                                value={form.received_by}
+                                                onChange={(e) => setForm((f) => ({ ...f, received_by: toLettersOnly(e.target.value) }))}
+                                                className="input-field"
+                                                placeholder="Name of recipient"
+                                            />
+                                        </div>
                                     <div>
-                                        <label className="label">Received By</label>
+                                        <label className="label">Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.date}
+                                            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Notice of BAC Meeting' ? (
+                                <>
+                                    <div>
+                                        <label className="label">Agenda</label>
                                         <input
                                             type="text"
-                                            value={form.received_by}
-                                            onChange={(e) => setForm((f) => ({ ...f, received_by: e.target.value }))}
+                                            value={form.title}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
                                             className="input-field"
-                                            placeholder="Name of recipient"
+                                            placeholder="Agenda of the BAC meeting"
                                         />
                                     </div>
                                     <div>
@@ -2784,6 +4030,294 @@ const Encode = ({ user }) => {
                                             onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
                                             className="input-field"
                                         />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Invitation to COA' ? (
+                                <>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.date}
+                                            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date received</label>
+                                        <input
+                                            type="date"
+                                            value={form.date_received}
+                                            onChange={(e) => setForm((f) => ({ ...f, date_received: e.target.value }))}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Attendance Sheet' ? (
+                                <>
+                                    <div>
+                                        <label className="label">Agenda</label>
+                                        <input
+                                            type="text"
+                                            value={form.title}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
+                                            className="input-field"
+                                            placeholder="Agenda"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.date}
+                                            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label">List of BAC Members</label>
+                                        <p className="text-xs text-[var(--text-muted)] mb-2">Present = checked, Absent = unchecked.</p>
+                                        {attendanceMembers.map((m) => (
+                                            <div key={m.id} className="flex items-center gap-3 mb-2">
+                                                <input
+                                                    type="text"
+                                                    value={m.name}
+                                                    onChange={(e) => setAttendanceMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)))}
+                                                    className="input-field flex-1 min-w-0"
+                                                    placeholder="Member name"
+                                                />
+                                                <label className="flex items-center gap-2 shrink-0 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={m.present}
+                                                        onChange={(e) => setAttendanceMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, present: e.target.checked } : x)))}
+                                                        className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
+                                                    />
+                                                    <span className="text-sm text-[var(--text)]">Present</span>
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAttendanceMembers((prev) => prev.filter((x) => x.id !== m.id))}
+                                                    className="p-2 text-[var(--text-muted)] hover:text-red-600 hover:bg-red-50 rounded"
+                                                    aria-label="Remove member"
+                                                >
+                                                    <MdClose className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setAttendanceMembers((prev) => [...prev, { id: Date.now(), name: '', present: true }])}
+                                            className="text-sm text-[var(--primary)] hover:underline font-medium"
+                                        >
+                                            + Add BAC member
+                                        </button>
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Minutes of the Meeting' ? (
+                                <>
+                                    <div>
+                                        <label className="label">Agenda/Others</label>
+                                        <input
+                                            type="text"
+                                            value={form.title}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
+                                            className="input-field"
+                                            placeholder="Agenda or other details"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.date}
+                                            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'BAC Resolution' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Resolution No.</label>
+                                        <input type="text" value={form.resolution_no} onChange={(e) => setForm((f) => ({ ...f, resolution_no: toNumbersOnly(e.target.value) }))} className="input-field" placeholder="Resolution number" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Title</label>
+                                        <input type="text" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="input-field" placeholder="Title" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Winning Bidder</label>
+                                        <input type="text" value={form.winning_bidder} onChange={(e) => setForm((f) => ({ ...f, winning_bidder: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Winning bidder name" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Amount</label>
+                                        <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                            <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                            <input type="number" step="0.01" min="0" value={form.total_amount} onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="label">Options</label>
+                                        <select value={form.resolution_option} onChange={(e) => setForm((f) => ({ ...f, resolution_option: e.target.value }))} className="input-field">
+                                            <option value="">Select option</option>
+                                            <option value="LCB">LCB</option>
+                                            <option value="LCRB">LCRB</option>
+                                            <option value="SCB">SCB</option>
+                                            <option value="SCRB">SCRB</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Office/Division</label>
+                                        <input type="text" value={form.office_division} onChange={(e) => setForm((f) => ({ ...f, office_division: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Office or division" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date of Adoption</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Venue</label>
+                                        <input type="text" value={form.venue} onChange={(e) => setForm((f) => ({ ...f, venue: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Venue" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Contract Services/Purchase Order' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Received by COA</label>
+                                        <select value={form.contract_received_by_coa === true ? 'yes' : form.contract_received_by_coa === false ? 'no' : ''} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, contract_received_by_coa: v === 'yes' ? true : v === 'no' ? false : null })); }} className="input-field">
+                                            <option value="">Select</option>
+                                            <option value="yes">Yes</option>
+                                            <option value="no">No</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="label">Contract Amount</label>
+                                        <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                            <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                            <input type="number" step="0.01" min="0" value={form.contract_amount} onChange={(e) => setForm((f) => ({ ...f, contract_amount: toNumbersOnly(e.target.value) }))} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="label">Notarized (place)</label>
+                                        <input type="text" value={form.notarized_place} onChange={(e) => setForm((f) => ({ ...f, notarized_place: e.target.value }))} className="input-field" placeholder="Place of notarization" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Notarized (date)</label>
+                                        <input type="date" value={form.notarized_date} onChange={(e) => setForm((f) => ({ ...f, notarized_date: e.target.value }))} className="input-field" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Notice to Proceed' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Service Provider</label>
+                                        <input type="text" value={form.ntp_service_provider} onChange={(e) => setForm((f) => ({ ...f, ntp_service_provider: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Service provider name" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Authorized Representative/Owner</label>
+                                        <input type="text" value={form.ntp_authorized_rep} onChange={(e) => setForm((f) => ({ ...f, ntp_authorized_rep: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Authorized representative or owner" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Received By</label>
+                                        <input type="text" value={form.ntp_received_by} onChange={(e) => setForm((f) => ({ ...f, ntp_received_by: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Received by" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'OSS' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Service Provider</label>
+                                        <input type="text" value={form.oss_service_provider} onChange={(e) => setForm((f) => ({ ...f, oss_service_provider: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Service provider name" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Authorized Representative/Owner</label>
+                                        <input type="text" value={form.oss_authorized_rep} onChange={(e) => setForm((f) => ({ ...f, oss_authorized_rep: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Authorized representative or owner" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === "Applicable: Secretary's Certificate and Special Power of Attorney" ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Service Provider</label>
+                                        <input type="text" value={form.secretary_service_provider} onChange={(e) => setForm((f) => ({ ...f, secretary_service_provider: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Service provider name" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Owner/Authorized Representative</label>
+                                        <input type="text" value={form.secretary_owner_rep} onChange={(e) => setForm((f) => ({ ...f, secretary_owner_rep: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Owner or authorized representative" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'PhilGEPS Posting of Award' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Upload</label>
+                                        <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }))} className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] w-full" accept=".pdf,.doc,.docx,.xls,.xlsx" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Certificate of DILG R1 Website Posting of Award' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Upload</label>
+                                        <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }))} className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] w-full" accept=".pdf,.doc,.docx,.xls,.xlsx" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Notice of Award (Posted)' || selectedDoc?.subDoc === 'Abstract of Quotation (Posted)' || selectedDoc?.subDoc === 'BAC Resolution (Posted)' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
                                     </div>
                                 </>
                             ) : (

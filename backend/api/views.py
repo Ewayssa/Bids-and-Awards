@@ -498,8 +498,51 @@ def get_dashboard_data(request):
 
 @api_view(['GET'])
 def backup_data(request):
-    """Export calendar events, users (no passwords), documents and reports metadata as JSON."""
+    """
+    Export a complete records backup as JSON: calendar events, users (no passwords),
+    and full document/report metadata (all form fields). Actual uploaded files (PDFs)
+    are not included—they remain on the server in media/. Use this backup to restore
+    event lists, user roles/status, and document/report metadata on the same server.
+    For full disaster recovery, also back up the database and the media folder.
+    """
     from django.http import JsonResponse
+    from decimal import Decimal
+
+    def _serialize_doc(d):
+        """Export all document fields except the file binary; include file path for reference."""
+        out = {'id': str(d.id)}
+        # All model fields except 'file' (we store file name for reference only)
+        for f in ['prNo', 'title', 'user_pr_no', 'total_amount', 'source_of_fund', 'ppmp_no', 'app_no', 'app_type',
+                  'certified_true_copy', 'certified_signed_by', 'market_budget', 'market_period_from', 'market_period_to',
+                  'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3',
+                  'office_division', 'received_by', 'date', 'date_received', 'attendance_members', 'resolution_no',
+                  'winning_bidder', 'resolution_option', 'venue', 'aoq_no', 'abstract_bidders', 'table_rating_service_provider',
+                  'table_rating_address', 'table_rating_factor_value', 'notice_award_service_provider', 'notice_award_authorized_rep',
+                  'notice_award_conforme', 'contract_received_by_coa', 'contract_amount', 'notarized_place', 'notarized_date',
+                  'ntp_service_provider', 'ntp_authorized_rep', 'ntp_received_by', 'oss_service_provider', 'oss_authorized_rep',
+                  'secretary_service_provider', 'secretary_owner_rep', 'uploadedBy', 'category', 'subDoc', 'status']:
+            val = getattr(d, f, None)
+            if val is None:
+                out[f] = None
+            elif isinstance(val, (str, bool)):
+                out[f] = val
+            elif hasattr(val, 'isoformat'):
+                out[f] = val.isoformat() if val else None
+            elif isinstance(val, Decimal):
+                out[f] = str(val)
+            else:
+                out[f] = val
+        out['uploaded_at'] = d.uploaded_at.isoformat() if d.uploaded_at else None
+        out['updated_at'] = d.updated_at.isoformat() if d.updated_at else None
+        out['file_name'] = d.file.name if d.file else None
+        return out
+
+    def _serialize_report(r):
+        out = {'id': str(r.id), 'title': r.title, 'submitting_office': r.submitting_office or '',
+               'uploadedBy': r.uploadedBy or '', 'file_name': r.file.name if r.file else None}
+        out['uploaded_at'] = r.uploaded_at.isoformat() if r.uploaded_at else None
+        return out
+
     events = [
         {'id': str(e.id), 'title': e.title, 'date': e.date.isoformat()}
         for e in CalendarEvent.objects.all().order_by('-created_at')
@@ -508,46 +551,69 @@ def backup_data(request):
         {'id': u.id, 'username': u.username, 'role': u.role, 'fullName': u.fullName or '', 'position': getattr(u, 'position', '') or '', 'office': u.office or '', 'is_active': u.is_active}
         for u in User.objects.all()
     ]
-    docs = [
-        {'id': str(d.id), 'title': d.title, 'prNo': d.prNo, 'date': d.date.isoformat() if d.date else None,
-         'category': d.category, 'subDoc': d.subDoc, 'uploadedBy': d.uploadedBy, 'status': d.status,
-         'uploaded_at': d.uploaded_at.isoformat() if d.uploaded_at else None}
-        for d in Document.objects.all().order_by('-uploaded_at')
-    ]
-    reports = [
-        {'id': str(r.id), 'title': r.title, 'submitting_office': r.submitting_office,
-         'uploadedBy': r.uploadedBy, 'uploaded_at': r.uploaded_at.isoformat() if r.uploaded_at else None}
-        for r in Report.objects.all().order_by('-uploaded_at')
-    ]
-    data = {'calendarEvents': events, 'users': users, 'documents': docs, 'reports': reports}
+    docs = [_serialize_doc(d) for d in Document.objects.all().order_by('-uploaded_at')]
+    reports = [_serialize_report(r) for r in Report.objects.all().order_by('-uploaded_at')]
+
+    data = {
+        'backupVersion': 1,
+        'createdAt': timezone.now().isoformat(),
+        'description': 'BAC records backup: events, users, document and report metadata (no file contents). Back up server media folder separately for full recovery.',
+        'calendarEvents': events,
+        'users': users,
+        'documents': docs,
+        'reports': reports,
+    }
     return JsonResponse(data)
 
 
 @api_view(['POST'])
 def restore_data(request):
-    """Restore calendar events, user status (is_active, role, etc), and document status from JSON."""
+    """
+    Restore from a records backup JSON:
+    - Replaces all calendar events with those in the backup.
+    - Updates existing users (is_active, role, fullName, position, office).
+    - Updates existing documents with all backed-up metadata (status and all form fields); does not create new documents or replace file uploads.
+    - Updates existing reports with backed-up metadata (title, submitting_office, uploadedBy); does not replace file uploads.
+    """
     from datetime import datetime
+    from decimal import Decimal, InvalidOperation
     try:
         data = request.data
     except Exception:
         return Response({'detail': 'Invalid JSON'}, status=status.HTTP_400_BAD_REQUEST)
-    restored = {'calendarEvents': 0, 'users': 0, 'documents': 0}
+    restored = {'calendarEvents': 0, 'users': 0, 'documents': 0, 'reports': 0}
+
+    def _parse_date(val):
+        if val is None:
+            return None
+        if hasattr(val, 'year'):
+            return val
+        if isinstance(val, str) and val.strip():
+            try:
+                return datetime.strptime(val[:10], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass
+        return None
+
+    def _parse_decimal(val):
+        if val is None or val == '':
+            return None
+        if isinstance(val, Decimal):
+            return val
+        try:
+            return Decimal(str(val).replace(',', '').strip())
+        except (InvalidOperation, ValueError, TypeError):
+            return None
+
     if 'calendarEvents' in data and isinstance(data['calendarEvents'], list):
         CalendarEvent.objects.all().delete()
         for e in data['calendarEvents']:
-            date_val = e.get('date')
-            if isinstance(date_val, str):
-                try:
-                    date_val = datetime.strptime(date_val[:10], '%Y-%m-%d').date()
-                except (ValueError, TypeError):
-                    continue
+            date_val = _parse_date(e.get('date'))
             if not date_val:
                 continue
-            CalendarEvent.objects.create(
-                title=e.get('title', ''),
-                date=date_val
-            )
+            CalendarEvent.objects.create(title=e.get('title', ''), date=date_val)
             restored['calendarEvents'] += 1
+
     if 'users' in data and isinstance(data['users'], list):
         for u in data['users']:
             uid = u.get('id')
@@ -557,11 +623,8 @@ def restore_data(request):
                 user = User.objects.get(pk=uid)
                 if 'is_active' in u:
                     user.is_active = bool(u['is_active'])
-                if 'role' in u:
-                    role_val = u['role']
-                    # Validate role is a valid choice
-                    if role_val in dict(User.ROLE_CHOICES):
-                        user.role = role_val
+                if 'role' in u and u['role'] in dict(User.ROLE_CHOICES):
+                    user.role = u['role']
                 if 'fullName' in u:
                     user.fullName = u['fullName'] or ''
                 if 'position' in u:
@@ -572,6 +635,19 @@ def restore_data(request):
                 restored['users'] += 1
             except User.DoesNotExist:
                 pass
+
+    # Restore all document metadata for existing documents (by id); do not touch file field
+    doc_meta_fields = [
+        'title', 'user_pr_no', 'total_amount', 'source_of_fund', 'ppmp_no', 'app_no', 'app_type',
+        'certified_true_copy', 'certified_signed_by', 'market_budget', 'market_period_from', 'market_period_to',
+        'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3',
+        'office_division', 'received_by', 'date', 'date_received', 'attendance_members', 'resolution_no',
+        'winning_bidder', 'resolution_option', 'venue', 'aoq_no', 'abstract_bidders', 'table_rating_service_provider',
+        'table_rating_address', 'table_rating_factor_value', 'notice_award_service_provider', 'notice_award_authorized_rep',
+        'notice_award_conforme', 'contract_received_by_coa', 'contract_amount', 'notarized_place', 'notarized_date',
+        'ntp_service_provider', 'ntp_authorized_rep', 'ntp_received_by', 'oss_service_provider', 'oss_authorized_rep',
+        'secretary_service_provider', 'secretary_owner_rep', 'uploadedBy', 'category', 'subDoc', 'status',
+    ]
     if 'documents' in data and isinstance(data['documents'], list):
         for d in data['documents']:
             doc_id = d.get('id')
@@ -579,10 +655,42 @@ def restore_data(request):
                 continue
             try:
                 doc = Document.objects.get(pk=doc_id)
-                if 'status' in d and d['status'] in ('pending', 'ongoing', 'complete'):
-                    doc.status = d['status']
-                    doc.save()
-                    restored['documents'] += 1
+                for f in doc_meta_fields:
+                    if f not in d:
+                        continue
+                    val = d[f]
+                    if f in ('date', 'date_received', 'notarized_date'):
+                        doc.__setattr__(f, _parse_date(val))
+                    elif f in ('total_amount', 'market_budget', 'contract_amount'):
+                        doc.__setattr__(f, _parse_decimal(val))
+                    elif f in ('contract_received_by_coa', 'certified_true_copy'):
+                        doc.__setattr__(f, bool(val) if val is not None else False)
+                    elif f == 'status':
+                        if val in ('pending', 'ongoing', 'complete'):
+                            doc.status = val
+                    else:
+                        doc.__setattr__(f, val if val is not None else '')
+                doc.save()
+                restored['documents'] += 1
             except (Document.DoesNotExist, ValueError):
                 pass
+
+    if 'reports' in data and isinstance(data['reports'], list):
+        for r in data['reports']:
+            rid = r.get('id')
+            if not rid:
+                continue
+            try:
+                report = Report.objects.get(pk=rid)
+                if 'title' in r:
+                    report.title = r['title'] or report.title
+                if 'submitting_office' in r:
+                    report.submitting_office = r['submitting_office'] or ''
+                if 'uploadedBy' in r:
+                    report.uploadedBy = r['uploadedBy'] or ''
+                report.save()
+                restored['reports'] += 1
+            except (Report.DoesNotExist, ValueError):
+                pass
+
     return Response({'detail': 'Restore completed', 'restored': restored})

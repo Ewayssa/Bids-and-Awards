@@ -9,7 +9,7 @@ const Personnel = ({ user }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [addForm, setAddForm] = useState({ username: '', fullName: '', position: '', office: '', role: ROLES.EMPLOYEE });
+    const [addForm, setAddForm] = useState({ username: '', fullName: '', position: '', office: '', role: '' });
     const [addError, setAddError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showConfirmAdd, setShowConfirmAdd] = useState(false);
@@ -35,7 +35,7 @@ const Personnel = ({ user }) => {
     }, []);
 
     const openAddModal = () => {
-        setAddForm({ username: '', fullName: '', position: '', office: '', role: ROLES.EMPLOYEE });
+        setAddForm({ username: '', fullName: '', position: '', office: '', role: '' });
         setAddError('');
         setShowAddModal(true);
         setNewUserCredentials(null);
@@ -83,6 +83,10 @@ const Personnel = ({ user }) => {
         }
         if (!office.trim()) {
             setAddError('Department is required.');
+            return;
+        }
+        if (!role || !String(role).trim()) {
+            setAddError('Role is required.');
             return;
         }
         setShowConfirmAdd(true);
@@ -377,6 +381,7 @@ const Personnel = ({ user }) => {
                                     className="input-field w-full"
                                     disabled={submitting}
                                 >
+                                    <option value="">Select</option>
                                     {getAvailableRoles(user?.role).map((role) => (
                                         <option key={role.value} value={role.value}>
                                             {role.label}
@@ -503,6 +508,7 @@ const Personnel = ({ user }) => {
                                     className="input-field w-full"
                                     disabled={submitting}
                                 >
+                                    <option value="">Select</option>
                                     {getAvailableRoles(user?.role).map((role) => (
                                         <option key={role.value} value={role.value}>
                                             {role.label}

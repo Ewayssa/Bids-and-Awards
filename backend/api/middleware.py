@@ -1,5 +1,7 @@
 """Custom middleware for the API app."""
 
+from django.conf import settings
+
 
 class DisableCSRFForAPI:
     """Exempt API requests from CSRF so the React frontend can POST/PATCH/DELETE without a token."""
@@ -25,9 +27,17 @@ class SecureHeadersMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
-        # Clickjacking protection (also handled by Django's XFrameOptionsMiddleware,
-        # but we set it explicitly here to mirror the original filter).
-        response.setdefault("X-Frame-Options", "DENY")
+        # Clickjacking protection:
+        # - For regular pages and API responses, keep X-Frame-Options: DENY
+        # - For media files (PDFs/documents), allow embedding so React frontend
+        #   can show them in <embed>/<iframe> even when served from a different port.
+        media_url = getattr(settings, "MEDIA_URL", "/media/")
+        if request.path.startswith(media_url):
+            # Remove any X-Frame-Options header that might have been set upstream
+            if "X-Frame-Options" in response:
+                del response["X-Frame-Options"]
+        else:
+            response.setdefault("X-Frame-Options", "DENY")
 
         # Basic XSS protection header (legacy but harmless for modern browsers).
         response.setdefault("X-XSS-Protection", "1; mode=block")

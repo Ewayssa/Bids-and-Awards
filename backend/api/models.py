@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser, UserManager as AuthUserMana
 from django.db import models  # type: ignore
 from django.db.models.signals import post_save, pre_save  # type: ignore
 from django.dispatch import receiver  # type: ignore
+import json
 import uuid
 
 
@@ -76,6 +77,31 @@ class Document(models.Model):
     office_division = models.CharField(max_length=255, blank=True, help_text='Office/Division (for Requisition and Issue Slip)')
     received_by = models.CharField(max_length=255, blank=True, help_text='Received By (for Requisition and Issue Slip)')
     date = models.DateField(null=True, blank=True)
+    date_received = models.DateField(null=True, blank=True, help_text='Date received (for Invitation to COA)')
+    attendance_members = models.TextField(blank=True, help_text='JSON array of {name, present} (for Attendance Sheet)')
+    resolution_no = models.CharField(max_length=100, blank=True, help_text='Resolution No. (for BAC Resolution)')
+    winning_bidder = models.CharField(max_length=255, blank=True, help_text='Winning Bidder (for BAC Resolution)')
+    resolution_option = models.CharField(max_length=20, blank=True, help_text='Options: LCB, LCRB, SCB, SCRB (for BAC Resolution)')
+    venue = models.CharField(max_length=255, blank=True, help_text='Venue (for BAC Resolution)')
+    aoq_no = models.CharField(max_length=100, blank=True, help_text='AOQ No. (for Abstract of Quotation)')
+    abstract_bidders = models.TextField(blank=True, help_text='JSON array of {name, amount, remarks} (for Abstract of Quotation), min 3 bidders')
+    table_rating_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for Lease of Venue: Table Rating Factor)')
+    table_rating_address = models.CharField(max_length=500, blank=True, help_text='Address (for Lease of Venue: Table Rating Factor)')
+    table_rating_factor_value = models.CharField(max_length=100, blank=True, help_text='Factor Value (for Lease of Venue: Table Rating Factor)')
+    notice_award_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for Notice of Award)')
+    notice_award_authorized_rep = models.CharField(max_length=255, blank=True, help_text='Authorized Representative/Owner (for Notice of Award)')
+    notice_award_conforme = models.CharField(max_length=255, blank=True, help_text='Conforme (for Notice of Award)')
+    contract_received_by_coa = models.BooleanField(default=False, help_text='Received by COA? Yes/No (for Contract Services/Purchase Order)')
+    contract_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Contract Amount (for Contract Services/Purchase Order)')
+    notarized_place = models.CharField(max_length=255, blank=True, help_text='Notarized place (for Contract Services/Purchase Order)')
+    notarized_date = models.DateField(null=True, blank=True, help_text='Notarized date (for Contract Services/Purchase Order)')
+    ntp_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for Notice to Proceed)')
+    ntp_authorized_rep = models.CharField(max_length=255, blank=True, help_text='Authorized Representative/Owner (for Notice to Proceed)')
+    ntp_received_by = models.CharField(max_length=255, blank=True, help_text='Received By (for Notice to Proceed)')
+    oss_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for OSS)')
+    oss_authorized_rep = models.CharField(max_length=255, blank=True, help_text='Authorized Representative/Owner (for OSS)')
+    secretary_service_provider = models.CharField(max_length=255, blank=True, help_text="Service Provider (for Secretary's Certificate)")
+    secretary_owner_rep = models.CharField(max_length=255, blank=True, help_text="Owner/Authorized Representative (for Secretary's Certificate)")
     uploadedBy = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=255)
     subDoc = models.CharField(max_length=255)
@@ -92,20 +118,20 @@ class Document(models.Model):
         - Complete: All detail fields are filled out
         For most sub-docs: requires date. For "Activity Design" and "Project Procurement Management Plan/Supplemental PPMP": requires source_of_fund. For "Annual Procurement Plan": requires app_no, app_type, and Signed by when Certified True Copy.
         """
-        # Check title - must have a value
-        has_title = bool(self.title and self.title.strip())
-        
+        # Check title - must have a value (except Invitation to COA which has no title)
+        sub_doc_trim = (self.subDoc or '').strip()
+        has_title = bool(self.title and self.title.strip()) if sub_doc_trim != 'Invitation to COA' else True
+
         # Check PR No - must have a value
         has_pr_no = bool(self.prNo and self.prNo.strip())
-        
+
         # Check category - must have a value (not empty, not just whitespace)
         has_category = bool(self.category and self.category.strip())
-        
+
         # Check subDoc - must have a value (not empty, not just whitespace)
-        has_sub_doc = bool(self.subDoc and self.subDoc.strip())
-        
+        has_sub_doc = bool(sub_doc_trim)
+
         # Date / Source of Fund / APP fields depending on subDoc
-        sub_doc_trim = (self.subDoc or '').strip()
         if sub_doc_trim == 'Annual Procurement Plan':
             has_app_type = bool(self.app_type and self.app_type.strip())
             has_app_no = has_app_type and (self.app_type.strip() != 'Updated' or bool(self.app_no and self.app_no.strip()))
@@ -137,12 +163,93 @@ class Document(models.Model):
             has_date = bool(self.date)
         elif sub_doc_trim.endswith(' - Small Value Procurement') or sub_doc_trim.endswith(' - Public Bidding'):
             has_date = bool(self.date)
+        elif sub_doc_trim == 'Invitation to COA':
+            has_date = bool(self.date) and bool(self.date_received)
+        elif sub_doc_trim == 'Attendance Sheet':
+            try:
+                members = json.loads(self.attendance_members or '[]') if (self.attendance_members or '').strip() else []
+                has_date = bool(self.date) and isinstance(members, list) and len(members) > 0
+            except (TypeError, ValueError):
+                has_date = False
+        elif sub_doc_trim == 'BAC Resolution':
+            has_date = (
+                bool(self.resolution_no and self.resolution_no.strip()) and
+                bool(self.title and self.title.strip()) and
+                bool(self.winning_bidder and self.winning_bidder.strip()) and
+                self.total_amount is not None and
+                bool(self.resolution_option and self.resolution_option.strip()) and
+                bool(self.office_division and self.office_division.strip()) and
+                bool(self.date) and
+                bool(self.venue and self.venue.strip())
+            )
+        elif sub_doc_trim == 'Abstract of Quotation':
+            try:
+                bidders = json.loads(self.abstract_bidders or '[]') if (self.abstract_bidders or '').strip() else []
+                if not isinstance(bidders, list) or len(bidders) < 3:
+                    has_date = False
+                else:
+                    def _bidder_ok(b):
+                        name_ok = bool((b.get('name') or '').strip())
+                        amt = b.get('amount')
+                        amount_ok = amt is not None and str(amt).strip() != ''
+                        remarks_ok = bool((b.get('remarks') or '').strip())
+                        return name_ok and amount_ok and remarks_ok
+                    all_filled = all(_bidder_ok(b) for b in bidders)
+                    has_date = (
+                        bool(self.aoq_no and self.aoq_no.strip()) and
+                        bool(self.date) and
+                        bool(self.title and self.title.strip()) and
+                        all_filled
+                    )
+            except (TypeError, ValueError):
+                has_date = False
+        elif sub_doc_trim == 'Lease of Venue: Table Rating Factor':
+            has_date = True  # No file, no extra fields required; once submitted = complete
+        elif sub_doc_trim == 'Notice of Award':
+            has_date = (
+                bool(self.date) and
+                bool(self.notice_award_service_provider and self.notice_award_service_provider.strip()) and
+                bool(self.notice_award_authorized_rep and self.notice_award_authorized_rep.strip()) and
+                bool(self.notice_award_conforme and self.notice_award_conforme.strip())
+            )
+        elif sub_doc_trim == 'Contract Services/Purchase Order':
+            has_date = (
+                bool(self.date) and
+                self.contract_amount is not None and
+                bool(self.notarized_place and self.notarized_place.strip()) and
+                bool(self.notarized_date)
+            )
+        elif sub_doc_trim == 'Notice to Proceed':
+            has_date = (
+                bool(self.date) and
+                bool(self.ntp_service_provider and self.ntp_service_provider.strip()) and
+                bool(self.ntp_authorized_rep and self.ntp_authorized_rep.strip()) and
+                bool(self.ntp_received_by and self.ntp_received_by.strip())
+            )
+        elif sub_doc_trim == 'OSS':
+            has_date = (
+                bool(self.oss_service_provider and self.oss_service_provider.strip()) and
+                bool(self.oss_authorized_rep and self.oss_authorized_rep.strip()) and
+                bool(self.date)
+            )
+        elif sub_doc_trim == "Applicable: Secretary's Certificate and Special Power of Attorney":
+            has_date = (
+                bool(self.secretary_service_provider and self.secretary_service_provider.strip()) and
+                bool(self.secretary_owner_rep and self.secretary_owner_rep.strip()) and
+                bool(self.date)
+            )
         else:
             has_date = bool(self.date)
         
-        # Check file - must be uploaded (except List of Venue: no file required)
+        # Check file - must be uploaded (except List of Venue, Lease of Venue: Table Rating Factor, Minutes of the Meeting, and Award Posting "date only" sub-docs)
         has_file = True
-        if sub_doc_trim != 'List of Venue' and not sub_doc_trim.endswith(' - List of Venue'):
+        _no_file_required = (
+            sub_doc_trim == 'List of Venue' or sub_doc_trim.endswith(' - List of Venue') or
+            sub_doc_trim == 'Lease of Venue: Table Rating Factor' or
+            sub_doc_trim == 'Minutes of the Meeting' or
+            sub_doc_trim in ('Notice of Award (Posted)', 'Abstract of Quotation (Posted)', 'BAC Resolution (Posted)')
+        )
+        if not _no_file_required:
             has_file = bool(self.file)
             if has_file and hasattr(self.file, 'name'):
                 # For saved files, check that name is not empty

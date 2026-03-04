@@ -203,7 +203,7 @@ const Login = ({ onLogin }) => {
                     <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight tracking-tight">BAC Documents Tracking System</h2>
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight mt-4">Login</h1>
 
-                    <div className="min-h-[5.5rem] mt-4 flex flex-col justify-center" aria-live="polite">
+                    <div className="mt-3 min-h-[2.5rem]" aria-live="polite">
                         {error && (
                             <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
                                 {error}
@@ -212,16 +212,16 @@ const Login = ({ onLogin }) => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="mt-6 flex flex-col">
-                        <div className="space-y-5">
+                        <div className="space-y-6">
                             <div>
-                                <label htmlFor="login-email" className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                                <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1.5">
                                     Email
                                 </label>
                                 <div className="relative border-b border-gray-300 focus-within:border-gray-700 transition-colors">
                                     <input
                                         id="login-email"
                                         type="text"
-                                        className="w-full pl-0 pr-4 py-2.5 bg-transparent text-gray-900 placeholder-gray-400 outline-none border-0 focus:ring-0"
+                                        className="w-full pl-0 pr-4 py-2.5 bg-transparent text-gray-900 placeholder-gray-400 outline-none border-0 focus:ring-0 text-[15px]"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         autoComplete="email"

@@ -23,10 +23,10 @@ const Settings = () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `bac-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = `bac-records-backup-${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            setMessage('Backup saved. All events, users, and document/report records downloaded.');
+            setMessage('Records backup saved. Events, users, and all document/report metadata are in the JSON file. For full recovery, also back up the server\'s media folder and database.');
         } catch (err) {
             setError(err.response?.data?.detail || err.message || 'Backup failed.');
         } finally {
@@ -56,7 +56,15 @@ const Settings = () => {
             const result = await backupRestoreService.restore(data);
             setMessage(result?.detail || 'Restore completed.');
             if (result?.restored) {
-                setMessage((m) => `${m} Calendar events: ${result.restored.calendarEvents}, Users: ${result.restored.users}, Documents (status): ${result.restored.documents}.`);
+                setMessage((m) => {
+                    const r = result.restored;
+                    const parts = [m];
+                    if (r.calendarEvents != null) parts.push(`Events: ${r.calendarEvents}`);
+                    if (r.users != null) parts.push(`Users: ${r.users}`);
+                    if (r.documents != null) parts.push(`Documents: ${r.documents}`);
+                    if (r.reports != null) parts.push(`Reports: ${r.reports}`);
+                    return parts.join('. ');
+                });
             }
         } catch (err) {
             setError(err.response?.data?.detail || err.message || 'Restore failed. Check file format.');
@@ -105,7 +113,7 @@ const Settings = () => {
                     </div>
                     <div className="p-6">
                         <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
-                            Save all file metadata, users, and events to a JSON file for safekeeping.
+                            Save all database records to a JSON file: calendar events, users (no passwords), and full document & report metadata. Uploaded PDFs stay on the server; back up the media folder separately for full recovery.
                         </p>
                         <div className="flex justify-center">
                         <button
@@ -133,9 +141,9 @@ const Settings = () => {
                         </div>
                     </div>
                     <div className="p-6">
-                        <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
-                            Restore events, user status, and document status from a previously saved backup.
-                        </p>
+                            <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
+                                Restore events, user status, and document/report metadata from a previously saved JSON backup. Use a backup from this system; existing records are updated by ID.
+                            </p>
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -170,10 +178,10 @@ const Settings = () => {
                     <div className="card-elevated max-w-sm w-full shadow-2xl rounded-2xl border-0 overflow-hidden">
                         <div className="p-6">
                             <h2 id="settings-confirm-backup-title" className="text-lg font-semibold text-[var(--text)] mb-2">
-                                Save all data
+                                Save records backup
                             </h2>
                             <p className="text-[var(--text-muted)] mb-6">
-                                Download a backup of all events, users, and document/report records?
+                                Download a JSON backup of all events, users, and document/report records (metadata only; file contents stay on the server)?
                             </p>
                             <div className="flex gap-3 justify-end">
                                 <button type="button" onClick={() => setConfirmBackup(false)} className="btn-secondary rounded-xl">
@@ -207,7 +215,7 @@ const Settings = () => {
                                 Restore from backup
                             </h2>
                             <p className="text-[var(--text-muted)] mb-6">
-                                Restore events, user status, and document status from &quot;{confirmRestore.file.name}&quot;? This may overwrite current data.
+                                Restore events, user status, and document/report metadata from &quot;{confirmRestore.file.name}&quot;? This may overwrite current data.
                             </p>
                             <div className="flex gap-3 justify-end">
                                 <button type="button" onClick={() => setConfirmRestore(null)} className="btn-secondary rounded-xl">

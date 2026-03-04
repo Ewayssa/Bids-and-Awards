@@ -23,7 +23,7 @@ export const DOC_TYPES = [
     {
         id: 'meeting',
         name: 'BAC Meeting Documents',
-        subDocs: ['Certificate of BAC', 'Invitation to COA', 'Attendance Sheet', 'Minutes of the Meeting'],
+        subDocs: ['Notice of BAC Meeting', 'Invitation to COA', 'Attendance Sheet', 'Minutes of the Meeting'],
     },
     {
         id: 'award',

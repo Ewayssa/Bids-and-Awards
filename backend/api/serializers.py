@@ -1,4 +1,5 @@
 import re
+import json
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
 from rest_framework import serializers
@@ -107,7 +108,8 @@ class UserSerializer(serializers.ModelSerializer):
 def _document_missing_count(obj):
     """Count of missing required fields. Activity Design/PPMP: source_of_fund. APP: app_no, app_type, Signed by if Certified."""
     count = 0
-    if not (obj.title and str(obj.title).strip()):
+    sub_doc_trim = (obj.subDoc or '').strip()
+    if sub_doc_trim != 'Invitation to COA' and not (obj.title and str(obj.title).strip()):
         count += 1
     if not (obj.prNo and str(obj.prNo).strip()):
         count += 1
@@ -115,7 +117,6 @@ def _document_missing_count(obj):
         count += 1
     if not (obj.subDoc and str(obj.subDoc).strip()):
         count += 1
-    sub_doc_trim = (obj.subDoc or '').strip()
     if sub_doc_trim == 'Annual Procurement Plan':
         if not (obj.app_type and str(obj.app_type).strip()):
             count += 1
@@ -154,16 +155,128 @@ def _document_missing_count(obj):
     elif sub_doc_trim.endswith(' - List of Venue'):
         # RFQ List of Venue variants: no date, no file required
         pass
+    elif sub_doc_trim == 'Lease of Venue: Table Rating Factor':
+        # No file required; once submitted = complete
+        pass
     elif sub_doc_trim in ('Public Bidding', 'Small Value Procurement', 'PHILGEPS', 'Certificate of DILG'):
         if not obj.date:
             count += 1
     elif sub_doc_trim.endswith(' - Small Value Procurement') or sub_doc_trim.endswith(' - Public Bidding'):
         if not obj.date:
             count += 1
+    elif sub_doc_trim == 'Invitation to COA':
+        if not obj.date:
+            count += 1
+        if not obj.date_received:
+            count += 1
+    elif sub_doc_trim == 'Attendance Sheet':
+        if not obj.date:
+            count += 1
+        try:
+            members = json.loads(obj.attendance_members or '[]') if (obj.attendance_members or '').strip() else []
+            if not (isinstance(members, list) and len(members) > 0):
+                count += 1
+        except (TypeError, ValueError):
+            count += 1
+    elif sub_doc_trim == 'BAC Resolution':
+        if not (obj.resolution_no and str(obj.resolution_no).strip()):
+            count += 1
+        if not (obj.title and str(obj.title).strip()):
+            count += 1
+        if not (obj.winning_bidder and str(obj.winning_bidder).strip()):
+            count += 1
+        if obj.total_amount is None:
+            count += 1
+        if not (obj.resolution_option and str(obj.resolution_option).strip()):
+            count += 1
+        if not (obj.office_division and str(obj.office_division).strip()):
+            count += 1
+        if not obj.date:
+            count += 1
+        if not (obj.venue and str(obj.venue).strip()):
+            count += 1
+    elif sub_doc_trim == 'Abstract of Quotation':
+        if not (obj.aoq_no and str(obj.aoq_no).strip()):
+            count += 1
+        if not obj.date:
+            count += 1
+        if not (obj.title and str(obj.title).strip()):
+            count += 1
+        try:
+            bidders = json.loads(obj.abstract_bidders or '[]') if (obj.abstract_bidders or '').strip() else []
+            if not (isinstance(bidders, list) and len(bidders) >= 3):
+                count += 1
+            else:
+                for b in bidders:
+                    if not (b.get('name') or str(b.get('name', '')).strip()):
+                        count += 1
+                        break
+                    if b.get('amount') is None or str(b.get('amount', '')).strip() == '':
+                        count += 1
+                        break
+                    if not (b.get('remarks') or str(b.get('remarks', '')).strip()):
+                        count += 1
+                        break
+        except (TypeError, ValueError):
+            count += 1
+    elif sub_doc_trim == 'Lease of Venue: Table Rating Factor':
+        if not (obj.table_rating_service_provider and str(obj.table_rating_service_provider).strip()):
+            count += 1
+        if not (obj.table_rating_address and str(obj.table_rating_address).strip()):
+            count += 1
+        if not (obj.table_rating_factor_value and str(obj.table_rating_factor_value).strip()):
+            count += 1
+    elif sub_doc_trim == 'Notice of Award':
+        if not obj.date:
+            count += 1
+        if not (obj.notice_award_service_provider and str(obj.notice_award_service_provider).strip()):
+            count += 1
+        if not (obj.notice_award_authorized_rep and str(obj.notice_award_authorized_rep).strip()):
+            count += 1
+        if not (obj.notice_award_conforme and str(obj.notice_award_conforme).strip()):
+            count += 1
+    elif sub_doc_trim == 'Contract Services/Purchase Order':
+        if not obj.date:
+            count += 1
+        if obj.contract_amount is None:
+            count += 1
+        if not (obj.notarized_place and str(obj.notarized_place).strip()):
+            count += 1
+        if not obj.notarized_date:
+            count += 1
+    elif sub_doc_trim == 'Notice to Proceed':
+        if not obj.date:
+            count += 1
+        if not (obj.ntp_service_provider and str(obj.ntp_service_provider).strip()):
+            count += 1
+        if not (obj.ntp_authorized_rep and str(obj.ntp_authorized_rep).strip()):
+            count += 1
+        if not (obj.ntp_received_by and str(obj.ntp_received_by).strip()):
+            count += 1
+    elif sub_doc_trim == 'OSS':
+        if not (obj.oss_service_provider and str(obj.oss_service_provider).strip()):
+            count += 1
+        if not (obj.oss_authorized_rep and str(obj.oss_authorized_rep).strip()):
+            count += 1
+        if not obj.date:
+            count += 1
+    elif sub_doc_trim == "Applicable: Secretary's Certificate and Special Power of Attorney":
+        if not (obj.secretary_service_provider and str(obj.secretary_service_provider).strip()):
+            count += 1
+        if not (obj.secretary_owner_rep and str(obj.secretary_owner_rep).strip()):
+            count += 1
+        if not obj.date:
+            count += 1
+    elif sub_doc_trim in ('PhilGEPS Posting of Award', 'Certificate of DILG R1 Website Posting of Award'):
+        if not obj.date:
+            count += 1
+    elif sub_doc_trim in ('Notice of Award (Posted)', 'Abstract of Quotation (Posted)', 'BAC Resolution (Posted)'):
+        if not obj.date:
+            count += 1
     else:
         if not obj.date:
             count += 1
-    if (obj.subDoc or '').strip() != 'List of Venue' and not (obj.subDoc or '').strip().endswith(' - List of Venue'):
+    if (obj.subDoc or '').strip() != 'List of Venue' and not (obj.subDoc or '').strip().endswith(' - List of Venue') and (obj.subDoc or '').strip() != 'Lease of Venue: Table Rating Factor' and (obj.subDoc or '').strip() != 'Minutes of the Meeting' and (obj.subDoc or '').strip() not in ('Notice of Award (Posted)', 'Abstract of Quotation (Posted)', 'BAC Resolution (Posted)'):
         has_file = bool(obj.file)
         if has_file and hasattr(obj.file, 'name'):
             has_file = bool(obj.file.name and str(obj.file.name).strip())
@@ -189,7 +302,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
-        fields = ('id', 'prNo', 'title', 'user_pr_no', 'total_amount', 'source_of_fund', 'ppmp_no', 'app_no', 'app_type', 'certified_true_copy', 'certified_signed_by', 'market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3', 'office_division', 'received_by', 'date', 'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at', 'status', 'file_url', 'missing_count')
+        fields = ('id', 'prNo', 'title', 'user_pr_no', 'total_amount', 'source_of_fund', 'ppmp_no', 'app_no', 'app_type', 'certified_true_copy', 'certified_signed_by', 'market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3', 'office_division', 'received_by', 'date', 'date_received', 'attendance_members', 'resolution_no', 'winning_bidder', 'resolution_option', 'venue', 'aoq_no', 'abstract_bidders', 'table_rating_service_provider', 'table_rating_address', 'table_rating_factor_value', 'notice_award_service_provider', 'notice_award_authorized_rep', 'notice_award_conforme', 'contract_received_by_coa', 'contract_amount', 'notarized_place', 'notarized_date', 'ntp_service_provider', 'ntp_authorized_rep', 'ntp_received_by', 'oss_service_provider', 'oss_authorized_rep', 'secretary_service_provider', 'secretary_owner_rep', 'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at', 'status', 'file_url', 'missing_count')
         extra_kwargs = {
             'file': {'required': False},
             'prNo': {'required': False, 'allow_blank': True},
@@ -210,6 +323,31 @@ class DocumentSerializer(serializers.ModelSerializer):
             'market_service_provider_3': {'required': False, 'allow_blank': True},
             'office_division': {'required': False, 'allow_blank': True},
             'received_by': {'required': False, 'allow_blank': True},
+            'date_received': {'required': False, 'allow_null': True},
+            'attendance_members': {'required': False, 'allow_blank': True},
+            'resolution_no': {'required': False, 'allow_blank': True},
+            'winning_bidder': {'required': False, 'allow_blank': True},
+            'resolution_option': {'required': False, 'allow_blank': True},
+            'venue': {'required': False, 'allow_blank': True},
+            'aoq_no': {'required': False, 'allow_blank': True},
+            'abstract_bidders': {'required': False, 'allow_blank': True},
+            'table_rating_service_provider': {'required': False, 'allow_blank': True},
+            'table_rating_address': {'required': False, 'allow_blank': True},
+            'table_rating_factor_value': {'required': False, 'allow_blank': True},
+            'notice_award_service_provider': {'required': False, 'allow_blank': True},
+            'notice_award_authorized_rep': {'required': False, 'allow_blank': True},
+            'notice_award_conforme': {'required': False, 'allow_blank': True},
+            'contract_received_by_coa': {'required': False},
+            'contract_amount': {'required': False, 'allow_null': True},
+            'notarized_place': {'required': False, 'allow_blank': True},
+            'notarized_date': {'required': False, 'allow_null': True},
+            'ntp_service_provider': {'required': False, 'allow_blank': True},
+            'ntp_authorized_rep': {'required': False, 'allow_blank': True},
+            'ntp_received_by': {'required': False, 'allow_blank': True},
+            'oss_service_provider': {'required': False, 'allow_blank': True},
+            'oss_authorized_rep': {'required': False, 'allow_blank': True},
+            'secretary_service_provider': {'required': False, 'allow_blank': True},
+            'secretary_owner_rep': {'required': False, 'allow_blank': True},
             'category': {'required': False, 'allow_blank': True},
             'subDoc': {'required': False, 'allow_blank': True},
         }
@@ -227,6 +365,42 @@ class DocumentSerializer(serializers.ModelSerializer):
         if value is None or value == '':
             return None
         return value
+
+    def validate_date_received(self, value):
+        """Allow empty string from form data to become None"""
+        if value is None or value == '':
+            return None
+        return value
+
+    def validate_notarized_date(self, value):
+        """Allow empty string from form data to become None"""
+        if value is None or value == '':
+            return None
+        return value
+
+    def validate_contract_received_by_coa(self, value):
+        """Accept form string 'true'/'false' for Yes/No"""
+        if value is None:
+            return False
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in ('true', '1', 'yes', 'on')
+        return bool(value)
+
+    def validate_contract_amount(self, value):
+        """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
+        if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
+            return None
+        if isinstance(value, str):
+            value = value.replace(',', '').strip()
+            if value == '' or value == '.':
+                return None
+        try:
+            d = Decimal(value) if not isinstance(value, Decimal) else value
+            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, ValueError, TypeError):
+            return None
 
     def validate_total_amount(self, value):
         """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""

@@ -45,7 +45,7 @@ const PasswordInput = ({
             {label && (
                 <label
                     htmlFor={id}
-                    className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5"
+                    className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
                     {label}
                 </label>
@@ -59,7 +59,7 @@ const PasswordInput = ({
                     key={visible ? 'visible' : 'hidden'}
                     id={id}
                     type={visible ? 'text' : 'password'}
-                    className={`w-full ${inputBaseClass} bg-transparent text-gray-900 placeholder-gray-400 outline-none border-0 focus:ring-0 disabled:opacity-60 disabled:cursor-not-allowed ${
+                    className={`w-full ${inputBaseClass} bg-transparent text-gray-900 placeholder-gray-400 outline-none border-0 focus:ring-0 disabled:opacity-60 disabled:cursor-not-allowed text-[15px] ${
                         showToggle ? 'pr-11' : 'pr-4'
                     } ${inputClassName}`}
                     value={value}
