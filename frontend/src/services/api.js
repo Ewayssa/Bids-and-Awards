@@ -4,8 +4,19 @@ const API_BASE_URL = '/api';
 
 export const documentService = {
     async getAll() {
-        const response = await axios.get(`${API_BASE_URL}/uploaded-documents/`);
-        return response.data;
+        const url = `${API_BASE_URL}/uploaded-documents/`;
+        let all = [];
+        let nextUrl = url;
+        while (nextUrl) {
+            const response = await axios.get(nextUrl);
+            const body = response.data;
+            const page = Array.isArray(body) ? body : (body?.results ?? []);
+            all = all.concat(page);
+            const next = body?.next;
+            if (!next) break;
+            nextUrl = next.startsWith('http') ? next : `${window.location.origin}${next.startsWith('/') ? next : '/' + next}`;
+        }
+        return all;
     },
 
     async getNextTransactionNumber(dateOrNull) {

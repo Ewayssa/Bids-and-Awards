@@ -107,10 +107,13 @@ export const canViewDocument = (user, document) => {
 
 export const canEditDocument = (user, document) => {
     if (!user || !document) return false;
-    if (hasPermission(user.role, PERMISSIONS.EDIT_DOCUMENTS)) return true;
-    const who = user.fullName || user.username;
-    const owner = document.uploadedBy || document.uploaded_by;
-    return who === owner && hasPermission(user.role, PERMISSIONS.UPLOAD_DOCUMENTS);
+    // Only the user who uploaded the document can update it (same rule for admin and employee).
+    const owner = (document.uploadedBy || document.uploaded_by || '').trim().toLowerCase();
+    if (!owner) return false;
+    const fullName = (user.fullName || '').trim().toLowerCase();
+    const username = (user.username || '').trim().toLowerCase();
+    const isOwner = (fullName && owner === fullName) || (username && owner === username);
+    return isOwner && (hasPermission(user.role, PERMISSIONS.UPLOAD_DOCUMENTS) || hasPermission(user.role, PERMISSIONS.EDIT_DOCUMENTS));
 };
 
 export const canDeleteDocument = (user) => {

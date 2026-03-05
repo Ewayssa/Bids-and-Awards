@@ -3,7 +3,23 @@ from django.db import models  # type: ignore
 from django.db.models.signals import post_save, pre_save  # type: ignore
 from django.dispatch import receiver  # type: ignore
 import json
+import os
+import re
 import uuid
+
+
+def document_file_upload_to(instance, filename):
+    """
+    Store uploaded document in a folder by category and BAC Folder No. (prNo).
+    Path: documents/{category}/{prNo}/{filename}
+    """
+    category = (instance.category or 'General').strip()
+    category = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', category)[:100] or 'General'
+    pr_no = (instance.prNo or 'unknown').strip()
+    pr_no = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', pr_no)[:50] or 'unknown'
+    name = os.path.basename(filename)
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', name)[:200] or 'document'
+    return os.path.join('documents', category, pr_no, name)
 
 
 class UserManager(AuthUserManager):
@@ -105,7 +121,7 @@ class Document(models.Model):
     uploadedBy = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=255)
     subDoc = models.CharField(max_length=255)
-    file = models.FileField(upload_to='documents/', blank=True, null=True)
+    file = models.FileField(upload_to=document_file_upload_to, blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)  # Track last update time
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { userService } from '../services/api';
-import { MdPersonAdd, MdClose, MdCheckCircle, MdPeople, MdSearch } from 'react-icons/md';
+import { MdPersonAdd, MdClose, MdCheckCircle, MdPeople, MdSearch, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { IoCreateOutline } from 'react-icons/io5';
 import PageHeader from '../components/PageHeader';
 import { ROLES, getRoleDisplayName, getAvailableRoles, hasPermission, PERMISSIONS } from '../utils/roles';
+
+const TABLE_PAGE_SIZE = 5;
 
 const Personnel = ({ user }) => {
     const [users, setUsers] = useState([]);
@@ -18,6 +20,7 @@ const Personnel = ({ user }) => {
     const [editingUser, setEditingUser] = useState(null);
     const [editForm, setEditForm] = useState({ fullName: '', position: '', office: '', role: '', is_active: true });
     const [searchQuery, setSearchQuery] = useState('');
+    const [tablePage, setTablePage] = useState(1);
 
     const loadUsers = async () => {
         try {
@@ -143,6 +146,16 @@ const Personnel = ({ user }) => {
         });
     }, [users, searchQuery]);
 
+    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / TABLE_PAGE_SIZE));
+    const paginatedUsers = React.useMemo(() => {
+        const start = (tablePage - 1) * TABLE_PAGE_SIZE;
+        return filteredUsers.slice(start, start + TABLE_PAGE_SIZE);
+    }, [filteredUsers, tablePage]);
+
+    useEffect(() => {
+        setTablePage(1);
+    }, [filteredUsers.length]);
+
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         setAddError('');
@@ -244,6 +257,7 @@ const Personnel = ({ user }) => {
                         <p className="text-sm text-[var(--text-subtle)] mt-1">Try a different search term.</p>
                     </div>
                 ) : (
+                    <>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-[var(--border)]">
                             <thead className="table-header">
@@ -258,7 +272,7 @@ const Personnel = ({ user }) => {
                                 </tr>
                             </thead>
                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
-                                {filteredUsers.map((u) => (
+                                {paginatedUsers.map((u) => (
                                     <tr key={u.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
                                         <td className="table-td font-medium">{u.fullName || '—'}</td>
                                         <td className="table-td-muted">{u.username}</td>
@@ -291,6 +305,32 @@ const Personnel = ({ user }) => {
                             </tbody>
                         </table>
                     </div>
+                    {filteredUsers.length > TABLE_PAGE_SIZE && (
+                        <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--border)] bg-[var(--background-subtle)]/50">
+                            <button
+                                type="button"
+                                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                                disabled={tablePage <= 1}
+                                className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                aria-label="Previous page"
+                            >
+                                <MdChevronLeft className="w-5 h-5" />
+                            </button>
+                            <span className="text-sm text-[var(--text-muted)]">
+                                Page {tablePage} of {totalPages}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
+                                disabled={tablePage >= totalPages}
+                                className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                aria-label="Next page"
+                            >
+                                <MdChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                    )}
+                    </>
                 )}
             </section>
 

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { reportService } from '../services/api';
 import { ROLES } from '../utils/roles';
-import { MdUpload, MdClose, MdDownload } from 'react-icons/md';
+import { MdUpload, MdClose, MdDownload, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
+
+const TABLE_PAGE_SIZE = 5;
 
 const Reports = ({ user }) => {
     const isAdmin = user?.role === ROLES.ADMIN;
@@ -23,6 +25,7 @@ const Reports = ({ user }) => {
         date_from: '',
         date_to: '',
     });
+    const [tablePage, setTablePage] = useState(1);
 
     const load = async () => {
         try {
@@ -56,6 +59,16 @@ const Reports = ({ user }) => {
             return true;
         });
     }, [reports, filters]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredReports.length / TABLE_PAGE_SIZE));
+    const paginatedReports = useMemo(() => {
+        const start = (tablePage - 1) * TABLE_PAGE_SIZE;
+        return filteredReports.slice(start, start + TABLE_PAGE_SIZE);
+    }, [filteredReports, tablePage]);
+
+    useEffect(() => {
+        setTablePage(1);
+    }, [filteredReports.length]);
 
     const hasActiveFilters = !!(filters.date_from || filters.date_to);
     const clearFilters = () => setFilters({ date_from: '', date_to: '' });
@@ -332,7 +345,7 @@ const Reports = ({ user }) => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredReports.map((r) => (
+                                paginatedReports.map((r) => (
                                     <tr key={r.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
                                         <td className="table-td font-medium">{r.title || '—'}</td>
                                         <td className="table-td-muted">{r.submitting_office || '—'}</td>
@@ -370,6 +383,31 @@ const Reports = ({ user }) => {
                         </tbody>
                     </table>
                 </div>
+                {filteredReports.length > TABLE_PAGE_SIZE && (
+                    <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--border-light)] bg-[var(--background-subtle)]/50">
+                        <button
+                            type="button"
+                            onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                            disabled={tablePage <= 1}
+                            className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                            aria-label="Previous page"
+                        >
+                            <MdChevronLeft className="w-5 h-5" />
+                        </button>
+                        <span className="text-sm text-[var(--text-muted)]">
+                            Page {tablePage} of {totalPages}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
+                            disabled={tablePage >= totalPages}
+                            className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                            aria-label="Next page"
+                        >
+                            <MdChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
             </section>
 
             {/* Upload Report modal */}

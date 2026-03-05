@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { auditLogService } from '../services/api';
-import { MdHistory, MdRefresh } from 'react-icons/md';
+import { MdHistory, MdRefresh, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+
+const TABLE_PAGE_SIZE = 5;
 
 const ACTION_LABELS = {
     user_login: 'Login',
@@ -38,6 +40,7 @@ const AuditTrail = () => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [tablePage, setTablePage] = useState(1);
 
     const loadLogs = React.useCallback(async () => {
         setError(null);
@@ -56,6 +59,13 @@ const AuditTrail = () => {
     useEffect(() => {
         loadLogs();
     }, [loadLogs]);
+
+    const totalPages = Math.max(1, Math.ceil(logs.length / TABLE_PAGE_SIZE));
+    const paginatedLogs = logs.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
+
+    useEffect(() => {
+        setTablePage(1);
+    }, [logs.length]);
 
     return (
         <div className="space-y-6 pb-10">
@@ -107,7 +117,7 @@ const AuditTrail = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    logs.map((entry) => (
+                                    paginatedLogs.map((entry) => (
                                         <tr
                                             key={entry.id != null ? String(entry.id) : entry.created_at + (entry.actor || '')}
                                             className="border-b border-[var(--border-light)] last:border-b-0 hover:bg-[var(--background-subtle)]/50"
@@ -130,6 +140,31 @@ const AuditTrail = () => {
                             </tbody>
                         </table>
                     </div>
+                    {logs.length > TABLE_PAGE_SIZE && (
+                        <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--border)] bg-[var(--background-subtle)]/50">
+                            <button
+                                type="button"
+                                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                                disabled={tablePage <= 1}
+                                className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                aria-label="Previous page"
+                            >
+                                <MdChevronLeft className="w-5 h-5" />
+                            </button>
+                            <span className="text-sm text-[var(--text-muted)]">
+                                Page {tablePage} of {totalPages}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
+                                disabled={tablePage >= totalPages}
+                                className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                aria-label="Next page"
+                            >
+                                <MdChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

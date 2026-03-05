@@ -244,6 +244,7 @@ def next_transaction_number(request):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all().order_by('-uploaded_at')
     serializer_class = DocumentSerializer
+    pagination_class = None  # Return all documents so Manage Documents and list show every file (no page 1 only)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

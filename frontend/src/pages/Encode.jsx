@@ -19,6 +19,8 @@ import {
     MdSchedule,
     MdWarning,
     MdFolder,
+    MdChevronLeft,
+    MdChevronRight,
 } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 import { DOC_TYPES, RFQ_PROCUREMENT_METHODS } from '../constants/docTypes';
@@ -108,6 +110,8 @@ const Encode = ({ user }) => {
     const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'grouped'
     const [expandedGroups, setExpandedGroups] = useState(new Set());
+    const [tablePage, setTablePage] = useState(1);
+    const TABLE_PAGE_SIZE = 5;
     const [showFilters, setShowFilters] = useState(false);
     const [selectedDocForComment, setSelectedDocForComment] = useState(null);
     const [commentText, setCommentText] = useState('');
@@ -127,6 +131,7 @@ const Encode = ({ user }) => {
     const [manageFolderPopup, setManageFolderPopup] = useState(null); // { typeId, prNo } when set, show popup with all docs in that BAC folder
     const [manageFolderPopupPreview, setManageFolderPopupPreview] = useState(null); // { doc, previewBlobUrl, previewBlobType } for inline file display
     const [manageFolderPopupIndex, setManageFolderPopupIndex] = useState(0); // which doc (with file) is shown when multiple
+    const [manageRefreshing, setManageRefreshing] = useState(false);
 
     const computeRFQNoFromDate = (dateStr) => {
         if (!dateStr) return '';
@@ -848,6 +853,22 @@ const Encode = ({ user }) => {
         return groups;
     }, [filteredDocuments]);
 
+    const groupedEntries = useMemo(() => Object.entries(groupedDocuments), [groupedDocuments]);
+    const totalPagesList = Math.max(1, Math.ceil(filteredDocuments.length / TABLE_PAGE_SIZE));
+    const totalPagesGrouped = Math.max(1, Math.ceil(groupedEntries.length / TABLE_PAGE_SIZE));
+    const paginatedDocuments = useMemo(() => {
+        const start = (tablePage - 1) * TABLE_PAGE_SIZE;
+        return filteredDocuments.slice(start, start + TABLE_PAGE_SIZE);
+    }, [filteredDocuments, tablePage]);
+    const paginatedGroupedEntries = useMemo(() => {
+        const start = (tablePage - 1) * TABLE_PAGE_SIZE;
+        return groupedEntries.slice(start, start + TABLE_PAGE_SIZE);
+    }, [groupedEntries, tablePage]);
+
+    useEffect(() => {
+        setTablePage(1);
+    }, [filteredDocuments.length, groupedEntries.length, viewMode]);
+
     // Get unique categories and transaction numbers for filters (from visible docs)
     const uniqueCategories = useMemo(() => {
         return [...new Set(updateListDocs.map(d => d.category).filter(Boolean))].sort();
@@ -905,19 +926,26 @@ const Encode = ({ user }) => {
 
     const isUserUploader = (doc) => {
         if (!doc?.uploadedBy || !user) return false;
-        const uploadedBy = (doc.uploadedBy || '').trim();
-        const me = (user.fullName || user.username || '').trim();
-        return uploadedBy && me && uploadedBy === me;
+        const uploadedBy = (doc.uploadedBy || '').trim().toLowerCase();
+        const meFull = (user.fullName || '').trim().toLowerCase();
+        const meUser = (user.username || '').trim().toLowerCase();
+        return (meFull && uploadedBy === meFull) || (meUser && uploadedBy === meUser);
     };
 
     // Checklist data for Update modal: which sub-docs are completed (any document matching category+subDoc)
     const checklistData = useMemo(() => {
-        return DOC_TYPES.map((docType) => ({
-            ...docType,
-            subDocsWithStatus: docType.subDocs.map((subDocName) => {
+        return DOC_TYPES.map((docType) => {
+            const categoryName = (docType.name || '').trim().toLowerCase();
+            const isRfq = docType.id === 'afq';
+            const subDocSlots = isRfq
+                ? docType.subDocs.flatMap((header) =>
+                    RFQ_PROCUREMENT_METHODS.map(({ value }) => `${header} - ${value}`)
+                )
+                : docType.subDocs;
+            const subDocsWithStatus = subDocSlots.map((subDocName) => {
                 const doc = updateListDocs.find(
                     (d) =>
-                        (d.category || '').trim() === (docType.name || '').trim() &&
+                        (d.category || '').trim().toLowerCase() === categoryName &&
                         (d.subDoc || '').trim() === (subDocName || '').trim()
                 );
                 return {
@@ -926,8 +954,12 @@ const Encode = ({ user }) => {
                     doc,
                     canUpdate: doc ? isUserUploader(doc) : false,
                 };
-            }),
-        }));
+            });
+            return {
+                ...docType,
+                subDocsWithStatus,
+            };
+        });
     }, [updateListDocs, user]);
 
     // Auto-open the first file's preview when a folder is selected (only when not in Manage Documents checklist)
@@ -1113,7 +1145,7 @@ const Encode = ({ user }) => {
     // Fetch a doc's file for the Manage BAC folder popup (inline preview, no View/Update)
     const fetchDocForManagePopup = useCallback(async (doc) => {
         if (!doc?.file_url) {
-            setManageFolderPopupPreview({ doc, previewBlobUrl: 'failed', previewBlobType: null });
+            setManageFolderPopupPreview({ doc, previewBlobUrl: 'no-file', previewBlobType: null });
             return;
         }
         setManageFolderPopupPreview({ doc, previewBlobUrl: null, previewBlobType: null });
@@ -1142,34 +1174,33 @@ const Encode = ({ user }) => {
         } catch (err) {
             console.error('Manage popup view failed:', err);
             setManageFolderPopupPreview((prev) => {
-                if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed') URL.revokeObjectURL(prev.previewBlobUrl);
+                if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed' && prev.previewBlobUrl !== 'no-file') URL.revokeObjectURL(prev.previewBlobUrl);
                 return { doc, previewBlobUrl: 'failed', previewBlobType: null };
             });
         }
     }, []);
 
-    // When BAC folder popup opens: load first doc with file; when it closes: revoke and clear
+    // When BAC folder popup opens: load current doc (by index); when it closes: revoke and clear
     useEffect(() => {
         if (!manageFolderPopup) {
             setManageFolderPopupPreview((prev) => {
-                if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed') URL.revokeObjectURL(prev.previewBlobUrl);
+                if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed' && prev.previewBlobUrl !== 'no-file') URL.revokeObjectURL(prev.previewBlobUrl);
                 return null;
             });
             setManageFolderPopupIndex(0);
             return;
         }
         const docType = DOC_TYPES.find((d) => d.id === manageFolderPopup.typeId);
-        const categoryName = docType?.name || '';
+        const categoryName = (docType?.name || '').trim();
         const docs = documents.filter(
-            (d) => (d.category || '').trim() === categoryName && (d.prNo || '').trim() === manageFolderPopup.prNo
+            (d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase() && (d.prNo || '').trim() === manageFolderPopup.prNo
         );
-        const withFile = docs.filter((d) => d.file_url);
-        if (withFile.length === 0) {
+        if (docs.length === 0) {
             setManageFolderPopupPreview(null);
             return;
         }
-        const index = Math.min(manageFolderPopupIndex, withFile.length - 1);
-        fetchDocForManagePopup(withFile[index]);
+        const index = Math.min(manageFolderPopupIndex, docs.length - 1);
+        fetchDocForManagePopup(docs[index]);
     }, [manageFolderPopup, documents, manageFolderPopupIndex, fetchDocForManagePopup]);
 
     const getFetchUrl = (url) => {
@@ -1279,11 +1310,17 @@ const Encode = ({ user }) => {
         setUpdateError('');
     };
 
-    const openManage = () => {
+    const openManage = async () => {
         setActiveModal('manage');
         setManageSelectedTypeId(null);
         setManageSelectedPrNo(null);
         setManageFolderPopup(null);
+        setManageRefreshing(true);
+        try {
+            await load();
+        } finally {
+            setManageRefreshing(false);
+        }
     };
 
     const handleChecklistSubDocClick = (subDocWithStatus) => {
@@ -1467,7 +1504,7 @@ const Encode = ({ user }) => {
                             ) : viewMode === 'grouped' ? (
                                 // Grouped view by transaction number
                                 <div className="divide-y divide-[var(--border-light)]">
-                                    {Object.entries(groupedDocuments).map(([prNo, docs]) => {
+                                    {paginatedGroupedEntries.map(([prNo, docs]) => {
                                         const isExpanded = expandedGroups.has(prNo);
                                         const statusCounts = docs.reduce((acc, doc) => {
                                             acc[doc.status] = (acc[doc.status] || 0) + 1;
@@ -1614,7 +1651,7 @@ const Encode = ({ user }) => {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
-                                        {filteredDocuments.map((doc) => {
+                                        {paginatedDocuments.map((doc) => {
                                             const statusColors = {
                                                 complete: 'bg-green-100 text-green-800 border-green-200',
                                                 ongoing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -1666,6 +1703,31 @@ const Encode = ({ user }) => {
                                         })}
                                     </tbody>
                                 </table>
+                            )}
+                            {(filteredDocuments.length > TABLE_PAGE_SIZE || groupedEntries.length > TABLE_PAGE_SIZE) && (
+                                <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--border-light)] bg-[var(--background-subtle)]/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                                        disabled={tablePage <= 1}
+                                        className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                        aria-label="Previous page"
+                                    >
+                                        <MdChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <span className="text-sm text-[var(--text-muted)]">
+                                        Page {tablePage} of {viewMode === 'grouped' ? totalPagesGrouped : totalPagesList}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTablePage((p) => Math.min(viewMode === 'grouped' ? totalPagesGrouped : totalPagesList, p + 1))}
+                                        disabled={tablePage >= (viewMode === 'grouped' ? totalPagesGrouped : totalPagesList)}
+                                        className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                        aria-label="Next page"
+                                    >
+                                        <MdChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </section>
@@ -3368,9 +3430,16 @@ const Encode = ({ user }) => {
                         <div className="flex-1 overflow-auto p-6">
                             {!manageSelectedTypeId ? (
                                 /* Level 1: Document type folders */
+                                <>
+                                    {manageRefreshing && (
+                                        <div className="flex items-center justify-center gap-2 py-3 text-sm text-[var(--text-muted)]">
+                                            <span>Loading all documents…</span>
+                                        </div>
+                                    )}
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                     {DOC_TYPES.map((docType) => {
-                                        const docsInType = documents.filter((d) => (d.category || '').trim() === (docType.name || '').trim());
+                                        const categoryName = (docType.name || '').trim();
+                                        const docsInType = documents.filter((d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase());
                                         const folderCount = new Set(docsInType.map((d) => (d.prNo || '').trim()).filter(Boolean)).size;
                                         return (
                                             <button
@@ -3388,12 +3457,13 @@ const Encode = ({ user }) => {
                                         );
                                     })}
                                 </div>
+                                </>
                             ) : !manageSelectedPrNo ? (
                                 /* Level 2: BAC Folder No. list (sorted) for this document type */
                                 (() => {
                                     const docType = DOC_TYPES.find((d) => d.id === manageSelectedTypeId);
-                                    const categoryName = docType?.name || '';
-                                    const docsInCategory = documents.filter((d) => (d.category || '').trim() === categoryName);
+                                    const categoryName = (docType?.name || '').trim();
+                                    const docsInCategory = documents.filter((d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase());
                                     const prNoList = [...new Set(docsInCategory.map((d) => (d.prNo || '').trim()).filter(Boolean))].sort();
                                     if (prNoList.length === 0) {
                                         return (
@@ -3435,13 +3505,13 @@ const Encode = ({ user }) => {
             {/* Manage: popup when a BAC Folder is clicked – shows the file itself automatically (no View/Update) */}
             {activeModal === 'manage' && manageFolderPopup && (() => {
                 const docType = DOC_TYPES.find((d) => d.id === manageFolderPopup.typeId);
-                const categoryName = docType?.name || '';
+                const categoryName = (docType?.name || '').trim();
                 const docs = documents.filter(
-                    (d) => (d.category || '').trim() === categoryName && (d.prNo || '').trim() === manageFolderPopup.prNo
+                    (d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase() && (d.prNo || '').trim() === manageFolderPopup.prNo
                 );
-                const docsWithFile = docs.filter((d) => d.file_url);
-                const currentIndex = Math.min(manageFolderPopupIndex, Math.max(0, docsWithFile.length - 1));
-                const showNav = docsWithFile.length > 1;
+                const totalDocs = docs.length;
+                const currentIndex = Math.min(manageFolderPopupIndex, Math.max(0, totalDocs - 1));
+                const showNav = totalDocs > 1;
                 return (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" aria-modal="true" role="dialog">
                         <div className="bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -3459,8 +3529,8 @@ const Encode = ({ user }) => {
                                 </button>
                             </div>
                             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                                {docsWithFile.length === 0 ? (
-                                    <div className="p-6 text-center text-[var(--text-muted)]">No documents with files in this folder.</div>
+                                {totalDocs === 0 ? (
+                                    <div className="p-6 text-center text-[var(--text-muted)]">No documents in this folder.</div>
                                 ) : (
                                     <>
                                         {showNav && (
@@ -3470,32 +3540,37 @@ const Encode = ({ user }) => {
                                                     onClick={() => setManageFolderPopupIndex((i) => Math.max(0, i - 1))}
                                                     disabled={currentIndex === 0}
                                                     className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
-                                                    aria-label="Previous file"
+                                                    aria-label="Previous"
                                                 >
-                                                    <MdExpandLess className="w-5 h-5 rotate-90" />
+                                                    <MdChevronLeft className="w-5 h-5" />
                                                 </button>
                                                 <span className="text-sm text-[var(--text-muted)]">
-                                                    {currentIndex + 1} of {docsWithFile.length}
+                                                    Page {currentIndex + 1} of {totalDocs}
                                                 </span>
                                                 <button
                                                     type="button"
-                                                    onClick={() => setManageFolderPopupIndex((i) => Math.min(docsWithFile.length - 1, i + 1))}
-                                                    disabled={currentIndex >= docsWithFile.length - 1}
+                                                    onClick={() => setManageFolderPopupIndex((i) => Math.min(totalDocs - 1, i + 1))}
+                                                    disabled={currentIndex >= totalDocs - 1}
                                                     className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
-                                                    aria-label="Next file"
+                                                    aria-label="Next"
                                                 >
-                                                    <MdExpandLess className="w-5 h-5 -rotate-90" />
+                                                    <MdChevronRight className="w-5 h-5" />
                                                 </button>
                                             </div>
                                         )}
-                                        <div className="flex-1 overflow-auto bg-gray-100 p-4 min-h-0">
+                                        <div className="flex-1 overflow-auto bg-gray-100 p-4 min-h-0 flex flex-col">
                                             {!manageFolderPopupPreview ? (
-                                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
                                                     <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
-                                                    <span>Loading file…</span>
+                                                    <span>Loading…</span>
+                                                </div>
+                                            ) : manageFolderPopupPreview.previewBlobUrl === 'no-file' ? (
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
+                                                    <p className="font-medium">No file</p>
+                                                    <p className="text-sm mt-1">This document has no file uploaded.</p>
                                                 </div>
                                             ) : manageFolderPopupPreview.previewBlobUrl === 'failed' ? (
-                                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
                                                     <p>Could not load file.</p>
                                                 </div>
                                             ) : manageFolderPopupPreview.previewBlobUrl ? (
@@ -3503,36 +3578,43 @@ const Encode = ({ user }) => {
                                                     const ct = manageFolderPopupPreview.previewBlobType || '';
                                                     const isPdf = ct.includes('pdf');
                                                     const isImage = /^image\//.test(ct);
+                                                    const previewBoxClass = 'w-full min-h-[480px] flex-1 rounded-lg border border-[var(--border)] bg-white overflow-hidden flex flex-col';
                                                     if (isPdf) {
                                                         return (
-                                                            <embed
-                                                                src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
-                                                                type="application/pdf"
-                                                                className="w-full min-h-[500px] flex-1 border-0 rounded-lg"
-                                                                title={manageFolderPopupPreview.doc?.title || 'Document'}
-                                                            />
+                                                            <div className={previewBoxClass}>
+                                                                <embed
+                                                                    src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
+                                                                    type="application/pdf"
+                                                                    className="w-full min-h-[480px] flex-1 border-0"
+                                                                    title={manageFolderPopupPreview.doc?.title || 'Document'}
+                                                                />
+                                                            </div>
                                                         );
                                                     }
                                                     if (isImage) {
                                                         return (
-                                                            <img
-                                                                src={manageFolderPopupPreview.previewBlobUrl}
-                                                                alt={manageFolderPopupPreview.doc?.title || 'Document'}
-                                                                className="max-w-full max-h-[70vh] object-contain mx-auto"
-                                                            />
+                                                            <div className={`${previewBoxClass} items-center justify-center`}>
+                                                                <img
+                                                                    src={manageFolderPopupPreview.previewBlobUrl}
+                                                                    alt={manageFolderPopupPreview.doc?.title || 'Document'}
+                                                                    className="max-w-full max-h-[70vh] object-contain"
+                                                                />
+                                                            </div>
                                                         );
                                                     }
                                                     return (
-                                                        <iframe
-                                                            src={manageFolderPopupPreview.previewBlobUrl}
-                                                            title={manageFolderPopupPreview.doc?.title || 'Document'}
-                                                            className="w-full min-h-[500px] flex-1 border-0 rounded-lg bg-white"
-                                                            sandbox="allow-same-origin"
-                                                        />
+                                                        <div className={previewBoxClass}>
+                                                            <iframe
+                                                                src={manageFolderPopupPreview.previewBlobUrl}
+                                                                title={manageFolderPopupPreview.doc?.title || 'Document'}
+                                                                className="w-full min-h-[480px] flex-1 border-0"
+                                                                sandbox="allow-same-origin"
+                                                            />
+                                                        </div>
                                                     );
                                                 })()
                                             ) : (
-                                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
                                                     <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
                                                     <span>Loading file…</span>
                                                 </div>
@@ -3588,7 +3670,7 @@ const Encode = ({ user }) => {
 
                                     {/* Document checklist – grouped by document type, click a document to update it */}
                                     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-                                        <p className="text-xs text-[var(--text-muted)]">Click a document to update it.</p>
+                                        <p className="text-xs text-[var(--text-muted)]">Only documents you uploaded can be updated. Click a document to update it.</p>
                                         {checklistData.map((docType) => {
                                             const subs = docType.subDocsWithStatus || [];
                                             const completed = subs.filter((s) => s.done).length;
@@ -3617,9 +3699,9 @@ const Encode = ({ user }) => {
                                                                 <li key={`${docType.id}-${sub.name}`}>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => hasDoc && handleChecklistSubDocClick(sub)}
-                                                                        disabled={!hasDoc}
-                                                                        className={`w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left transition-colors text-sm ${hasDoc ? 'hover:bg-[var(--primary-muted)]/30 cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                                                                        onClick={() => hasDoc && sub.canUpdate && handleChecklistSubDocClick(sub)}
+                                                                        disabled={!hasDoc || !sub.canUpdate}
+                                                                        className={`w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left transition-colors text-sm ${hasDoc && sub.canUpdate ? 'hover:bg-[var(--primary-muted)]/30 cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
                                                                     >
                                                                         <span className="font-medium text-[var(--text)] truncate">{sub.name}</span>
                                                                         <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
