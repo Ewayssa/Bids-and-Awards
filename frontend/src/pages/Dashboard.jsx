@@ -352,7 +352,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     return (
         <div className="space-y-8 pb-10">
             <PageHeader
-                title="BAC Dashboard"
+                title={isAdmin ? 'BAC Dashboard' : 'Employee Dashboard'}
                 subtitle={dateLabel}
                 titleSize="default"
             >

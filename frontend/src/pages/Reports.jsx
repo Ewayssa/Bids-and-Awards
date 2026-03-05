@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { reportService } from '../services/api';
 import { ROLES } from '../utils/roles';
 import { MdUpload, MdClose, MdDownload, MdChevronLeft, MdChevronRight } from 'react-icons/md';
@@ -72,6 +73,133 @@ const Reports = ({ user }) => {
 
     const hasActiveFilters = !!(filters.date_from || filters.date_to);
     const clearFilters = () => setFilters({ date_from: '', date_to: '' });
+
+    const handleExportExcel = () => {
+        if (!filteredReports.length) return;
+
+        const today = new Date();
+        const reportDateLabel = today.toLocaleDateString('en-PH', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+
+        const headerTitleRow = ['DEPARTMENT OF THE INTERIOR AND LOCAL GOVERNMENT - REGION 1'];
+        const headerSubtitleRow = [`Procurement Monitoring Report as of ${reportDateLabel}`];
+
+        const columnHeaders = [
+            'Code (PAP)',
+            'Procurement Project',
+            'PMO/End-User',
+            'Is this an Early Procurement Activity?',
+            'Mode of Procurement',
+            'Pre-Proc Conference',
+            'Ads/Post of IB',
+            'Pre-bid Conf',
+            'Eligibility Check',
+            'Sub/Open of Bids',
+            'Bid Evaluation',
+            'Post Qual',
+            'Date of BAC Resolution Recommending Award',
+            'Notice of Award',
+            'Contract Signing',
+            'Notice to Proceed',
+            'Delivery/Completion',
+            'Inspection & Acceptance',
+            'Source of Funds',
+            'ABC (Php) - Total',
+            'ABC (Php) - MOOE',
+            'ABC (Php) - CO',
+            'Contract Cost (Php) - Total',
+            'Contract Cost (Php) - MOOE',
+            'Contract Cost (Php) - CO',
+            'Remarks (Explaining changes from the APP)',
+        ];
+
+        const dataRows = filteredReports.map((r) => [
+            '', // Code (PAP) - to be filled in Excel
+            r.title || '', // Procurement Project
+            r.submitting_office || '', // PMO/End-User
+            '', // Early Procurement Activity
+            '', // Mode of Procurement
+            '', // Pre-Proc Conference
+            '', // Ads/Post of IB
+            '', // Pre-bid Conf
+            '', // Eligibility Check
+            '', // Sub/Open of Bids
+            '', // Bid Evaluation
+            '', // Post Qual
+            '', // Date of BAC Resolution Recommending Award
+            '', // Notice of Award
+            '', // Contract Signing
+            '', // Notice to Proceed
+            '', // Delivery/Completion
+            '', // Inspection & Acceptance
+            '', // Source of Funds
+            '', // ABC Total
+            '', // ABC MOOE
+            '', // ABC CO
+            '', // Contract Cost Total
+            '', // Contract Cost MOOE
+            '', // Contract Cost CO
+            '', // Remarks
+        ]);
+
+        const aoa = [
+            headerTitleRow,
+            headerSubtitleRow,
+            [],
+            columnHeaders,
+            ...dataRows,
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+
+        // Optional: set some reasonable column widths for readability
+        worksheet['!cols'] = [
+            { wch: 14 }, // Code (PAP)
+            { wch: 40 }, // Procurement Project
+            { wch: 24 }, // PMO/End-User
+            { wch: 18 }, // Early Proc
+            { wch: 20 }, // Mode
+            { wch: 16 }, // Pre-Proc Conference
+            { wch: 16 }, // Ads/Post of IB
+            { wch: 14 }, // Pre-bid Conf
+            { wch: 14 }, // Eligibility Check
+            { wch: 16 }, // Sub/Open of Bids
+            { wch: 14 }, // Bid Evaluation
+            { wch: 12 }, // Post Qual
+            { wch: 26 }, // Date of BAC Resolution
+            { wch: 16 }, // Notice of Award
+            { wch: 16 }, // Contract Signing
+            { wch: 16 }, // Notice to Proceed
+            { wch: 18 }, // Delivery/Completion
+            { wch: 20 }, // Inspection & Acceptance
+            { wch: 22 }, // Source of Funds
+            { wch: 16 }, // ABC Total
+            { wch: 14 }, // ABC MOOE
+            { wch: 14 }, // ABC CO
+            { wch: 20 }, // Contract Cost Total
+            { wch: 18 }, // Contract Cost MOOE
+            { wch: 18 }, // Contract Cost CO
+            { wch: 30 }, // Remarks
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Monitoring Report');
+
+        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStr = today.toISOString().split('T')[0];
+        a.href = url;
+        a.download = `procurement-monitoring-report-${dateStr}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
 
     const performUpload = async () => {
         setUploadError('');
@@ -267,14 +395,25 @@ const Reports = ({ user }) => {
                                 </p>
                             )}
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => { setUploadSuccess(''); setUploadModalOpen(true); }}
-                            className="inline-flex items-center gap-1.5 rounded-xl text-sm py-2.5 px-4 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold shadow-sm transition-all duration-200"
-                        >
-                            <MdUpload className="w-4 h-4" />
-                            Upload Report
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleExportExcel}
+                                disabled={!filteredReports.length || loading}
+                                className="inline-flex items-center gap-1.5 rounded-xl text-sm py-2.5 px-4 bg-[var(--background-subtle)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--background)] font-semibold shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <MdDownload className="w-4 h-4" />
+                                Export to Excel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setUploadSuccess(''); setUploadModalOpen(true); }}
+                                className="inline-flex items-center gap-1.5 rounded-xl text-sm py-2.5 px-4 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold shadow-sm transition-all duration-200"
+                            >
+                                <MdUpload className="w-4 h-4" />
+                                Upload Report
+                            </button>
+                        </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-[var(--border-light)]">
                         <div className="flex items-center gap-2 shrink-0">

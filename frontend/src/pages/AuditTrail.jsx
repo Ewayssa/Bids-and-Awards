@@ -93,23 +93,14 @@ const AuditTrail = () => {
                             <h2 className="text-base sm:text-lg font-bold text-[var(--text)]">Activity Logs</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded.</p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => loadLogs()}
-                            disabled={loading}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--background-subtle)] disabled:opacity-50 text-sm font-medium shadow-sm"
-                        >
-                            <MdRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-[var(--border)] w-full">
                             <thead className="table-header">
                                 <tr>
-                                    <th className="table-th">Date &amp; time</th>
-                                    <th className="table-th">Action</th>
                                     <th className="table-th">User</th>
+                                    <th className="table-th">Action</th>
+                                    <th className="table-th">Date &amp; time</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
@@ -126,15 +117,15 @@ const AuditTrail = () => {
                                             key={entry.id != null ? String(entry.id) : entry.created_at + (entry.actor || '')}
                                             className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group"
                                         >
-                                            <td className="table-td-muted whitespace-nowrap">
-                                                {formatDate(entry.created_at)}
-                                            </td>
+                                            <td className="table-td">{entry.actor || '—'}</td>
                                             <td className="table-td">
                                                 <span className="font-medium text-[var(--text)]">
                                                     {ACTION_LABELS[entry.action] || entry.action}
                                                 </span>
                                             </td>
-                                            <td className="table-td">{entry.actor || '—'}</td>
+                                            <td className="table-td-muted whitespace-nowrap">
+                                                {formatDate(entry.created_at)}
+                                            </td>
                                         </tr>
                                     ))
                                 )}
