@@ -69,7 +69,7 @@ const NotificationBell = ({ user }) => {
                             <span className="text-sm font-semibold text-[var(--text)]">Notifications</span>
                             {unreadCount > 0 && (
                                 <button type="button" onClick={markAllRead} className="text-xs text-[var(--primary)] hover:underline">
-                                    Mark all read
+                                    Mark all as read
                                 </button>
                             )}
                         </div>
