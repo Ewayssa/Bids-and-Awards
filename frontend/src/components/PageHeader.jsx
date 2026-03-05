@@ -2,11 +2,6 @@ import React from 'react';
 
 /**
  * Reusable page header with title, subtitle, and optional actions.
- * @param {Object} props
- * @param {string} props.title - Page title
- * @param {string} props.subtitle - Short description below the title
- * @param {React.ReactNode} [props.children] - Optional actions (e.g. NotificationBell)
- * @param {'default'|'lg'} [props.titleSize] - Title size; 'lg' for larger pages
  */
 const PageHeader = ({ title, subtitle, children, titleSize = 'lg' }) => {
     const titleClass = titleSize === 'lg' ? 'page-title-lg' : 'page-title';

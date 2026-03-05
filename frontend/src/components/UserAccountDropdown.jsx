@@ -42,7 +42,7 @@ const UserAccountDropdown = ({ user, onLogout, className = '' }) => {
 
             {open && (
                 <div
-                    className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-[var(--surface)] border border-[var(--border-light)] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08),0_8px_16px_-8px_rgba(0,0,0,0.04)] z-50"
+                    className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.12),0_8px_16px_-8px_rgba(0,0,0,0.08)] z-[9999]"
                     role="menu"
                 >
                     {/* Popover arrow – points up at trigger */}

@@ -214,27 +214,27 @@ const Personnel = ({ user }) => {
                 </div>
             )}
 
-            <section className="card overflow-hidden">
-                <div className="px-6 py-4 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/50 flex flex-col gap-3">
+            <section className="content-section">
+                <div className="section-header">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="min-w-0 flex-1 overflow-hidden">
-                            <h2 className="text-base font-semibold text-[var(--text)] truncate block">System Users</h2>
+                            <h2 className="text-base sm:text-lg font-bold text-[var(--text)] truncate block">System Users</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">All registered users and their roles</p>
                         </div>
                         {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && (
-                        <button type="button" onClick={openAddModal} className="flex items-center gap-2 w-fit rounded-xl shrink-0 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-2.5 px-5 shadow-sm hover:shadow-md transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                        <button type="button" onClick={openAddModal} className="inline-flex items-center gap-2 w-fit rounded-xl shrink-0 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold py-2.5 px-5 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2">
                             <MdPersonAdd className="w-5 h-5" /> Add User
                         </button>
                         )}
                     </div>
-                    <div className="relative w-full max-w-lg sm:max-w-xl">
+                    <div className="relative w-full max-w-lg sm:max-w-xl mt-3 pt-3 border-t border-[var(--border-light)]">
                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" aria-hidden />
                         <input
                             type="search"
                             placeholder="Search users..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="input-field w-full pl-10"
+                            className="input-field w-full pl-10 rounded-lg"
                             aria-label="Search users"
                         />
                     </div>
@@ -259,7 +259,7 @@ const Personnel = ({ user }) => {
                 ) : (
                     <>
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-[var(--border)]">
+                        <table className="min-w-full divide-y divide-[var(--border)] w-full">
                             <thead className="table-header">
                                 <tr>
                                     <th className="table-th">Full Name</th>

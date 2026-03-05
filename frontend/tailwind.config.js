@@ -38,7 +38,9 @@ export default {
                 },
             },
             fontFamily: {
-                sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+                sans: ['Montserrat', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+                serif: ['Merriweather', 'Georgia', 'serif'],
+                mono: ['Source Code Pro', 'ui-monospace', 'monospace'],
             },
             borderRadius: {
                 'app': '0.75rem',

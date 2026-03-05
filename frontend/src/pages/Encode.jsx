@@ -1552,7 +1552,7 @@ const Encode = ({ user }) => {
                                                 </button>
                                                 {isExpanded && (
                                                     <div className="px-4 sm:px-6 pb-4 border-t border-[var(--border-light)]">
-                                                        <table className="min-w-full divide-y divide-[var(--border-light)]">
+                                                        <table className="min-w-full divide-y divide-[var(--border)] w-full">
                                                             <thead className="table-header">
                                                                 <tr>
                                                                     <th className="table-th">Title</th>
@@ -1604,7 +1604,7 @@ const Encode = ({ user }) => {
                                                                                         {isAdmin && null}
                                                                                     </div>
                                                                                 ) : (
-                                                                                    <span className="text-[var(--text-muted)] text-xs italic">No file</span>
+                                                                                    <span className="text-[var(--text-muted)]">—</span>
                                                                                 )}
                                                                             </td>
                                                                             )}
@@ -1694,7 +1694,7 @@ const Encode = ({ user }) => {
                                                                 {isAdmin && null}
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[var(--text-muted)] text-xs italic">No file</span>
+                                                            <span className="text-[var(--text-muted)]">—</span>
                                                         )}
                                                     </td>
                                                     )}

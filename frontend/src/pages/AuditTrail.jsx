@@ -49,7 +49,7 @@ const AuditTrail = () => {
             const data = await auditLogService.getAll();
             setLogs(Array.isArray(data) ? data : []);
         } catch (err) {
-            setError(err.response?.data?.detail || err.message || 'Failed to load audit log.');
+            setError(err.response?.data?.detail || err.message || 'Failed to load activity logs.');
             setLogs([]);
         } finally {
             setLoading(false);
@@ -69,49 +69,53 @@ const AuditTrail = () => {
 
     return (
         <div className="space-y-6 pb-10">
-            <header className="text-left flex flex-wrap items-center justify-between gap-4">
-                <PageHeader
-                    title="Audit Trail"
-                    subtitle="Important system actions. Only significant events are recorded."
-                    titleSize="default"
-                />
-                <button
-                    type="button"
-                    onClick={() => loadLogs()}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--background-subtle)] disabled:opacity-50 text-sm font-medium"
-                >
-                    <MdRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
-            </header>
+            <PageHeader
+                title="Activity Logs"
+                subtitle="Important system activities. Only significant events are recorded."
+                titleSize="default"
+            />
 
             {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
                     {error}
                 </div>
             )}
 
             {loading ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="card rounded-xl flex flex-col items-center justify-center py-16">
                     <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--primary)] border-t-transparent" />
+                    <p className="text-sm text-[var(--text-muted)] mt-4">Loading activity logs…</p>
                 </div>
             ) : (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
+                <section className="content-section">
+                    <div className="section-header flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 className="text-base sm:text-lg font-bold text-[var(--text)]">Activity Logs</h2>
+                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => loadLogs()}
+                            disabled={loading}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--background-subtle)] disabled:opacity-50 text-sm font-medium shadow-sm"
+                        >
+                            <MdRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                    </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead>
-                                <tr className="border-b border-[var(--border)] bg-[var(--background-subtle)]">
-                                    <th className="px-4 py-3 font-semibold text-[var(--text)]">Date &amp; time</th>
-                                    <th className="px-4 py-3 font-semibold text-[var(--text)]">Action</th>
-                                    <th className="px-4 py-3 font-semibold text-[var(--text)]">User</th>
-                                    <th className="px-4 py-3 font-semibold text-[var(--text)]">Details</th>
+                        <table className="min-w-full divide-y divide-[var(--border)] w-full">
+                            <thead className="table-header">
+                                <tr>
+                                    <th className="table-th">Date &amp; time</th>
+                                    <th className="table-th">Action</th>
+                                    <th className="table-th">User</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                                 {logs.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-8 text-center text-[var(--text-muted)]">
+                                        <td colSpan={3} className="table-td text-center py-12 text-[var(--text-muted)]">
                                             <MdHistory className="w-10 h-10 mx-auto mb-2 opacity-50" />
                                             No audit entries yet.
                                         </td>
@@ -120,20 +124,17 @@ const AuditTrail = () => {
                                     paginatedLogs.map((entry) => (
                                         <tr
                                             key={entry.id != null ? String(entry.id) : entry.created_at + (entry.actor || '')}
-                                            className="border-b border-[var(--border-light)] last:border-b-0 hover:bg-[var(--background-subtle)]/50"
+                                            className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group"
                                         >
-                                            <td className="px-4 py-3 text-[var(--text-muted)] whitespace-nowrap">
+                                            <td className="table-td-muted whitespace-nowrap">
                                                 {formatDate(entry.created_at)}
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="table-td">
                                                 <span className="font-medium text-[var(--text)]">
                                                     {ACTION_LABELS[entry.action] || entry.action}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-[var(--text)]">{entry.actor || '—'}</td>
-                                            <td className="px-4 py-3 text-[var(--text-muted)] max-w-xs truncate" title={entry.description}>
-                                                {entry.description || (entry.target_type && entry.target_id ? `${entry.target_type} ${entry.target_id}` : '—')}
-                                            </td>
+                                            <td className="table-td">{entry.actor || '—'}</td>
                                         </tr>
                                     ))
                                 )}
@@ -165,7 +166,7 @@ const AuditTrail = () => {
                             </button>
                         </div>
                     )}
-                </div>
+                </section>
             )}
         </div>
     );

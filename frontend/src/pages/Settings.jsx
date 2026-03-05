@@ -75,13 +75,11 @@ const Settings = () => {
 
     return (
         <div className="space-y-8 pb-10">
-            <header className="text-left">
-                <PageHeader
-                    title="Settings"
-                    subtitle="Backup and restore system data."
-                    titleSize="default"
-                />
-            </header>
+            <PageHeader
+                title="Settings"
+                subtitle="Backup and restore system data."
+                titleSize="default"
+            />
 
             {(message || error) && (
                 <div className="space-y-3">

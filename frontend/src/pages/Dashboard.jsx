@@ -363,24 +363,27 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
             </PageHeader>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 dashboard-stat-cards">
-                {statCards.map(({ value, label, icon: Icon, iconBg, iconColor, link }, i) => (
-                    <Link key={label} to={link || '#'} className="card overflow-visible p-4 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0 dashboard-stat-card" style={{ animationDelay: `${i * 0.08}s` }}>
-                        <div className="mb-3">
-                            <span className={`inline-flex w-9 h-9 rounded-lg items-center justify-center flex-shrink-0 ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
-                                <Icon className="w-4 h-4" />
-                            </span>
-                        </div>
-                        <p className="text-xs sm:text-sm font-medium text-[var(--text-muted)]">{label}</p>
-                        <p className="text-xl sm:text-2xl font-bold text-[var(--text)] tabular-nums mt-0.5">{loading ? '—' : formatNumber(value)}</p>
-                    </Link>
-                ))}
+                {statCards.map(({ value, label, icon: Icon, iconBg, iconColor, link }, i) => {
+                    const accentClass = label === 'Complete' ? 'stat-card--complete' : label === 'On-going' ? 'stat-card--ongoing' : 'stat-card--pending';
+                    return (
+                        <Link key={label} to={link || '#'} className={`card stat-card ${accentClass} overflow-visible p-4 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0 dashboard-stat-card`} style={{ animationDelay: `${i * 0.08}s` }}>
+                            <div className="mb-3">
+                                <span className={`inline-flex w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 shadow-sm ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
+                                    <Icon className="w-5 h-5" />
+                                </span>
+                            </div>
+                            <p className="text-xs sm:text-sm font-medium text-[var(--text-muted)]">{label}</p>
+                            <p className="text-xl sm:text-2xl font-bold text-[var(--text)] tabular-nums mt-0.5">{loading ? '—' : formatNumber(value)}</p>
+                        </Link>
+                    );
+                })}
             </div>
 
             <div className="w-full">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full dashboard-grid">
-                    <section className="card overflow-visible min-w-0 dashboard-section" style={{ animationDelay: '0.15s' }}>
-                        <div className="px-5 py-4 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/30">
-                            <h2 className="text-base font-semibold text-[var(--text)]">Calendar</h2>
+                    <section className="content-section overflow-visible min-w-0 dashboard-section" style={{ animationDelay: '0.15s' }}>
+                        <div className="section-header">
+                            <h2 className="text-base font-bold text-[var(--text)]">Calendar</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">BAC events and deadlines</p>
                         </div>
                         <div className="p-4 sm:p-5 flex flex-col lg:flex-row gap-4 lg:gap-5 min-w-0 overflow-visible">
@@ -490,9 +493,9 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                             </div>
                         </div>
                     </section>
-                    <section className="card overflow-visible flex flex-col min-w-0 dashboard-section" style={{ animationDelay: '0.25s' }}>
-                        <div className="px-5 py-4 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/30">
-                            <h2 className="text-base font-semibold text-[var(--text)]">Procurement Progress</h2>
+                    <section className="content-section overflow-visible flex flex-col min-w-0 dashboard-section" style={{ animationDelay: '0.25s' }}>
+                        <div className="section-header">
+                            <h2 className="text-base font-bold text-[var(--text)]">Procurement Progress</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Overview by completion</p>
                         </div>
                         <div className="p-5 sm:p-6 flex flex-col sm:flex-row gap-6 min-w-0 overflow-visible items-center sm:items-stretch">

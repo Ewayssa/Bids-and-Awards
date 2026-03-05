@@ -19,7 +19,7 @@ const NAV_ITEMS = [
     { path: '/encode', label: 'Encode', icon: MdPostAdd },
     { path: '/reports', label: 'Reports', icon: MdAssessment },
     { path: '/personnel', label: 'User Management', icon: MdPeople },
-    { path: '/audit-trail', label: 'Audit Trail', icon: MdHistory },
+    { path: '/audit-trail', label: 'Activity Logs', icon: MdHistory },
     { path: '/settings', label: 'Settings', icon: MdSettings },
 ];
 

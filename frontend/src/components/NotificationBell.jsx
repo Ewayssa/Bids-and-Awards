@@ -63,8 +63,8 @@ const NotificationBell = ({ user }) => {
             </button>
             {open && (
                 <>
-                    <div className="fixed inset-0 z-40" aria-hidden onClick={() => setOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-lg overflow-hidden" role="dialog" aria-label="Notifications">
+                    <div className="fixed inset-0 z-[9998]" aria-hidden onClick={() => setOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 z-[9999] w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-lg overflow-hidden" role="dialog" aria-label="Notifications">
                         <div className="p-3 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--background-subtle)]/50">
                             <span className="text-sm font-semibold text-[var(--text)]">Notifications</span>
                             {unreadCount > 0 && (

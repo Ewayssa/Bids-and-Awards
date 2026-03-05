@@ -243,7 +243,7 @@ const Reports = ({ user }) => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <PageHeader
                 title="Reports"
                 subtitle="Upload and view all reports in the system."
@@ -256,27 +256,25 @@ const Reports = ({ user }) => {
             )}
 
             {/* Reports Table */}
-            <section className="card overflow-hidden">
-                <div className="px-4 sm:px-6 py-4 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/50">
+            <section className="content-section">
+                <div className="section-header">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0 flex-1 overflow-hidden">
-                            <h2 className="text-base sm:text-lg font-semibold text-[var(--text)] truncate block">All Uploaded Reports</h2>
+                            <h2 className="text-base sm:text-lg font-bold text-[var(--text)] truncate block">All Uploaded Reports</h2>
                             {hasActiveFilters && (
                                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
                                     Showing {filteredReports.length} of {reports.length} report{reports.length !== 1 ? 's' : ''}
                                 </p>
                             )}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => { setUploadSuccess(''); setUploadModalOpen(true); }}
-                                className="inline-flex items-center gap-1.5 rounded-lg text-sm py-2 px-3 bg-green-600 hover:bg-green-700 text-white font-medium transition-colors"
-                            >
-                                <MdUpload className="w-4 h-4" />
-                                Upload Report
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => { setUploadSuccess(''); setUploadModalOpen(true); }}
+                            className="inline-flex items-center gap-1.5 rounded-xl text-sm py-2.5 px-4 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold shadow-sm transition-all duration-200"
+                        >
+                            <MdUpload className="w-4 h-4" />
+                            Upload Report
+                        </button>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-[var(--border-light)]">
                         <div className="flex items-center gap-2 shrink-0">
@@ -285,7 +283,7 @@ const Reports = ({ user }) => {
                                 type="date"
                                 value={filters.date_from}
                                 onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value }))}
-                                className="input-field py-1.5 text-xs px-2 min-w-[120px]"
+                                className="input-field py-1.5 text-xs px-2 min-w-[120px] rounded-lg"
                             />
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -294,7 +292,7 @@ const Reports = ({ user }) => {
                                 type="date"
                                 value={filters.date_to}
                                 onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
-                                className="input-field py-1.5 text-xs px-2 min-w-[120px]"
+                                className="input-field py-1.5 text-xs px-2 min-w-[120px] rounded-lg"
                             />
                         </div>
                         {hasActiveFilters && (
@@ -308,8 +306,8 @@ const Reports = ({ user }) => {
                         )}
                     </div>
                 </div>
-                <div className="overflow-x-auto table-scroll-wrap table-fit">
-                    <table className="min-w-full divide-y divide-[var(--border)] border-collapse text-sm w-full table-fixed">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-[var(--border)] w-full">
                         <thead className="table-header">
                             <tr>
                                 <th className="table-th">Report Title</th>
@@ -324,7 +322,7 @@ const Reports = ({ user }) => {
                         <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={isAdmin ? 5 : 4} className="px-4 py-12 text-center">
+                                    <td colSpan={isAdmin ? 5 : 4} className="table-td text-center py-12">
                                         <div className="flex flex-col items-center justify-center text-[var(--text-muted)]">
                                             <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
                                             <span className="text-sm">Loading reports…</span>
@@ -333,14 +331,14 @@ const Reports = ({ user }) => {
                                 </tr>
                             ) : reports.length === 0 ? (
                                 <tr>
-                                    <td colSpan={isAdmin ? 5 : 4} className="px-4 py-12 text-center">
+                                    <td colSpan={isAdmin ? 5 : 4} className="table-td text-center py-12">
                                         <p className="text-[var(--text-muted)] font-medium">No reports uploaded yet</p>
                                         <p className="text-sm text-[var(--text-subtle)] mt-1">Use &apos;Upload Report&apos; to add one.</p>
                                     </td>
                                 </tr>
                             ) : filteredReports.length === 0 ? (
                                 <tr>
-                                    <td colSpan={isAdmin ? 5 : 4} className="px-4 py-12 text-center text-[var(--text-muted)]">
+                                    <td colSpan={isAdmin ? 5 : 4} className="table-td text-center py-12 text-[var(--text-muted)]">
                                         No reports match your filters. <button type="button" onClick={clearFilters} className="text-[var(--primary)] hover:underline font-medium mt-1 inline-block">Clear filters</button>
                                     </td>
                                 </tr>
