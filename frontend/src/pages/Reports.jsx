@@ -480,14 +480,6 @@ const Reports = ({ user }) => {
                             {previewReport.previewBlobUrl === 'failed' ? (
                                 <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)] gap-2">
                                     <p>Could not load preview.</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => triggerDownload({ file_url: previewReport.file_url, title: previewReport.title })}
-                                        className="btn-secondary inline-flex items-center gap-2"
-                                    >
-                                        <MdDownload className="w-4 h-4" />
-                                        Download instead
-                                    </button>
                                 </div>
                             ) : previewReport.previewBlobUrl ? (
                                 (() => {
@@ -516,7 +508,6 @@ const Reports = ({ user }) => {
                                     return (
                                         <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)] gap-3">
                                             <p>This file type cannot be previewed in the browser.</p>
-                                            <p className="text-sm">Use the <strong>Download</strong> button below to save the file.</p>
                                         </div>
                                     );
                                 })()
@@ -527,18 +518,7 @@ const Reports = ({ user }) => {
                                 </div>
                             )}
                         </div>
-                        <div className="p-4 border-t border-[var(--border-light)] bg-[var(--surface)] flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => triggerDownload(
-                                    { file_url: previewReport.file_url, title: previewReport.title },
-                                    previewReport.previewBlobUrl && previewReport.previewBlobUrl !== 'failed' ? { blobUrl: previewReport.previewBlobUrl } : {}
-                                )}
-                                className="btn-secondary inline-flex items-center gap-2"
-                            >
-                                <MdDownload className="w-4 h-4" />
-                                Download
-                            </button>
+                        <div className="p-4 border-t border-[var(--border-light)] bg-[var(--surface)] flex justify-end">
                             <button
                                 type="button"
                                 onClick={closePreview}
