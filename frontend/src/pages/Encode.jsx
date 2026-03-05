@@ -271,7 +271,18 @@ const Encode = ({ user }) => {
     const validateNewForm = () => {
         const err = {};
         const isLeaseOfVenue = selectedSubDocType === 'Lease of Venue: Table Rating Factor' || (selectedSubDocType && (selectedSubDocType.includes('Lease of Venue') || selectedSubDocType.includes('List of Venue')));
-        if (selectedSubDocType !== 'Invitation to COA' && !isLeaseOfVenue && !(form.title && form.title.trim())) err.title = 'This field is required';
+        // Only require Title when the "fill out details" form actually shows a Title/Agenda field
+        const formShowsTitleField = !(
+            selectedSubDocType === 'Invitation to COA' ||
+            isLeaseOfVenue ||
+            (selectedDocType?.name === 'RFQ Concerns' && (
+                selectedSubDocType?.startsWith('PHILGEPS - List of Venue') ||
+                (selectedSubDocType?.startsWith('PHILGEPS - ') && !selectedSubDocType.includes('List of Venue')) ||
+                selectedSubDocType?.startsWith('Certificate of DILG - List of Venue') ||
+                selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement')
+            ))
+        );
+        if (formShowsTitleField && !(form.title && form.title.trim())) err.title = 'This field is required';
         setNewFormErrors(err);
         return Object.keys(err).length === 0;
     };
@@ -734,8 +745,31 @@ const Encode = ({ user }) => {
 
     const formatDate = (d) => (!d ? '—' : typeof d === 'string' ? d.split('T')[0] : d);
 
+    // Sub-doc types that have no Title field in fill-out details (same as backend) — completion = date + file + other required fields
+    const docRequiresTitle = (doc) => {
+        const sub = (doc?.subDoc || '').trim();
+        return !(
+            sub === 'Invitation to COA' ||
+            sub === 'List of Venue' ||
+            sub.endsWith(' - List of Venue') ||
+            sub === 'Lease of Venue: Table Rating Factor' ||
+            sub === 'PHILGEPS - Small Value Procurement' ||
+            sub === 'PHILGEPS - Public Bidding' ||
+            sub === 'Certificate of DILG - Small Value Procurement' ||
+            sub === 'Certificate of DILG - List of Venue' ||
+            sub === 'Certificate of DILG - Public Bidding' ||
+            sub === 'Small Value Procurement' ||
+            sub === 'Public Bidding'
+        );
+    };
+
+    const docRequiresDate = (doc) => {
+        const sub = (doc?.subDoc || '').trim();
+        return !(sub === 'List of Venue' || sub.endsWith(' - List of Venue') || sub === 'Lease of Venue: Table Rating Factor');
+    };
+
     const isIncomplete = (doc) =>
-        !doc.title || !doc.prNo || !doc.category || !doc.date;
+        (docRequiresTitle(doc) && !doc.title) || !doc.prNo || !doc.category || (docRequiresDate(doc) && !doc.date);
 
     const isAdmin = user?.role === ROLES.ADMIN;
     const canViewAllDocuments = isAdmin; // Only admin can view/download documents; employees cannot view files
@@ -827,7 +861,7 @@ const Encode = ({ user }) => {
     const getMissingFields = (doc) => {
         if (!doc) return [];
         const missing = [];
-        if (!(doc.title && String(doc.title).trim())) missing.push('Title');
+        if (docRequiresTitle(doc) && !(doc.title && String(doc.title).trim())) missing.push('Title');
         if (!(doc.prNo && String(doc.prNo).trim())) missing.push('BAC Folder No.');
         if (!(doc.category && String(doc.category).trim())) missing.push('Category');
         if (!(doc.subDoc && String(doc.subDoc).trim())) missing.push('Sub-document');
@@ -855,11 +889,16 @@ const Encode = ({ user }) => {
             if (!doc.date) missing.push('Date');
             if (!(doc.office_division && String(doc.office_division).trim())) missing.push('Office/Division');
             if (!(doc.received_by && String(doc.received_by).trim())) missing.push('Received By');
-        } else {
-            if (!doc.date) missing.push('Date');
+        } else if (docRequiresDate(doc) && !doc.date) {
+            missing.push('Date');
         }
+        const noFileRequired = (() => {
+            const sub = (doc.subDoc || '').trim();
+            return sub === 'List of Venue' || sub.endsWith(' - List of Venue') || sub === 'Lease of Venue: Table Rating Factor' ||
+                sub === 'Minutes of the Meeting' || sub === 'Notice of Award (Posted)' || sub === 'Abstract of Quotation (Posted)' || sub === 'BAC Resolution (Posted)';
+        })();
         const hasFile = doc.file || (doc.file_url && String(doc.file_url).trim());
-        if (!hasFile) missing.push('File');
+        if (!noFileRequired && !hasFile) missing.push('File');
         if (!(doc.uploadedBy && String(doc.uploadedBy).trim())) missing.push('Uploaded By');
         return missing;
     };

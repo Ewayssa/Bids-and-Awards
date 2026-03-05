@@ -7,6 +7,7 @@ import Encode from './pages/Encode';
 import Reports from './pages/Reports';
 import Personnel from './pages/User_management';
 import Settings from './pages/Settings';
+import AuditTrail from './pages/AuditTrail';
 import Navigation from './components/Navigation';
 import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/roles';
 
@@ -44,6 +45,7 @@ function AppContent() {
                             <Route path="/encode" element={canAccessRoute(userRole, '/encode') ? <Encode user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="/reports" element={canAccessRoute(userRole, '/reports') ? <Reports user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
+                            <Route path="/audit-trail" element={canAccessRoute(userRole, '/audit-trail') ? <AuditTrail user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="/settings" element={canAccessRoute(userRole, '/settings') ? <Settings user={user} /> : <Navigate to={defaultRoute} replace />} />
                             <Route path="*" element={<Navigate to={defaultRoute} replace />} />
                             </Routes>

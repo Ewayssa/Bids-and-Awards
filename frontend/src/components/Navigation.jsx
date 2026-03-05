@@ -8,6 +8,7 @@ import {
     MdSettings,
     MdMenu,
     MdClose,
+    MdHistory,
 } from 'react-icons/md';
 import { canAccessRoute, ROLES } from '../utils/roles';
 
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
     { path: '/encode', label: 'Encode', icon: MdPostAdd },
     { path: '/reports', label: 'Reports', icon: MdAssessment },
     { path: '/personnel', label: 'User Management', icon: MdPeople },
+    { path: '/audit-trail', label: 'Audit Trail', icon: MdHistory },
     { path: '/settings', label: 'Settings', icon: MdSettings },
 ];
 

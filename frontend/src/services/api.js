@@ -125,7 +125,19 @@ export const backupRestoreService = {
     },
 };
 
+export const auditLogService = {
+    async getAll() {
+        const response = await axios.get(`${API_BASE_URL}/audit-log/`);
+        const data = response.data;
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.results)) return data.results;
+        if (data && Array.isArray(data.data)) return data.data;
+        return [];
+    },
+};
+
 export const userService = {
+
     async getAll() {
         const response = await axios.get(`${API_BASE_URL}/users/`);
         return response.data;

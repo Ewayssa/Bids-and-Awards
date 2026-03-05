@@ -44,6 +44,7 @@ export const NAV_ACCESS_RULES = {
     '/reports': [ROLES.ADMIN, ROLES.EMPLOYEE],
     '/personnel': [ROLES.ADMIN],
     '/settings': [ROLES.ADMIN],
+    '/audit-trail': [ROLES.ADMIN],
 };
 
 export const canAccessRoute = (userRole, route) => {
@@ -53,7 +54,7 @@ export const canAccessRoute = (userRole, route) => {
     return allowed.includes(userRole);
 };
 
-const ROUTES_ORDER = ['/', '/encode', '/reports', '/personnel', '/settings'];
+const ROUTES_ORDER = ['/', '/encode', '/reports', '/personnel', '/audit-trail', '/settings'];
 
 export const getDefaultRouteForRole = (userRole) => {
     if (!userRole) return '/';

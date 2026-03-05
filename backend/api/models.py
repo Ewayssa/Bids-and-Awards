@@ -118,9 +118,21 @@ class Document(models.Model):
         - Complete: All detail fields are filled out
         For most sub-docs: requires date. For "Activity Design" and "Project Procurement Management Plan/Supplemental PPMP": requires source_of_fund. For "Annual Procurement Plan": requires app_no, app_type, and Signed by when Certified True Copy.
         """
-        # Check title - must have a value (except Invitation to COA which has no title)
+        # Check title - must have a value (except types that have no title in the fill-out form: Invitation to COA; Small Value Procurement, Public Bidding, Lease of Venue)
         sub_doc_trim = (self.subDoc or '').strip()
-        has_title = bool(self.title and self.title.strip()) if sub_doc_trim != 'Invitation to COA' else True
+        _no_title_required = (
+            sub_doc_trim == 'Invitation to COA'
+            or sub_doc_trim == 'List of Venue'
+            or sub_doc_trim.endswith(' - List of Venue')
+            or sub_doc_trim == 'Lease of Venue: Table Rating Factor'
+            or sub_doc_trim == 'PHILGEPS - Small Value Procurement'
+            or sub_doc_trim == 'PHILGEPS - Public Bidding'
+            or sub_doc_trim == 'Certificate of DILG - Small Value Procurement'
+            or sub_doc_trim == 'Certificate of DILG - List of Venue'
+            or sub_doc_trim == 'Certificate of DILG - Public Bidding'
+            or sub_doc_trim in ('Small Value Procurement', 'Public Bidding')
+        )
+        has_title = (bool(self.title and self.title.strip()) if not _no_title_required else True)
 
         # Check PR No - must have a value
         has_pr_no = bool(self.prNo and self.prNo.strip())
@@ -348,3 +360,20 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.message[:50]
+
+
+class AuditLog(models.Model):
+    """Audit trail for important system actions (who did what, when)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    action = models.CharField(max_length=64, db_index=True)  # e.g. document_created, user_login
+    actor = models.CharField(max_length=255, blank=True)   # username or "System"
+    target_type = models.CharField(max_length=64, blank=True)  # document, user, report, etc.
+    target_id = models.CharField(max_length=64, blank=True)
+    description = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.actor}: {self.action} at {self.created_at}"

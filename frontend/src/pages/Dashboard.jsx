@@ -93,10 +93,10 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
         return () => window.removeEventListener('focus', onFocus);
     }, [location.pathname, loadData]);
 
-    // Periodic refresh every 60s while on Dashboard for real-time counts
+    // Periodic refresh every 30s while on Dashboard for real-time bar chart and stats
     useEffect(() => {
         if (location.pathname !== '/') return;
-        const interval = setInterval(loadData, 60000);
+        const interval = setInterval(loadData, 30000);
         return () => clearInterval(interval);
     }, [location.pathname, loadData]);
 
@@ -333,10 +333,15 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     const dateLabel = today.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
     const procurementMethodCounts = stats.procurementMethodCounts ?? { 'List of Venue': 0, 'Small Value Procurement': 0, 'Public Bidding': 0 };
-    const barLabels = ['Lease of Venue', 'Small Value Procurement', 'Public Bidding'];
-    const barColors = ['#22c55e', '#3b82f6', '#8b5cf6'];
-    const barValues = barLabels.map((label) => Number(procurementMethodCounts[label]) || 0);
+    // Map display labels to API keys (backend uses "List of Venue", UI shows "Lease of Venue")
+    const barSeries = [
+        { label: 'Lease of Venue', key: 'List of Venue', color: '#22c55e' },
+        { label: 'Small Value Procurement', key: 'Small Value Procurement', color: '#3b82f6' },
+        { label: 'Public Bidding', key: 'Public Bidding', color: '#8b5cf6' },
+    ];
+    const barValues = barSeries.map((s) => Number(procurementMethodCounts[s.key]) || 0);
     const barMax = Math.max(1, ...barValues);
+    const barTotal = barValues.reduce((a, b) => a + b, 0);
 
     const statCards = [
         { value: completed, label: 'Completed', icon: MdCheckCircle, iconBg: 'bg-green-50', iconColor: 'text-green-600', link: '/encode?status=complete' },
@@ -546,28 +551,59 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                         ) : null;
                                     })()}
                                 </div>
+                                {total > 0 && (
+                                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-3 pt-3 border-t border-[var(--border-light)]">
+                                        {pieSlices.map((slice) => (
+                                            <div key={slice.label} className="flex items-center gap-2">
+                                                <span
+                                                    className="w-3 h-3 rounded-full flex-shrink-0 border border-white shadow-sm"
+                                                    style={{ backgroundColor: slice.color }}
+                                                    aria-hidden
+                                                />
+                                                <span className="text-xs font-medium text-[var(--text)]">{slice.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="w-full min-w-0 flex-1 sm:min-w-[200px] border-t sm:border-t-0 sm:border-l border-[var(--border-light)] pt-6 sm:pt-0 sm:pl-6">
                                 <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">Procurement Types</p>
-                                <div className="space-y-4" role="img" aria-label="Bar chart: List of Venue, Small Value Procurement, Public Bidding document counts">
-                                    {barLabels.map((label, i) => (
-                                        <div key={label} className="flex flex-col gap-1.5 min-w-0">
-                                            <div className="flex justify-between items-baseline gap-2 min-w-0">
-                                                <span className="text-sm font-medium text-[var(--text)] truncate">{label}</span>
-                                                <span className="text-sm font-semibold text-[var(--text)] tabular-nums flex-shrink-0">{loading ? '—' : formatNumber(barValues[i])}</span>
+                                <div className="space-y-5" role="img" aria-label="Bar chart: Lease of Venue, Small Value Procurement, Public Bidding document counts">
+                                    {barSeries.map((series, i) => {
+                                        const value = barValues[i];
+                                        const pctOfTotal = barTotal > 0 ? (value / barTotal) * 100 : 0;
+                                        const pctOfMax = barMax > 0 ? (value / barMax) * 100 : 0;
+                                        const barWidthPct = value > 0 ? Math.max(pctOfMax, 8) : 0;
+                                        return (
+                                            <div key={series.key} className="flex flex-col gap-1.5 min-w-0">
+                                                <div className="flex justify-between items-baseline gap-2 min-w-0">
+                                                    <span className="text-sm font-medium text-[var(--text)] truncate">{series.label}</span>
+                                                    <span className="text-sm font-semibold text-[var(--text)] tabular-nums flex-shrink-0">
+                                                        {loading ? '—' : (
+                                                            <>
+                                                                {formatNumber(value)}
+                                                                {barTotal > 0 && value >= 0 && (
+                                                                    <span className="text-[var(--text-muted)] font-normal ml-1">
+                                                                        ({formatNumber(pctOfTotal, 0)}%)
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <div className="h-9 w-full rounded-lg bg-[var(--background-subtle)] overflow-hidden border border-[var(--border-light)] relative">
+                                                    <div
+                                                        className="h-full rounded-l-lg transition-all duration-500 ease-out"
+                                                        style={{
+                                                            width: `${barWidthPct}%`,
+                                                            backgroundColor: series.color,
+                                                        }}
+                                                        aria-hidden
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="h-6 w-full rounded-lg bg-[var(--background-subtle)] overflow-hidden border border-[var(--border-light)]">
-                                                <div
-                                                    className="h-full rounded-l-lg transition-all duration-500 ease-out"
-                                                    style={{
-                                                        width: barValues[i] > 0 ? `${Math.max((barValues[i] / barMax) * 100, 6)}%` : '0%',
-                                                        backgroundColor: barColors[i],
-                                                    }}
-                                                    aria-hidden
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>

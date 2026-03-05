@@ -3,7 +3,7 @@ import json
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
 from rest_framework import serializers
-from .models import User, Document, Report, CalendarEvent, Notification
+from .models import User, Document, Report, CalendarEvent, Notification, AuditLog
 
 
 def get_next_transaction_number(date=None):
@@ -109,7 +109,20 @@ def _document_missing_count(obj):
     """Count of missing required fields. Activity Design/PPMP: source_of_fund. APP: app_no, app_type, Signed by if Certified."""
     count = 0
     sub_doc_trim = (obj.subDoc or '').strip()
-    if sub_doc_trim != 'Invitation to COA' and not (obj.title and str(obj.title).strip()):
+    # No title required for: Invitation to COA; Small Value Procurement, Public Bidding, Lease of Venue (same as fill-out form)
+    _no_title_required = (
+        sub_doc_trim == 'Invitation to COA'
+        or sub_doc_trim == 'List of Venue'
+        or sub_doc_trim.endswith(' - List of Venue')
+        or sub_doc_trim == 'Lease of Venue: Table Rating Factor'
+        or sub_doc_trim == 'PHILGEPS - Small Value Procurement'
+        or sub_doc_trim == 'PHILGEPS - Public Bidding'
+        or sub_doc_trim == 'Certificate of DILG - Small Value Procurement'
+        or sub_doc_trim == 'Certificate of DILG - List of Venue'
+        or sub_doc_trim == 'Certificate of DILG - Public Bidding'
+        or sub_doc_trim in ('Small Value Procurement', 'Public Bidding')
+    )
+    if not _no_title_required and not (obj.title and str(obj.title).strip()):
         count += 1
     if not (obj.prNo and str(obj.prNo).strip()):
         count += 1
@@ -532,3 +545,10 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ('id', 'message', 'created_at', 'read', 'link', 'admin_only')
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditLog
+        fields = ('id', 'action', 'actor', 'target_type', 'target_id', 'description', 'created_at')
+        read_only_fields = fields

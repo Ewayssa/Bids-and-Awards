@@ -8,6 +8,7 @@ router.register(r'upload', views.DocumentViewSet, basename='upload')
 router.register(r'reports', views.ReportViewSet, basename='report')
 router.register(r'calendar-events', views.CalendarEventViewSet, basename='calendar-event')
 router.register(r'notifications', views.NotificationViewSet, basename='notification')
+router.register(r'audit-log', views.AuditLogViewSet, basename='audit-log')
 
 urlpatterns = [
     path('login', views.login),

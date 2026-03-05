@@ -7,7 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 import secrets
 
-from .models import User, Document, Report, CalendarEvent, Notification, PasswordResetToken
+from .models import User, Document, Report, CalendarEvent, Notification, PasswordResetToken, AuditLog
 from .serializers import (
     UserSerializer,
     RegisterSerializer,
@@ -15,6 +15,7 @@ from .serializers import (
     ReportSerializer,
     CalendarEventSerializer,
     NotificationSerializer,
+    AuditLogSerializer,
     get_next_transaction_number,
 )
 
@@ -28,6 +29,7 @@ def login(request):
     if user:
         if not user.is_active:
             return Response({'message': 'Your account is not yet active. An administrator must activate it before you can log in.'}, status=status.HTTP_403_FORBIDDEN)
+        _log_audit('user_login', user.username, 'user', str(user.id), 'User logged in')
         return Response({
             'message': 'Login successful',
             'username': user.username,
@@ -46,6 +48,7 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
+    _log_audit('user_registered', user.username, 'user', str(user.id), 'New account registered')
     created_at = timezone.now()
     from django.utils.timezone import localtime
     time_str = localtime(created_at).strftime('%B %d, %Y, %I:%M %p')
@@ -122,6 +125,7 @@ def change_password(request):
     user.set_password(new_password)
     user.must_change_password = False
     user.save(update_fields=['password', 'must_change_password'])
+    _log_audit('password_changed', user.username, 'user', str(user.id), 'Password changed')
     return Response({'message': 'Password changed successfully.'})
 
 
@@ -174,6 +178,7 @@ def reset_password(request):
     user.must_change_password = False
     user.save(update_fields=['password', 'must_change_password'])
     reset.delete()
+    _log_audit('password_reset', user.username, 'user', str(user.id), 'Password reset via token')
     display_name = (user.fullName or user.username or user.email or 'A user').strip()
     _create_notification(f'{display_name} reset their password.', link='/personnel', admin_only=True)
     return Response({'message': 'Password reset successfully. You can now log in.'})
@@ -191,6 +196,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        _log_audit('user_created', (request.data.get('created_by') or 'System').strip(), 'user', str(user.id), f'User {user.username} created')
         response_data = UserSerializer(user).data
         temporary_password = getattr(user, '_temporary_password', None)
         if temporary_password is not None:
@@ -198,14 +204,32 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     def perform_update(self, serializer):
+        instance = serializer.instance
         serializer.save()
+        actor = (self.request.data.get('updated_by') or 'System').strip()
+        _log_audit('user_updated', actor, 'user', str(instance.id), f'User {instance.username} updated')
 
     def perform_destroy(self, instance):
+        user_id = str(instance.id)
+        username = instance.username
+        actor = (self.request.data.get('deleted_by') or 'System').strip()
         super().perform_destroy(instance)
+        _log_audit('user_deleted', actor, 'user', user_id, f'User {username} deleted')
 
 
 def _create_notification(message, link='/encode', admin_only=False):
     Notification.objects.create(message=message, link=link, admin_only=admin_only)
+
+
+def _log_audit(action, actor='System', target_type='', target_id='', description=''):
+    """Record an important action in the audit trail."""
+    AuditLog.objects.create(
+        action=action,
+        actor=(actor or 'System').strip() or 'System',
+        target_type=(target_type or '')[:64],
+        target_id=str(target_id)[:64] if target_id else '',
+        description=(description or '')[:500],
+    )
 
 
 @api_view(['GET'])
@@ -268,6 +292,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         doc = serializer.save()
         title = (doc.title or doc.prNo or 'Document')[:80]
+        _log_audit('document_created', (doc.uploadedBy or 'Unknown').strip(), 'document', str(doc.id), title)
         _create_notification(f'New BAC document submitted: {title}')
 
     def perform_update(self, serializer):
@@ -276,12 +301,19 @@ class DocumentViewSet(viewsets.ModelViewSet):
         doc.refresh_from_db()
         new_status = doc.status
         title = (doc.title or doc.prNo or 'Document')[:80]
+        actor = (self.request.data.get('currentUsername') or doc.uploadedBy or 'Unknown').strip()
+        _log_audit('document_updated', actor, 'document', str(doc.id), title)
         _create_notification(f'BAC document updated: {title}')
         if new_status == 'complete' and old_status != 'complete':
+            _log_audit('document_completed', actor, 'document', str(doc.id), title)
             _create_notification(f'BAC document completed: {title}')
 
     def perform_destroy(self, instance):
+        doc_id = str(instance.id)
+        title = (instance.title or instance.prNo or 'Document')[:80]
+        actor = (self.request.data.get('currentUsername') or instance.uploadedBy or 'Unknown').strip()
         super().perform_destroy(instance)
+        _log_audit('document_deleted', actor, 'document', doc_id, title)
 
 
 class ReportViewSet(viewsets.ModelViewSet):
@@ -294,13 +326,18 @@ class ReportViewSet(viewsets.ModelViewSet):
         return context
 
     def perform_create(self, serializer):
-        serializer.save()
+        report = serializer.save()
+        _log_audit('report_created', (report.uploadedBy or 'Unknown').strip(), 'report', str(report.id), (report.title or 'Report')[:80])
 
     def perform_update(self, serializer):
         serializer.save()
 
     def perform_destroy(self, instance):
+        report_id = str(instance.id)
+        title = (instance.title or 'Report')[:80]
+        actor = (self.request.data.get('currentUsername') or instance.uploadedBy or 'Unknown').strip()
         super().perform_destroy(instance)
+        _log_audit('report_deleted', actor, 'report', report_id, title)
 
 
 class CalendarEventViewSet(viewsets.ModelViewSet):
@@ -346,6 +383,15 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def mark_all_read(self, request):
         Notification.objects.filter(read=False).update(read=True)
         return Response({'detail': 'ok'})
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only list of audit trail entries (important actions only)."""
+    queryset = AuditLog.objects.all().order_by('-created_at')
+    serializer_class = AuditLogSerializer
+
+    def get_queryset(self):
+        return AuditLog.objects.all().order_by('-created_at')
 
 
 # Document types and required sub-documents (must match frontend DOC_TYPES)
@@ -563,6 +609,7 @@ def backup_data(request):
         'documents': docs,
         'reports': reports,
     }
+    _log_audit('backup_exported', (request.data.get('username') or request.query_params.get('username') or 'System').strip(), 'system', '', 'Data backup exported')
     return JsonResponse(data)
 
 
@@ -693,4 +740,5 @@ def restore_data(request):
             except (Report.DoesNotExist, ValueError):
                 pass
 
+    _log_audit('restore_completed', (request.data.get('username') or request.query_params.get('username') or 'System').strip(), 'system', '', f"Restore completed: {restored['calendarEvents']} events, {restored['users']} users, {restored['documents']} documents, {restored['reports']} reports")
     return Response({'detail': 'Restore completed', 'restored': restored})
