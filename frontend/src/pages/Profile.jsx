@@ -46,7 +46,6 @@ const Profile = ({ user, onUserUpdated }) => {
     const [editingProfile, setEditingProfile] = useState(false);
     const [profilePassword, setProfilePassword] = useState('');
     const [profileError, setProfileError] = useState('');
-    const [profileSuccess, setProfileSuccess] = useState('');
     const [profileLoading, setProfileLoading] = useState(false);
 
     const [currentPassword, setCurrentPassword] = useState('');
@@ -56,7 +55,6 @@ const Profile = ({ user, onUserUpdated }) => {
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
 
     const [toast, setToast] = useState(null);
@@ -87,7 +85,6 @@ const Profile = ({ user, onUserUpdated }) => {
     const handleProfileSubmit = async (e) => {
         e.preventDefault();
         setProfileError('');
-        setProfileSuccess('');
         if (!profilePassword.trim()) {
             setProfileError('Enter your current password to save changes.');
             return;
@@ -122,7 +119,6 @@ const Profile = ({ user, onUserUpdated }) => {
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        setSuccess('');
         const strength = getPasswordStrength(newPassword);
         if (!strength.valid) {
             setError('Password must have at least 8 characters, 1 uppercase letter, 1 number, and 1 special character.');
@@ -425,9 +421,9 @@ const Profile = ({ user, onUserUpdated }) => {
                                         </div>
                                     </div>
                                 </div>
-                                {(profileError || profileSuccess) && (
-                                    <div className={profileError ? 'p-3 rounded-lg bg-red-500/10 text-red-600 text-sm' : 'p-3 rounded-lg bg-green-500/10 text-green-700 text-sm'}>
-                                        {profileError || profileSuccess}
+                                {profileError && (
+                                    <div className="p-3 rounded-lg bg-red-500/10 text-red-600 text-sm">
+                                        {profileError}
                                     </div>
                                 )}
                                 <div className="flex flex-wrap gap-3 pt-2">
@@ -563,7 +559,6 @@ const Profile = ({ user, onUserUpdated }) => {
                             </div>
                         </div>
                         {error && <div className="p-3 rounded-lg bg-red-500/10 text-red-600 text-sm" role="alert">{error}</div>}
-                        {success && <div className="p-3 rounded-lg bg-green-500/10 text-green-700 text-sm" role="status">{success}</div>}
                         <div className="pt-1">
                             <button type="submit" disabled={loading || !passwordStrength.valid || newPassword !== confirmPassword} className="btn-primary rounded-xl inline-flex items-center justify-center gap-2 min-w-[140px]">
                                 {loading && <span className="w-4 h-4 border-2 border-[var(--primary-foreground)] border-t-transparent rounded-full animate-spin" aria-hidden />}

@@ -521,6 +521,16 @@ class ReportSerializer(serializers.ModelSerializer):
         model = Report
         fields = ('id', 'title', 'uploaded_at', 'uploadedBy', 'submitting_office', 'file', 'file_url')
 
+    def validate_file(self, value):
+        """Allow only PDF files for uploaded reports."""
+        if not value:
+            raise serializers.ValidationError('File is required.')
+        name = str(getattr(value, 'name', '')).lower()
+        content_type = str(getattr(value, 'content_type', '')).lower()
+        if not (name.endswith('.pdf') or content_type == 'application/pdf'):
+            raise serializers.ValidationError('Only PDF files are allowed for reports.')
+        return value
+
     def get_file_url(self, obj):
         if obj.file:
             return obj.file.url

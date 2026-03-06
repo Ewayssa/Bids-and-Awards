@@ -70,11 +70,6 @@ export const hasPermission = (userRole, permission) => {
     return permissions.includes(permission);
 };
 
-export const hasAnyPermission = (userRole, permissions) => {
-    if (!userRole || !permissions?.length) return false;
-    return permissions.some((p) => hasPermission(userRole, p));
-};
-
 export const getRoleDisplayName = (role) => {
     if (!role) return ROLE_DISPLAY_NAMES[ROLES.EMPLOYEE];
     return ROLE_DISPLAY_NAMES[role] || role || 'Employee';
@@ -91,35 +86,4 @@ export const mapOldRoleToNew = (oldRole) => {
     const r = String(oldRole).toLowerCase().trim();
     if (r === 'admin' || r === 'administrator') return ROLES.ADMIN;
     return ROLES.EMPLOYEE;
-};
-
-// Document permission helpers
-export const canViewDocument = (user, document) => {
-    if (!user || !document) return false;
-    if (hasPermission(user.role, PERMISSIONS.VIEW_ALL_DOCUMENTS)) return true;
-    if (hasPermission(user.role, PERMISSIONS.VIEW_OWN_DOCUMENTS)) {
-        const who = user.fullName || user.username;
-        const owner = document.uploadedBy || document.uploaded_by;
-        return who === owner;
-    }
-    return false;
-};
-
-export const canEditDocument = (user, document) => {
-    if (!user || !document) return false;
-    // Only the user who uploaded the document can update it (same rule for admin and employee).
-    const owner = (document.uploadedBy || document.uploaded_by || '').trim().toLowerCase();
-    if (!owner) return false;
-    const fullName = (user.fullName || '').trim().toLowerCase();
-    const username = (user.username || '').trim().toLowerCase();
-    const isOwner = (fullName && owner === fullName) || (username && owner === username);
-    return isOwner && (hasPermission(user.role, PERMISSIONS.UPLOAD_DOCUMENTS) || hasPermission(user.role, PERMISSIONS.EDIT_DOCUMENTS));
-};
-
-export const canDeleteDocument = (user) => {
-    return user && hasPermission(user.role, PERMISSIONS.DELETE_DOCUMENTS);
-};
-
-export const canApproveDocuments = (user) => {
-    return user?.role === ROLES.ADMIN;
 };

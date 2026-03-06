@@ -16,7 +16,6 @@ const Personnel = ({ user }) => {
     const [submitting, setSubmitting] = useState(false);
     const [showConfirmAdd, setShowConfirmAdd] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
-    const [newUserCredentials, setNewUserCredentials] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
     const [editForm, setEditForm] = useState({ fullName: '', position: '', office: '', role: '', is_active: true });
     const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +40,6 @@ const Personnel = ({ user }) => {
         setAddForm({ username: '', fullName: '', position: '', office: '', role: '' });
         setAddError('');
         setShowAddModal(true);
-        setNewUserCredentials(null);
     };
 
     const openEditModal = (u) => {
@@ -102,11 +100,7 @@ const Personnel = ({ user }) => {
         try {
             const created = await userService.create({ username: username.trim(), fullName: fullName.trim() || undefined, position: position.trim() || undefined, office: office.trim() || undefined, role });
             closeAddModal();
-            setSuccessMessage('User added successfully. Share the credentials below with the new user; they must change their password on first login.');
-            setNewUserCredentials({
-                username: created.username,
-                temporary_password: created.temporary_password,
-            });
+            setSuccessMessage('User added successfully.');
             setLoading(true);
             await loadUsers();
         } catch (err) {
@@ -196,21 +190,9 @@ const Personnel = ({ user }) => {
             />
 
             {successMessage && (
-                <div className="space-y-3">
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm font-medium shadow-sm transition-all duration-300 ease-out" role="alert">
-                        <MdCheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
-                        <span>{successMessage}</span>
-                    </div>
-                    {newUserCredentials && (
-                        <div className="px-4 py-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">
-                            <p className="font-semibold mb-2">Share these credentials with the new user (they must change their password on first login):</p>
-                            <div className="grid gap-2 font-mono bg-white/80 rounded-lg p-3 border border-amber-200">
-                                <p><span className="text-[var(--text-muted)]">Email:</span> <strong>{newUserCredentials.username}</strong></p>
-                                <p><span className="text-[var(--text-muted)]">Default password:</span> <strong className="select-all">{newUserCredentials.temporary_password}</strong></p>
-                            </div>
-                            <button type="button" onClick={() => setNewUserCredentials(null)} className="mt-2 text-amber-700 hover:underline text-xs">Dismiss</button>
-                        </div>
-                    )}
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm font-medium shadow-sm transition-all duration-300 ease-out" role="alert">
+                    <MdCheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
+                    <span>{successMessage}</span>
                 </div>
             )}
 

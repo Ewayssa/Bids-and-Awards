@@ -11,9 +11,8 @@ import {
     MdHistory,
 } from 'react-icons/md';
 import { canAccessRoute, ROLES } from '../utils/roles';
+import NotificationBell from './NotificationBell';
 
-
-//comment
 const NAV_ITEMS = [
     { path: '/', label: 'Dashboard', icon: MdDashboard },
     { path: '/encode', label: 'Encode', icon: MdPostAdd },
@@ -118,6 +117,9 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <img src="/dilg-logo.png" alt="DILG Logo" className="max-h-10 w-auto flex-shrink-0 select-none" />
                     <span className="text-lg font-bold text-[var(--text)] truncate">Bids and Awards</span>
+                </div>
+                <div className="flex-shrink-0">
+                    <NotificationBell user={user} />
                 </div>
             </header>
 

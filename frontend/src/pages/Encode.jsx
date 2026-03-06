@@ -1130,7 +1130,6 @@ const Encode = ({ user }) => {
             const blobUrl = URL.createObjectURL(blobForView);
             setPreviewDoc((prev) => prev ? { ...prev, previewBlobUrl: blobUrl, previewBlobType: blobType } : null);
         } catch (err) {
-            console.error('View failed:', err);
             setPreviewDoc((prev) => prev ? { ...prev, previewBlobUrl: 'failed' } : null);
         }
     };
@@ -1172,7 +1171,6 @@ const Encode = ({ user }) => {
                 return { doc, previewBlobUrl: blobUrl, previewBlobType: blobType };
             });
         } catch (err) {
-            console.error('Manage popup view failed:', err);
             setManageFolderPopupPreview((prev) => {
                 if (prev?.previewBlobUrl && prev.previewBlobUrl !== 'failed' && prev.previewBlobUrl !== 'no-file') URL.revokeObjectURL(prev.previewBlobUrl);
                 return { doc, previewBlobUrl: 'failed', previewBlobType: null };
@@ -1280,7 +1278,6 @@ const Encode = ({ user }) => {
                 URL.revokeObjectURL(url);
             }
         } catch (err) {
-            console.error('Download failed:', err);
             if (r?.file_url) {
                 const url = getFetchUrl(r.file_url);
                 window.open(url, '_blank', 'noopener');

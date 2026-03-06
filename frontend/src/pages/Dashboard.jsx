@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { dashboardService, calendarEventService, documentService } from '../services/api';
 import { ROLES } from '../utils/roles';
-import { MdCheckCircle, MdSchedule, MdChevronLeft, MdChevronRight, MdAdd, MdClose, MdWarning, MdDashboard, MdEdit } from 'react-icons/md';
+import { MdCheckCircle, MdSchedule, MdChevronLeft, MdChevronRight, MdAdd, MdClose, MdWarning, MdEdit } from 'react-icons/md';
 import NotificationBell from '../components/NotificationBell';
 import PageHeader from '../components/PageHeader';
 import UserAccountDropdown from '../components/UserAccountDropdown';

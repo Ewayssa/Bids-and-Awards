@@ -72,6 +72,7 @@ const STORAGE_KEY_ENCODED_REPORT = 'bac_reports_encoded_rows';
 
 const Reports = ({ user }) => {
     const isAdmin = user?.role === ROLES.ADMIN;
+    const currentEncoderId = user?.username || user?.fullName || '';
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -84,7 +85,7 @@ const Reports = ({ user }) => {
         file: null,
     });
     const [confirmUpload, setConfirmUpload] = useState(null); // { onConfirm }
-    const [previewReport, setPreviewReport] = useState(null); // { title, file_url, previewBlobUrl, previewBlobType }
+    const [previewReport, setPreviewReport] = useState(null); // same as Encode: { title, file_url, previewBlobUrl, previewBlobType }
     const [filters, setFilters] = useState({
         date_from: '',
         date_to: '',
@@ -132,7 +133,6 @@ const Reports = ({ user }) => {
         return str.split('T')[0];
     };
 
-
     const filteredReports = useMemo(() => {
         return reports.filter((r) => {
             const dateStr = formatDate(r.uploaded_at);
@@ -163,13 +163,6 @@ const Reports = ({ user }) => {
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
         return `${day}-${month}-${year}`;
-    };
-
-    const formatNumberForExport = (val) => {
-        if (val == null || val === '') return '';
-        const n = Number(val);
-        if (Number.isNaN(n)) return String(val);
-        return n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
     const formatNumberDisplay = (val) => {
@@ -381,7 +374,21 @@ const Reports = ({ user }) => {
 
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
-        setForm((prev) => ({ ...prev, file: file || null }));
+        if (!file) {
+            setForm((prev) => ({ ...prev, file: null }));
+            return;
+        }
+        const name = String(file.name || '').toLowerCase();
+        const type = String(file.type || '');
+        const isPdf = name.endsWith('.pdf') || type === 'application/pdf';
+        if (!isPdf) {
+            setUploadError('Only PDF files are allowed for reports.');
+            e.target.value = '';
+            setForm((prev) => ({ ...prev, file: null }));
+            return;
+        }
+        setUploadError('');
+        setForm((prev) => ({ ...prev, file }));
     };
 
     const closeModal = () => {
@@ -401,31 +408,52 @@ const Reports = ({ user }) => {
         }
     };
 
+    const toFullUrl = (url) => {
+        if (!url || typeof url !== 'string') return url;
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        const path = url.startsWith('/') ? url : `/${url}`;
+        return `${window.location.origin}${path}`;
+    };
+
+    /** View: show preview of the uploaded file — same approach as Encode: fetch by file_url first, then preview API. */
     const openPreview = async (r) => {
-        if (!r?.file_url) return;
-        setPreviewReport({ title: r.title || 'Report Preview', file_url: r.file_url, previewBlobUrl: null, previewBlobType: null });
+        const fileUrl = r?.file_url ?? r?.file;
+        if (!fileUrl && !r?.id) return;
+        setPreviewReport({ title: r.title || 'Report Preview', file_url: fileUrl, previewBlobUrl: null, previewBlobType: null });
         const tryFetch = async (url) => {
-            const res = await fetch(url, { credentials: 'include' });
+            const full = toFullUrl(url);
+            const res = await fetch(full, { credentials: 'include' });
             if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
             return res;
         };
         try {
-            const fetchUrl = getFetchUrl(r.file_url);
             let res;
-            try {
-                res = await tryFetch(fetchUrl);
-            } catch {
-                res = await tryFetch(r.file_url);
+            if (fileUrl) {
+                try {
+                    res = await tryFetch(getFetchUrl(fileUrl));
+                } catch {
+                    res = await tryFetch(fileUrl);
+                }
+            } else if (r?.id != null) {
+                res = await tryFetch(`/api/reports/${r.id}/preview/`);
+            } else {
+                throw new Error('No file');
             }
-            const contentType = res.headers.get('content-type') || '';
+            const contentType = (res.headers.get('content-type') || '').split(';')[0].trim();
             const blob = await res.blob();
-            const blobType = blob.type || (contentType.split(';')[0].trim()) || 'application/octet-stream';
+            if (blob.size === 0) throw new Error('Empty file');
+            const isJson = (contentType || '').toLowerCase().includes('application/json');
+            const isHtml = (contentType || '').toLowerCase().includes('text/html');
+            if ((isJson || isHtml) && blob.size < 2000) throw new Error('Server returned error page');
+            let blobType = blob.type || contentType || 'application/octet-stream';
+            if (blobType === 'application/octet-stream' && (contentType.toLowerCase().includes('pdf') || /\.pdf(\?|$)/i.test(String(fileUrl || '')))) {
+                blobType = 'application/pdf';
+            }
             const blobForView = blob.type ? blob : new Blob([blob], { type: blobType });
             const blobUrl = URL.createObjectURL(blobForView);
-            setPreviewReport((prev) => prev ? { ...prev, previewBlobUrl: blobUrl, previewBlobType: blobType } : null);
+            setPreviewReport((prev) => (prev ? { ...prev, previewBlobUrl: blobUrl, previewBlobType: blobType } : null));
         } catch (err) {
-            console.error('Preview failed:', err);
-            setPreviewReport((prev) => prev ? { ...prev, previewBlobUrl: 'failed' } : null);
+            setPreviewReport((prev) => (prev ? { ...prev, previewBlobUrl: 'failed' } : null));
         }
     };
 
@@ -436,16 +464,34 @@ const Reports = ({ user }) => {
         setPreviewReport(null);
     };
 
-    const addEncodedRow = () => setEncodedRows((prev) => [...prev, emptyEncodedRow()]);
+    const addEncodedRow = () =>
+        setEncodedRows((prev) => [
+            ...prev,
+            {
+                ...emptyEncodedRow(),
+                __owner: currentEncoderId || 'Unknown',
+            },
+        ]);
     const updateEncodedRow = (index, key, value) => {
         setEncodedRows((prev) => {
             const next = [...prev];
             if (!next[index]) return next;
-            next[index] = { ...next[index], [key]: value };
+            const row = next[index];
+            const owner = row.__owner;
+            if (owner && owner !== currentEncoderId) return next;
+            next[index] = { ...row, [key]: value };
             return next;
         });
     };
-    const removeEncodedRow = (index) => setEncodedRows((prev) => prev.filter((_, i) => i !== index));
+    const removeEncodedRow = (index) =>
+        setEncodedRows((prev) =>
+            prev.filter((row, i) => {
+                if (i !== index) return true;
+                const owner = row.__owner;
+                if (owner && owner !== currentEncoderId) return true;
+                return false;
+            })
+        );
 
     const getSuggestedExt = (url) => {
         if (!url || typeof url !== 'string') return '.pdf';
@@ -454,48 +500,56 @@ const Reports = ({ user }) => {
     };
 
     const triggerDownload = async (r, { blob: existingBlob, blobUrl } = {}) => {
-        if (!r?.file_url && !blobUrl) return;
-        const ext = getSuggestedExt(r?.file_url || blobUrl);
+        const fileUrl = r?.file_url ?? r?.file;
+        if (!fileUrl && !r?.id && !blobUrl) return;
+        const ext = getSuggestedExt(fileUrl || blobUrl);
         const base = r?.title ? `${r.title.replace(/[/\\?%*:|"<>]/g, '_')}` : 'report';
         const suggestedName = base.endsWith(ext) ? base : `${base}${ext}`;
 
+        // Prefer file picker (Save As) so user can choose where to save
         const showPicker = typeof window.showSaveFilePicker === 'function';
         let handle = null;
         if (showPicker) {
             try {
                 handle = await window.showSaveFilePicker({ suggestedName });
             } catch (err) {
-                if (err?.name === 'AbortError') return;
+                if (err?.name === 'AbortError') return; // user cancelled
+                throw err;
             }
         }
 
         try {
             let blob;
-            let contentDisposition = null;
             if (existingBlob instanceof Blob) {
                 blob = existingBlob;
             } else if (blobUrl && typeof blobUrl === 'string' && blobUrl.startsWith('blob:')) {
                 const res = await fetch(blobUrl);
                 blob = await res.blob();
             } else {
-                const fetchUrl = getFetchUrl(r.file_url);
+                const tryFetch = async (url) => {
+                    const full = toFullUrl(url);
+                    const res = await fetch(full, { credentials: 'include' });
+                    if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
+                    return res;
+                };
                 let res;
-                try {
-                    res = await fetch(fetchUrl, { credentials: 'include' });
-                } catch {
-                    res = await fetch(r.file_url, { credentials: 'include' });
+                if (r?.id != null) {
+                    try {
+                        res = await tryFetch(`/api/reports/${r.id}/preview/`);
+                    } catch {
+                        if (fileUrl) {
+                            try { res = await tryFetch(getFetchUrl(fileUrl)); } catch { res = await tryFetch(fileUrl); }
+                        } else throw new Error('No file');
+                    }
+                } else if (fileUrl) {
+                    try { res = await tryFetch(getFetchUrl(fileUrl)); } catch { res = await tryFetch(fileUrl); }
+                } else {
+                    throw new Error('No file');
                 }
-                if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
-                contentDisposition = res.headers.get('content-disposition');
                 blob = await res.blob();
             }
-            let filename = r?.title ? `${r.title.replace(/[/\\?%*:|"<>]/g, '_')}` : 'report';
-            if (contentDisposition) {
-                const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-                if (match) filename = match[1].replace(/['"]/g, '').trim() || filename;
-            }
-            const ext2 = blob.type?.includes('pdf') ? '.pdf' : blob.type?.includes('spreadsheet') || blob.type?.includes('excel') ? '.xlsx' : blob.type?.includes('msword') ? '.docx' : '.pdf';
-            const finalName = filename.endsWith(ext2) ? filename : `${filename}${ext2}`;
+            const ext2 = blob.type?.includes('pdf') ? '.pdf' : blob.type?.includes('spreadsheet') || blob.type?.includes('excel') ? '.xlsx' : blob.type?.includes('msword') ? '.docx' : ext.startsWith('.') ? ext : `.${ext.replace(/^\./, '') || 'pdf'}`;
+            const finalName = suggestedName.endsWith(ext2) || suggestedName.toLowerCase().endsWith(ext2.toLowerCase()) ? suggestedName : `${(suggestedName.replace(/\.[^.]+$/, '') || base || 'report')}${ext2}`;
 
             if (handle) {
                 const writable = await handle.createWritable();
@@ -510,8 +564,7 @@ const Reports = ({ user }) => {
                 URL.revokeObjectURL(url);
             }
         } catch (err) {
-            console.error('Download failed:', err);
-            if (r?.file_url) window.open(r.file_url, '_blank', 'noopener');
+            if (fileUrl) window.open(toFullUrl(fileUrl), '_blank', 'noopener');
         }
     };
 
@@ -548,15 +601,6 @@ const Reports = ({ user }) => {
                             >
                                 <MdAdd className="w-4 h-4" />
                                 Encode
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleExportExcel}
-                                disabled={(!encodedRows.length && !filteredReports.length) || loading}
-                                className="inline-flex items-center gap-1.5 rounded-xl text-sm py-2.5 px-4 bg-[var(--background-subtle)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--background)] font-semibold shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                                <MdDownload className="w-4 h-4" />
-                                Export
                             </button>
                             <button
                                 type="button"
@@ -643,7 +687,7 @@ const Reports = ({ user }) => {
                                         <td className="table-td-muted">{formatDate(r.uploaded_at)}</td>
                                         {isAdmin && (
                                             <td className="table-td whitespace-nowrap">
-                                                {r.file_url ? (
+                                                {(r.file_url || r.file || r.id) ? (
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
                                                             type="button"
@@ -757,7 +801,7 @@ const Reports = ({ user }) => {
                                     type="file"
                                     onChange={handleFileChange}
                                     className="block w-full text-sm text-[var(--text)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-medium file:cursor-pointer file:transition-colors file:duration-200"
-                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+                                    accept=".pdf,application/pdf"
                                 />
                                 {form.file && (
                                     <p className="mt-1 text-sm text-[var(--text-muted)]">{form.file.name}</p>
@@ -886,100 +930,113 @@ const Reports = ({ user }) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {encodedRows.map((row, index) => (
-                                            <tr key={index} className="border-b border-gray-300">
-                                                <td className="bg-pink-50 border-r border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 align-top hover:bg-pink-100">{index + 1}</td>
-                                                {REPORT_COLUMNS.map((col) => {
-                                                    const val = row[col.key] ?? '';
-                                                    const isDateInvalid = col.type === 'date' && val && !validateDateRange(val);
-                                                    if (col.type === 'date') {
-                                                        return (
-                                                            <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
-                                                                <input
-                                                                    type="date"
-                                                                    value={String(val)}
-                                                                    min={DATE_MIN}
-                                                                    max={DATE_MAX}
-                                                                    onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
-                                                                    title={isDateInvalid ? 'Invalid: Input must be between 1/1/2000 and 12/31/2060' : ''}
-                                                                    className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 ${isDateInvalid ? 'bg-red-200' : 'bg-transparent'}`}
-                                                                />
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (col.type === 'number') {
-                                                        const rawVal = val === '' || val == null ? '' : String(val).replace(/[^0-9.]/g, '');
-                                                        const displayVal = formatNumberAsYouType(rawVal);
+                                        {encodedRows.map((row, index) => {
+                                            const owner = row.__owner || '';
+                                            const isOwner = !owner || owner === currentEncoderId;
+                                            return (
+                                                <tr key={index} className="border-b border-gray-300">
+                                                    <td className="bg-pink-50 border-r border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 align-top hover:bg-pink-100">
+                                                        {index + 1}
+                                                    </td>
+                                                    {REPORT_COLUMNS.map((col) => {
+                                                        const val = row[col.key] ?? '';
+                                                        const isDateInvalid = col.type === 'date' && val && !validateDateRange(val);
+                                                        if (col.type === 'date') {
+                                                            return (
+                                                                <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
+                                                                    <input
+                                                                        type="date"
+                                                                        value={String(val)}
+                                                                        min={DATE_MIN}
+                                                                        max={DATE_MAX}
+                                                                        onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
+                                                                        title={isDateInvalid ? 'Invalid: Input must be between 1/1/2000 and 12/31/2060' : ''}
+                                                                        disabled={!isOwner}
+                                                                        className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 ${isDateInvalid ? 'bg-red-200' : 'bg-transparent'} ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
+                                                                    />
+                                                                </td>
+                                                            );
+                                                        }
+                                                        if (col.type === 'number') {
+                                                            const rawVal = val === '' || val == null ? '' : String(val).replace(/[^0-9.]/g, '');
+                                                            const displayVal = formatNumberAsYouType(rawVal);
+                                                            return (
+                                                                <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
+                                                                    <input
+                                                                        type="text"
+                                                                        inputMode="decimal"
+                                                                        value={displayVal}
+                                                                        onChange={(e) => {
+                                                                            if (!isOwner) return;
+                                                                            const stripped = e.target.value.replace(/[₱,\s]/g, '');
+                                                                            const sanitized = sanitizeNumberInput(stripped);
+                                                                            const limited = (() => {
+                                                                                const p = sanitized.split('.');
+                                                                                if (p.length > 2) return p[0] + '.' + p.slice(1).join('').slice(0, 2);
+                                                                                if (p.length === 2 && p[1].length > 2) return p[0] + '.' + p[1].slice(0, 2);
+                                                                                return sanitized;
+                                                                            })();
+                                                                            updateEncodedRow(index, col.key, limited);
+                                                                        }}
+                                                                        onBlur={() => {
+                                                                            if (!isOwner) return;
+                                                                            const r = row[col.key];
+                                                                            if (r === '' || r == null) return;
+                                                                            const n = parseFloat(String(r).replace(/[^0-9.]/g, ''));
+                                                                            if (!Number.isNaN(n)) updateEncodedRow(index, col.key, Number(n).toFixed(2));
+                                                                        }}
+                                                                        disabled={!isOwner}
+                                                                        className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded text-right focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
+                                                                        placeholder="₱0.00"
+                                                                        title="Numbers and decimal (tuldok) only, e.g. 1234567.89"
+                                                                    />
+                                                                </td>
+                                                            );
+                                                        }
+                                                        if (col.type === 'select' && col.options) {
+                                                            return (
+                                                                <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
+                                                                    <select
+                                                                        value={String(val)}
+                                                                        onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
+                                                                        disabled={!isOwner}
+                                                                        className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
+                                                                    >
+                                                                        <option value="">—</option>
+                                                                        {col.options.map((opt) => (
+                                                                            <option key={opt} value={opt}>{opt}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </td>
+                                                            );
+                                                        }
                                                         return (
                                                             <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
                                                                 <input
                                                                     type="text"
-                                                                    inputMode="decimal"
-                                                                    value={displayVal}
-                                                                    onChange={(e) => {
-                                                                        const stripped = e.target.value.replace(/[₱,\s]/g, '');
-                                                                        const sanitized = sanitizeNumberInput(stripped);
-                                                                        const limited = (() => {
-                                                                            const p = sanitized.split('.');
-                                                                            if (p.length > 2) return p[0] + '.' + p.slice(1).join('').slice(0, 2);
-                                                                            if (p.length === 2 && p[1].length > 2) return p[0] + '.' + p[1].slice(0, 2);
-                                                                            return sanitized;
-                                                                        })();
-                                                                        updateEncodedRow(index, col.key, limited);
-                                                                    }}
-                                                                    onBlur={() => {
-                                                                        const r = row[col.key];
-                                                                        if (r === '' || r == null) return;
-                                                                        const n = parseFloat(String(r).replace(/[^0-9.]/g, ''));
-                                                                        if (!Number.isNaN(n)) updateEncodedRow(index, col.key, Number(n).toFixed(2));
-                                                                    }}
-                                                                    className="w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded text-right focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent"
-                                                                    placeholder="₱0.00"
-                                                                    title="Numbers and decimal (tuldok) only, e.g. 1234567.89"
+                                                                    value={String(val)}
+                                                                    onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
+                                                                    disabled={!isOwner}
+                                                                    className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
                                                                 />
                                                             </td>
                                                         );
-                                                    }
-                                                    if (col.type === 'select' && col.options) {
-                                                        return (
-                                                            <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
-                                                                <select
-                                                                    value={String(val)}
-                                                                    onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
-                                                                    className="w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent"
-                                                                >
-                                                                    <option value="">—</option>
-                                                                    {col.options.map((opt) => (
-                                                                        <option key={opt} value={opt}>{opt}</option>
-                                                                    ))}
-                                                                </select>
-                                                            </td>
-                                                        );
-                                                    }
-                                                    return (
-                                                        <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
-                                                            <input
-                                                                type="text"
-                                                                value={String(val)}
-                                                                onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
-                                                                className="w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent"
-                                                            />
-                                                        </td>
-                                                    );
-                                                })}
-                                                <td className="bg-pink-50 border-gray-300 p-0 align-top text-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeEncodedRow(index)}
-                                                        className="p-2 text-red-600 hover:bg-red-100 rounded border border-transparent hover:border-red-300"
-                                                        title="Remove row"
-                                                        aria-label="Remove row"
-                                                    >
-                                                        <MdDelete className="w-5 h-5" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    })}
+                                                    <td className="bg-pink-50 border-gray-300 p-0 align-top text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeEncodedRow(index)}
+                                                            disabled={!isOwner}
+                                                            className={`p-2 text-red-600 rounded border border-transparent hover:border-red-300 ${isOwner ? 'hover:bg-red-100 cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+                                                            title={isOwner ? 'Remove row' : 'You can only remove rows you encoded'}
+                                                            aria-label="Remove row"
+                                                        >
+                                                            <MdDelete className="w-5 h-5" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                                 {encodedRows.length === 0 && (
@@ -995,7 +1052,7 @@ const Reports = ({ user }) => {
                 document.body
             )}
 
-            {/* Preview modal - shows file first, then user can download */}
+            {/* Preview modal — same as Encode: blob URL in embed/img/iframe */}
             {previewReport && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
@@ -1014,10 +1071,10 @@ const Reports = ({ user }) => {
                                 <MdClose className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="flex-1 overflow-auto bg-gray-100 p-4">
+                        <div className="flex-1 overflow-auto bg-gray-100 p-4 min-h-[70vh] flex flex-col">
                             {previewReport.previewBlobUrl === 'failed' ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)] gap-2">
-                                    <p>Could not load preview.</p>
+                                <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
+                                    <p>Could not load file.</p>
                                 </div>
                             ) : previewReport.previewBlobUrl ? (
                                 (() => {
@@ -1030,7 +1087,7 @@ const Reports = ({ user }) => {
                                                 src={`${previewReport.previewBlobUrl}#toolbar=0&navpanes=0`}
                                                 type="application/pdf"
                                                 className="w-full min-h-[600px] flex-1 border-0 rounded-lg"
-                                                title="Report Preview"
+                                                title="Document"
                                             />
                                         );
                                     }
@@ -1039,29 +1096,28 @@ const Reports = ({ user }) => {
                                             <img
                                                 src={previewReport.previewBlobUrl}
                                                 alt={previewReport.title}
-                                                className="max-w-full max-h-[70vh] object-contain mx-auto"
+                                                className="max-w-full max-h-[70vh] object-contain mx-auto block"
                                             />
                                         );
                                     }
                                     return (
-                                        <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)] gap-3">
-                                            <p>This file type cannot be previewed in the browser.</p>
-                                        </div>
+                                        <iframe
+                                            src={previewReport.previewBlobUrl}
+                                            title={previewReport.title}
+                                            className="w-full min-h-[600px] flex-1 border-0 rounded-lg bg-white"
+                                            sandbox="allow-same-origin"
+                                        />
                                     );
                                 })()
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
                                     <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
-                                    <span>Loading preview…</span>
+                                    <span>Loading file…</span>
                                 </div>
                             )}
                         </div>
-                        <div className="p-4 border-t border-[var(--border-light)] bg-[var(--surface)] flex justify-end">
-                            <button
-                                type="button"
-                                onClick={closePreview}
-                                className="btn-primary"
-                            >
+                        <div className="p-4 border-t border-[var(--border-light)] bg-[var(--surface)] flex justify-end gap-3">
+                            <button type="button" onClick={closePreview} className="btn-primary">
                                 Close
                             </button>
                         </div>

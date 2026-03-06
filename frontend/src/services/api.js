@@ -148,7 +148,6 @@ export const auditLogService = {
 };
 
 export const userService = {
-
     async getAll() {
         const response = await axios.get(`${API_BASE_URL}/users/`);
         return response.data;

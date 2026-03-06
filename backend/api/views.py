@@ -4,8 +4,10 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from django.http import FileResponse, HttpResponse
 from datetime import timedelta
 import secrets
+import mimetypes
 
 from .models import User, Document, Report, CalendarEvent, Notification, PasswordResetToken, AuditLog
 from .serializers import (
@@ -331,7 +333,8 @@ class ReportViewSet(viewsets.ModelViewSet):
         _log_audit('report_created', (report.uploadedBy or 'Unknown').strip(), 'report', str(report.id), (report.title or 'Report')[:80])
 
     def perform_update(self, serializer):
-        serializer.save()
+        report = serializer.save()
+        _log_audit('report_updated', (self.request.data.get('currentUsername') or report.uploadedBy or 'Unknown').strip(), 'report', str(report.id), (report.title or 'Report')[:80])
 
     def perform_destroy(self, instance):
         report_id = str(instance.id)
@@ -339,6 +342,27 @@ class ReportViewSet(viewsets.ModelViewSet):
         actor = (self.request.data.get('currentUsername') or instance.uploadedBy or 'Unknown').strip()
         super().perform_destroy(instance)
         _log_audit('report_deleted', actor, 'report', report_id, title)
+
+    @action(detail=True, methods=['get'], url_path='preview')
+    def preview(self, request, pk=None):
+        """Serve the report file for preview (inline, no download)."""
+        report = self.get_object()
+        if not report.file:
+            return Response({'detail': 'No file attached.'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            content_type, _ = mimetypes.guess_type(report.file.name or '')
+            content_type = content_type or 'application/octet-stream'
+            if content_type == 'application/octet-stream' and report.file.name and report.file.name.lower().endswith('.pdf'):
+                content_type = 'application/pdf'
+            fh = report.file.open('rb')
+            resp = FileResponse(fh, content_type=content_type, as_attachment=False)
+            resp['Content-Disposition'] = 'inline'
+            resp['Cache-Control'] = 'no-cache'
+            return resp
+        except FileNotFoundError:
+            return Response({'detail': 'File not found on server.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CalendarEventViewSet(viewsets.ModelViewSet):
@@ -360,13 +384,23 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
             )
 
     def perform_create(self, serializer):
-        serializer.save()
+        event = serializer.save()
+        title = (getattr(event, 'title', None) or 'Calendar event')[:80]
+        actor = (self.request.data.get('created_by') or 'Unknown').strip()
+        _log_audit('calendar_event_created', actor, 'calendar_event', str(event.id), title)
 
     def perform_update(self, serializer):
-        serializer.save()
+        event = serializer.save()
+        title = (getattr(event, 'title', None) or 'Calendar event')[:80]
+        actor = (self.request.data.get('updated_by') or 'Unknown').strip()
+        _log_audit('calendar_event_updated', actor, 'calendar_event', str(event.id), title)
 
     def perform_destroy(self, instance):
+        event_id = str(instance.id)
+        title = (getattr(instance, 'title', None) or 'Calendar event')[:80]
+        actor = (getattr(self.request, 'data', None) and self.request.data.get('deleted_by')) or 'Unknown'
         super().perform_destroy(instance)
+        _log_audit('calendar_event_deleted', actor.strip(), 'calendar_event', event_id, title)
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -390,6 +424,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only list of audit trail entries (important actions only)."""
     queryset = AuditLog.objects.all().order_by('-created_at')
     serializer_class = AuditLogSerializer
+    pagination_class = None  # Return all audit entries so Activity Logs page shows full history
 
     def get_queryset(self):
         return AuditLog.objects.all().order_by('-created_at')

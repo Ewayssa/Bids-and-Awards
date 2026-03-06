@@ -12,7 +12,8 @@ const NotificationBell = ({ user }) => {
 
     useEffect(() => {
         let cancelled = false;
-        (async () => {
+
+        const fetchNotifications = async () => {
             try {
                 const list = await notificationService.getAll();
                 if (!cancelled && Array.isArray(list)) {
@@ -22,8 +23,18 @@ const NotificationBell = ({ user }) => {
             } catch {
                 if (!cancelled) setNotifications([]);
             }
-        })();
-        return () => { cancelled = true; };
+        };
+
+        // Initial load (and when route changes)
+        fetchNotifications();
+
+        // Poll every 15 seconds for near real-time updates
+        const intervalId = setInterval(fetchNotifications, 15000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
     }, [location.pathname, isAdmin]);
 
     const unreadCount = notifications.filter((n) => !n.read).length;

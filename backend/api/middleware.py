@@ -26,16 +26,16 @@ class SecureHeadersMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-
-        # Clickjacking protection:
-        # - For regular pages and API responses, keep X-Frame-Options: DENY
-        # - For media files (PDFs/documents), allow embedding so React frontend
-        #   can show them in <embed>/<iframe> even when served from a different port.
         media_url = getattr(settings, "MEDIA_URL", "/media/")
-        if request.path.startswith(media_url):
-            # Remove any X-Frame-Options header that might have been set upstream
+
+        # Allow embedding report preview in iframe (so View shows file in modal)
+        if '/api/reports/' in request.path and '/preview/' in request.path:
+            response['X-Frame-Options'] = 'SAMEORIGIN'
+        # Media files: allow embedding, force inline
+        elif request.path.startswith(media_url):
             if "X-Frame-Options" in response:
                 del response["X-Frame-Options"]
+            response["Content-Disposition"] = "inline"
         else:
             response.setdefault("X-Frame-Options", "DENY")
 

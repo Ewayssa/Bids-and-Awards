@@ -18,7 +18,11 @@ const ACTION_LABELS = {
     document_completed: 'Document completed',
     document_deleted: 'Document deleted',
     report_created: 'Report created',
+    report_updated: 'Report updated',
     report_deleted: 'Report deleted',
+    calendar_event_created: 'Calendar event created',
+    calendar_event_updated: 'Calendar event updated',
+    calendar_event_deleted: 'Calendar event deleted',
     backup_exported: 'Backup exported',
     restore_completed: 'Restore completed',
 };
@@ -60,6 +64,12 @@ const AuditTrail = () => {
         loadLogs();
     }, [loadLogs]);
 
+    // Auto-refresh every 30 seconds so new activities appear without leaving the page
+    useEffect(() => {
+        const interval = setInterval(loadLogs, 30000);
+        return () => clearInterval(interval);
+    }, [loadLogs]);
+
     const totalPages = Math.max(1, Math.ceil(logs.length / TABLE_PAGE_SIZE));
     const paginatedLogs = logs.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
 
@@ -91,21 +101,31 @@ const AuditTrail = () => {
                     <div className="section-header flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <h2 className="text-base sm:text-lg font-bold text-[var(--text)]">Activity Logs</h2>
-                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded.</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded. Refreshes every 30s.</p>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => loadLogs()}
+                            disabled={loading}
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--background-subtle)] disabled:opacity-50 text-sm font-medium text-[var(--text)]"
+                            aria-label="Refresh activity logs"
+                        >
+                            <MdRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-[var(--border)] w-full">
+                        <table className="min-w-full w-full divide-y divide-[var(--border)]" style={{ tableLayout: 'fixed' }}>
                             <thead className="table-header">
                                 <tr>
-                                    <th className="table-th">User</th>
-                                    <th className="table-th">Action</th>
-                                    <th className="table-th">Date &amp; time</th>
+                                    <th className="table-th" style={{ width: '25%' }}>User</th>
+                                    <th className="table-th text-center" style={{ width: '50%' }}>Action</th>
+                                    <th className="table-th whitespace-nowrap" style={{ width: '25%' }}>Date and time</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                                 {logs.length === 0 ? (
-                                    <tr>
+                                    <tr key="empty">
                                         <td colSpan={3} className="table-td text-center py-12 text-[var(--text-muted)]">
                                             <MdHistory className="w-10 h-10 mx-auto mb-2 opacity-50" />
                                             No audit entries yet.
@@ -118,8 +138,8 @@ const AuditTrail = () => {
                                             className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group"
                                         >
                                             <td className="table-td">{entry.actor || '—'}</td>
-                                            <td className="table-td">
-                                                <span className="font-medium text-[var(--text)]">
+                                            <td className="table-td text-center">
+                                                <span className="inline-flex justify-center items-center w-full font-medium text-[var(--text)]">
                                                     {ACTION_LABELS[entry.action] || entry.action}
                                                 </span>
                                             </td>

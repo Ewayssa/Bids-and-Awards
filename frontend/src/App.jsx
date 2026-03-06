@@ -37,7 +37,7 @@ function AppContent() {
                 <ChangePassword user={user} onPasswordChanged={handlePasswordChanged} />
             ) : (
                 <div className={`flex flex-nowrap min-h-screen w-full max-w-full bg-[var(--background)] overflow-x-hidden ${sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
-                    <Navigation user={user} onLogout={handleLogout} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+                    <Navigation user={user} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
                     <main className="flex-1 min-w-0 pt-14 md:pt-0 bg-[var(--background)] md:border-l border-[var(--border-light)] min-h-screen overflow-x-hidden" role="main">
                         <div className="page-container h-full w-full min-w-0 overflow-x-hidden">
                             <Routes>
