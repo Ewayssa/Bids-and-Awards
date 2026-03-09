@@ -25,10 +25,12 @@ const Login = ({ onLogin, infoMessage }) => {
     const [registerError, setRegisterError] = useState('');
     const [registerLoading, setRegisterLoading] = useState(false);
     const [registerSuccess, setRegisterSuccess] = useState(false);
+    const [hasTriedLogin, setHasTriedLogin] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setHasTriedLogin(true);
         if (!email.trim()) {
             setError('Please enter your username or email.');
             return;
@@ -209,7 +211,7 @@ const Login = ({ onLogin, infoMessage }) => {
                                 {error}
                             </div>
                         )}
-                        {!error && infoMessage && (
+                        {!error && infoMessage && !hasTriedLogin && (
                             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-3 py-2 rounded-lg" role="status">
                                 {infoMessage}
                             </div>
