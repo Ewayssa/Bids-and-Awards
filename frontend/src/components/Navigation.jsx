@@ -1,25 +1,25 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    MdDashboard,
-    MdPostAdd,
-    MdAssessment,
-    MdPeople,
-    MdSettings,
+    MdSpaceDashboard,
+    MdDescription,
+    MdTableChart,
+    MdGroup,
+    MdTune,
     MdMenu,
     MdClose,
-    MdHistory,
+    MdHistoryToggleOff,
 } from 'react-icons/md';
 import { canAccessRoute, ROLES } from '../utils/roles';
 import NotificationBell from './NotificationBell';
 
 const NAV_ITEMS = [
-    { path: '/', label: 'Dashboard', icon: MdDashboard },
-    { path: '/encode', label: 'Encode', icon: MdPostAdd },
-    { path: '/reports', label: 'Reports', icon: MdAssessment },
-    { path: '/personnel', label: 'User Management', icon: MdPeople },
-    { path: '/audit-trail', label: 'Activity Logs', icon: MdHistory },
-    { path: '/settings', label: 'Settings', icon: MdSettings },
+    { path: '/', label: 'Dashboard', icon: MdSpaceDashboard },
+    { path: '/encode', label: 'Encode', icon: MdDescription },
+    { path: '/reports', label: 'Reports', icon: MdTableChart },
+    { path: '/personnel', label: 'User Management', icon: MdGroup },
+    { path: '/audit-trail', label: 'Activity Logs', icon: MdHistoryToggleOff },
+    { path: '/settings', label: 'Settings', icon: MdTune },
 ];
 
 const canAccessNavItem = (item, role) => {
@@ -82,10 +82,10 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                                     )}
                                     <span
                                         className={[
-                                            'flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 transition-all duration-300 ease-out',
-                                            active 
-                                                ? 'bg-[var(--primary)]/15 text-[var(--primary)] shadow-sm scale-105' 
-                                                : 'text-[var(--text-subtle)] group-hover:scale-105 group-hover:bg-[var(--background-subtle)]',
+                                            'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all duration-300 ease-out',
+                                            active
+                                                ? 'bg-[var(--primary)] text-white shadow-md scale-105'
+                                                : 'bg-transparent text-[var(--text-subtle)] group-hover:text-[var(--primary)] group-hover:bg-[var(--primary-muted)]/25 group-hover:shadow-sm',
                                         ].join(' ')}
                                     >
                                         <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />

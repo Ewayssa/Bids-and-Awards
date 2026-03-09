@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
@@ -11,20 +11,53 @@ import AuditTrail from './pages/AuditTrail';
 import Navigation from './components/Navigation';
 import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/roles';
 
+const SESSION_TIMEOUT_MINUTES = 5;
+
 function AppContent() {
     const [user, setUser] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [loginInfoMessage, setLoginInfoMessage] = useState('');
     const navigate = useNavigate();
 
     const handleLogin = (userData) => {
         const role = mapOldRoleToNew(userData?.role) || ROLES.EMPLOYEE;
         setUser({ ...userData, role, must_change_password: userData?.must_change_password === true });
+        setLoginInfoMessage('');
         navigate('/');
     };
-    const handleLogout = () => setUser(null);
+    const handleLogout = () => {
+        setUser(null);
+        setLoginInfoMessage('');
+    };
     const handlePasswordChanged = () => {
         setUser((prev) => (prev ? { ...prev, must_change_password: false } : null));
     };
+
+    // Session timeout based on user inactivity
+    useEffect(() => {
+        if (!user) return;
+
+        const timeoutMs = SESSION_TIMEOUT_MINUTES * 60 * 1000;
+        let timeoutId;
+
+        const resetTimer = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                setUser(null);
+                setLoginInfoMessage('Your session has ended due to inactivity. Please sign in again.');
+                navigate('/');
+            }, timeoutMs);
+        };
+
+        const events = ['click', 'mousemove', 'keydown', 'scroll', 'focus'];
+        events.forEach((evt) => window.addEventListener(evt, resetTimer));
+        resetTimer();
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            events.forEach((evt) => window.removeEventListener(evt, resetTimer));
+        };
+    }, [user, navigate]);
 
     const userRole = user?.role || ROLES.EMPLOYEE;
     const defaultRoute = getDefaultRouteForRole(userRole);
@@ -32,7 +65,7 @@ function AppContent() {
     return (
         <>
             {!user ? (
-                <Login onLogin={handleLogin} />
+                <Login onLogin={handleLogin} infoMessage={loginInfoMessage} />
             ) : user.must_change_password ? (
                 <ChangePassword user={user} onPasswordChanged={handlePasswordChanged} />
             ) : (

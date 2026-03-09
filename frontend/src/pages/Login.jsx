@@ -8,7 +8,7 @@ import { validatePassword, STRICT_PASSWORD_RULES } from '../utils/password';
 
 const LEFT_PANEL_IMAGE = '/dilg-logo.png';
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, infoMessage }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -207,6 +207,11 @@ const Login = ({ onLogin }) => {
                         {error && (
                             <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
                                 {error}
+                            </div>
+                        )}
+                        {!error && infoMessage && (
+                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-3 py-2 rounded-lg" role="status">
+                                {infoMessage}
                             </div>
                         )}
                     </div>

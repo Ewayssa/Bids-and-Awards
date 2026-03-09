@@ -36,6 +36,16 @@ const CHECKLIST_ITEMS = [
 
 const toLettersOnly = (value) => value.replace(/[^A-Za-z\s]/g, '');
 const toNumbersOnly = (value) => value.replace(/[^0-9.]/g, '');
+const formatCurrencyValue = (value) => {
+    const cleaned = toNumbersOnly(String(value || ''));
+    if (!cleaned) return '';
+    const num = parseFloat(cleaned);
+    if (Number.isNaN(num)) return '';
+    return num.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+};
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
@@ -1918,9 +1928,10 @@ const Encode = ({ user }) => {
                                             setSelectedSubDocType(null);
                                             setNewStep('docType');
                                         }}
-                                        className="text-sm text-[var(--primary)] hover:text-[var(--primary-hover)] hover:underline font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1 rounded px-2 py-1"
+                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] px-3 py-1.5 rounded-lg border border-transparent hover:border-[var(--primary-muted)] hover:bg-[var(--primary-muted)]/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1"
                                     >
-                                        ← Back
+                                        <MdChevronLeft className="w-4 h-4" aria-hidden="true" />
+                                        Back
                                     </button>
                                 </div>
                             </div>
@@ -1997,7 +2008,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2109,7 +2120,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2192,10 +2203,9 @@ const Encode = ({ user }) => {
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
                                                 <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={form.total_amount}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.total_amount)}
                                                     onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
@@ -2211,7 +2221,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2284,10 +2294,9 @@ const Encode = ({ user }) => {
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
                                                 <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={form.total_amount}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.total_amount)}
                                                     onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
@@ -2303,7 +2312,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2376,10 +2385,9 @@ const Encode = ({ user }) => {
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
                                                 <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={form.total_amount}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.total_amount)}
                                                     onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
@@ -2395,7 +2403,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2501,7 +2509,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2553,10 +2561,9 @@ const Encode = ({ user }) => {
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
                                                 <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={form.market_budget}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.market_budget)}
                                                     onChange={(e) => setForm((f) => ({ ...f, market_budget: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
@@ -2629,7 +2636,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                 />
@@ -2725,7 +2732,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -3047,7 +3054,18 @@ const Encode = ({ user }) => {
                                             <label className="label">Amount <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                                <input type="number" step="0.01" min="0" value={form.total_amount} onChange={(e) => { const value = toNumbersOnly(e.target.value); setForm((f) => ({ ...f, total_amount: value })); if (newFormErrors.total_amount) setNewFormErrors((e2) => ({ ...e2, total_amount: '' })); }} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.total_amount)}
+                                                    onChange={(e) => {
+                                                        const value = toNumbersOnly(e.target.value);
+                                                        setForm((f) => ({ ...f, total_amount: value }));
+                                                        if (newFormErrors.total_amount) setNewFormErrors((e2) => ({ ...e2, total_amount: '' }));
+                                                    }}
+                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                    placeholder="0.00"
+                                                />
                                             </div>
                                             {newFormErrors.total_amount && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.total_amount}</p>}
                                         </div>
@@ -3080,7 +3098,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3109,7 +3127,18 @@ const Encode = ({ user }) => {
                                             <label className="label">Contract Amount <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                                <input type="number" step="0.01" min="0" value={form.contract_amount} onChange={(e) => { const value = toNumbersOnly(e.target.value); setForm((f) => ({ ...f, contract_amount: value })); if (newFormErrors.contract_amount) setNewFormErrors((e2) => ({ ...e2, contract_amount: '' })); }} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.contract_amount)}
+                                                    onChange={(e) => {
+                                                        const value = toNumbersOnly(e.target.value);
+                                                        setForm((f) => ({ ...f, contract_amount: value }));
+                                                        if (newFormErrors.contract_amount) setNewFormErrors((e2) => ({ ...e2, contract_amount: '' }));
+                                                    }}
+                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                    placeholder="0.00"
+                                                />
                                             </div>
                                             {newFormErrors.contract_amount && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.contract_amount}</p>}
                                         </div>
@@ -3126,7 +3155,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3160,7 +3189,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3189,7 +3218,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3361,9 +3390,10 @@ const Encode = ({ user }) => {
                                     <button
                                         type="button"
                                         onClick={() => setNewStep('subDoc')}
-                                        className="text-sm text-[var(--primary)] hover:text-[var(--primary-hover)] hover:underline font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1 rounded px-2 py-1"
+                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] px-3 py-1.5 rounded-lg border border-transparent hover:border-[var(--primary-muted)] hover:bg-[var(--primary-muted)]/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1"
                                     >
-                                        ← Back
+                                        <MdChevronLeft className="w-4 h-4" aria-hidden="true" />
+                                        Back
                                     </button>
                                     <button
                                         type="submit"
@@ -3406,10 +3436,11 @@ const Encode = ({ user }) => {
                                     <button
                                         type="button"
                                         onClick={() => setManageSelectedTypeId(null)}
-                                        className="p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] shrink-0"
-                                        aria-label="Back"
+                                        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] px-3 py-1.5 rounded-lg border border-transparent hover:border-[var(--primary-muted)] hover:bg-[var(--primary-muted)]/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1"
+                                        aria-label="Back to document types"
                                     >
-                                        <MdExpandLess className="w-5 h-5 rotate-90" />
+                                        <MdChevronLeft className="w-4 h-4" aria-hidden="true" />
+                                        Back
                                     </button>
                                 )}
                                 <h2 className="text-lg font-semibold text-[var(--text)] truncate">
@@ -3470,7 +3501,6 @@ const Encode = ({ user }) => {
                                     }
                                     return (
                                         <div className="space-y-2">
-                                            <p className="text-sm text-[var(--text-muted)] mb-4">Click a BAC Folder to see all documents in a popup.</p>
                                             <ul className="divide-y divide-[var(--border)] border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]">
                                                 {prNoList.map((prNo) => {
                                                     const count = docsInCategory.filter((d) => (d.prNo || '').trim() === prNo).length;
@@ -3531,8 +3561,82 @@ const Encode = ({ user }) => {
                                     <div className="p-6 text-center text-[var(--text-muted)]">No documents in this folder.</div>
                                 ) : (
                                     <>
+                                        <div className="flex-1 overflow-auto bg-gray-100 p-4 min-h-0 flex flex-col">
+                                            {!manageFolderPopupPreview ? (
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
+                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
+                                                    <span>Loading…</span>
+                                                </div>
+                                            ) : manageFolderPopupPreview.previewBlobUrl === 'no-file' ? (
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
+                                                    <p className="font-medium">No file</p>
+                                                    <p className="text-sm mt-1">This document has no file uploaded.</p>
+                                                </div>
+                                            ) : manageFolderPopupPreview.previewBlobUrl === 'failed' ? (
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
+                                                    <p>Could not load file.</p>
+                                                </div>
+                                            ) : manageFolderPopupPreview.previewBlobUrl ? (
+                                                (() => {
+                                                    const ct = manageFolderPopupPreview.previewBlobType || '';
+                                                    const isPdf = ct.includes('pdf');
+                                                    const isImage = /^image\//.test(ct);
+                                                    const previewBoxClass = 'w-full min-h-[480px] flex-1 rounded-lg border border-[var(--border)] bg-white overflow-hidden flex flex-col';
+                                                    const docTitle = manageFolderPopupPreview.doc?.title || manageFolderPopupPreview.doc?.subDoc || 'Document';
+                                                    if (isPdf) {
+                                                        return (
+                                                            <div className={previewBoxClass}>
+                                                                <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--background-subtle)] text-sm font-semibold text-[var(--text)] truncate">
+                                                                    {docTitle}
+                                                                </div>
+                                                                <embed
+                                                                    src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
+                                                                    type="application/pdf"
+                                                                    className="w-full min-h-[440px] flex-1 border-0"
+                                                                    title={docTitle}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    }
+                                                    if (isImage) {
+                                                        return (
+                                                            <div className={previewBoxClass}>
+                                                                <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--background-subtle)] text-sm font-semibold text-[var(--text)] truncate">
+                                                                    {docTitle}
+                                                                </div>
+                                                                <div className="flex-1 flex items-center justify-center p-4">
+                                                                    <img
+                                                                        src={manageFolderPopupPreview.previewBlobUrl}
+                                                                        alt={docTitle}
+                                                                        className="max-w-full max-h-[70vh] object-contain"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div className={previewBoxClass}>
+                                                            <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--background-subtle)] text-sm font-semibold text-[var(--text)] truncate">
+                                                                {docTitle}
+                                                            </div>
+                                                            <iframe
+                                                                src={manageFolderPopupPreview.previewBlobUrl}
+                                                                title={docTitle}
+                                                                className="w-full min-h-[440px] flex-1 border-0"
+                                                                sandbox="allow-same-origin"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })()
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
+                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
+                                                    <span>Loading file…</span>
+                                                </div>
+                                            )}
+                                        </div>
                                         {showNav && (
-                                            <div className="px-4 py-2 border-b border-[var(--border)] flex items-center justify-center gap-3 shrink-0">
+                                            <div className="px-4 py-2 border-t border-[var(--border)] flex items-center justify-center gap-3 shrink-0 bg-[var(--surface)]">
                                                 <button
                                                     type="button"
                                                     onClick={() => setManageFolderPopupIndex((i) => Math.max(0, i - 1))}
@@ -3556,68 +3660,6 @@ const Encode = ({ user }) => {
                                                 </button>
                                             </div>
                                         )}
-                                        <div className="flex-1 overflow-auto bg-gray-100 p-4 min-h-0 flex flex-col">
-                                            {!manageFolderPopupPreview ? (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
-                                                    <span>Loading…</span>
-                                                </div>
-                                            ) : manageFolderPopupPreview.previewBlobUrl === 'no-file' ? (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <p className="font-medium">No file</p>
-                                                    <p className="text-sm mt-1">This document has no file uploaded.</p>
-                                                </div>
-                                            ) : manageFolderPopupPreview.previewBlobUrl === 'failed' ? (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <p>Could not load file.</p>
-                                                </div>
-                                            ) : manageFolderPopupPreview.previewBlobUrl ? (
-                                                (() => {
-                                                    const ct = manageFolderPopupPreview.previewBlobType || '';
-                                                    const isPdf = ct.includes('pdf');
-                                                    const isImage = /^image\//.test(ct);
-                                                    const previewBoxClass = 'w-full min-h-[480px] flex-1 rounded-lg border border-[var(--border)] bg-white overflow-hidden flex flex-col';
-                                                    if (isPdf) {
-                                                        return (
-                                                            <div className={previewBoxClass}>
-                                                                <embed
-                                                                    src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
-                                                                    type="application/pdf"
-                                                                    className="w-full min-h-[480px] flex-1 border-0"
-                                                                    title={manageFolderPopupPreview.doc?.title || 'Document'}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    }
-                                                    if (isImage) {
-                                                        return (
-                                                            <div className={`${previewBoxClass} items-center justify-center`}>
-                                                                <img
-                                                                    src={manageFolderPopupPreview.previewBlobUrl}
-                                                                    alt={manageFolderPopupPreview.doc?.title || 'Document'}
-                                                                    className="max-w-full max-h-[70vh] object-contain"
-                                                                />
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return (
-                                                        <div className={previewBoxClass}>
-                                                            <iframe
-                                                                src={manageFolderPopupPreview.previewBlobUrl}
-                                                                title={manageFolderPopupPreview.doc?.title || 'Document'}
-                                                                className="w-full min-h-[480px] flex-1 border-0"
-                                                                sandbox="allow-same-origin"
-                                                            />
-                                                        </div>
-                                                    );
-                                                })()
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
-                                                    <span>Loading file…</span>
-                                                </div>
-                                            )}
-                                        </div>
                                     </>
                                 )}
                             </div>
@@ -3804,10 +3846,9 @@ const Encode = ({ user }) => {
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
                                                 <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={form.total_amount}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.total_amount)}
                                                     onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
@@ -3862,10 +3903,9 @@ const Encode = ({ user }) => {
                                             <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                                 <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
                                                 <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={form.total_amount}
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.total_amount)}
                                                     onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
@@ -4005,21 +4045,20 @@ const Encode = ({ user }) => {
                                             placeholder="Document title"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="label">Budget</label>
-                                        <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                                            <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={form.market_budget}
-                                                onChange={(e) => setForm((f) => ({ ...f, market_budget: toNumbersOnly(e.target.value) }))}
-                                                className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
-                                                placeholder="0.00"
-                                            />
+                                        <div>
+                                            <label className="label">Budget</label>
+                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formatCurrencyValue(form.market_budget)}
+                                                    onChange={(e) => setForm((f) => ({ ...f, market_budget: toNumbersOnly(e.target.value) }))}
+                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
                                     <div>
                                         <label className="label">Period of market scoping</label>
                                         <div className="grid grid-cols-2 gap-3">
@@ -4277,7 +4316,14 @@ const Encode = ({ user }) => {
                                         <label className="label">Amount</label>
                                         <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                             <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                            <input type="number" step="0.01" min="0" value={form.total_amount} onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={formatCurrencyValue(form.total_amount)}
+                                                onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
+                                                className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                placeholder="0.00"
+                                            />
                                         </div>
                                     </div>
                                     <div>
@@ -4325,7 +4371,14 @@ const Encode = ({ user }) => {
                                         <label className="label">Contract Amount</label>
                                         <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                             <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                            <input type="number" step="0.01" min="0" value={form.contract_amount} onChange={(e) => setForm((f) => ({ ...f, contract_amount: toNumbersOnly(e.target.value) }))} className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0" placeholder="0.00" />
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={formatCurrencyValue(form.contract_amount)}
+                                                onChange={(e) => setForm((f) => ({ ...f, contract_amount: toNumbersOnly(e.target.value) }))}
+                                                className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
+                                                placeholder="0.00"
+                                            />
                                         </div>
                                     </div>
                                     <div>
