@@ -1400,35 +1400,36 @@ const Encode = ({ user }) => {
                     : 'Create new procurements and maintain accurate document records.'}
             />
 
-            <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto min-w-0 w-full">
-                {/* Action cards for Start New Procurement and Update Documents */}
+            <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0">
                 {canUploadDocuments && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="card-elevated overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Start New Procurement</p>
-                                <p className="mt-1 text-[var(--text-muted)] text-sm">Use this to submit new documents. This is the only way to submit documents.</p>
+                    <div className="p-5 sm:p-6 border-b border-[var(--border-light)]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="card overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Start New Procurement</p>
+                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Use this to submit new documents. This is the only way to submit documents.</p>
+                                </div>
+                                <button type="button" onClick={openNew} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                    <MdUpload className="w-5 h-5" />
+                                    Start New
+                                </button>
                             </div>
-                            <button type="button" onClick={openNew} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                                <MdUpload className="w-5 h-5" />
-                                Start New
-                            </button>
-                        </div>
-                        <div className="card-elevated overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Update Documents</p>
-                                <p className="mt-1 text-[var(--text-muted)] text-sm">Update documents to add missing fields or change existing ones. Click ongoing documents in the checklist to complete them.</p>
+                            <div className="card overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Update Documents</p>
+                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Update documents to add missing fields or change existing ones. Click ongoing documents in the checklist to complete them.</p>
+                                </div>
+                                <button type="button" onClick={openUpdate} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                    <MdEdit className="w-5 h-5" />
+                                    Update
+                                </button>
                             </div>
-                            <button type="button" onClick={openUpdate} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                                <MdEdit className="w-5 h-5" />
-                                Update
-                            </button>
                         </div>
                     </div>
                 )}
 
                 {/* Table of all submitted documents */}
-                <section className="card overflow-hidden min-w-0">
+                <section className="min-w-0">
                     <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/50">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <h2 className="text-base sm:text-lg font-semibold text-[var(--text)] truncate">

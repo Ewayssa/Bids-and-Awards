@@ -575,21 +575,19 @@ const Reports = ({ user }) => {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-5">
             <PageHeader
                 title="Reports"
                 subtitle="Upload and view all reports in the system."
             />
 
-            {uploadSuccess && (
-                <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm shadow-sm transition-all duration-300 ease-out">
-                    {uploadSuccess}
-                </div>
-            )}
-
-            {/* Reports Table */}
-            <section className="content-section">
-                <div className="section-header">
+            <section className="content-section overflow-hidden rounded-xl p-0">
+                {uploadSuccess && (
+                    <div className="p-4 px-5 pt-5 rounded-t-xl bg-green-50 border-b border-green-200 text-green-800 text-sm">
+                        {uploadSuccess}
+                    </div>
+                )}
+                <div className={`section-header ${uploadSuccess ? 'section-header--nested' : ''}`}>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0 flex-1 overflow-hidden">
                             <h2 className="text-base sm:text-lg font-bold text-[var(--text)] truncate block">All Uploaded Reports</h2>

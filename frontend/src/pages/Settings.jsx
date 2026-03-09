@@ -74,7 +74,7 @@ const Settings = () => {
     };
 
     return (
-        <div className="space-y-8 pb-10">
+        <div className="space-y-5 pb-8">
             <PageHeader
                 title="Settings"
                 subtitle="Backup and restore system data."

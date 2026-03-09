@@ -183,21 +183,20 @@ const Personnel = ({ user }) => {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-5">
             <PageHeader
                 title="User Management"
                 subtitle="Create and manage user accounts, assign roles and permissions."
             />
 
-            {successMessage && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm font-medium shadow-sm transition-all duration-300 ease-out" role="alert">
-                    <MdCheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
-                    <span>{successMessage}</span>
-                </div>
-            )}
-
-            <section className="content-section">
-                <div className="section-header">
+            <section className="content-section overflow-hidden rounded-xl p-0">
+                {successMessage && (
+                    <div className="flex items-center gap-3 px-5 py-3 rounded-t-xl bg-green-50 border-b border-green-200 text-green-800 text-sm font-medium" role="alert">
+                        <MdCheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
+                        <span>{successMessage}</span>
+                    </div>
+                )}
+                <div className={`section-header ${successMessage ? 'section-header--nested' : ''}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="min-w-0 flex-1 overflow-hidden">
                             <h2 className="text-base sm:text-lg font-bold text-[var(--text)] truncate block">System Users</h2>

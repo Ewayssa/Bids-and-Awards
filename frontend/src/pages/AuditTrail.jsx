@@ -78,27 +78,27 @@ const AuditTrail = () => {
     }, [logs.length]);
 
     return (
-        <div className="space-y-6 pb-10">
+        <div className="space-y-5 pb-8">
             <PageHeader
                 title="Activity Logs"
                 subtitle="Important system activities. Only significant events are recorded."
                 titleSize="default"
             />
 
-            {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
-                    {error}
-                </div>
-            )}
-
-            {loading ? (
-                <div className="card rounded-xl flex flex-col items-center justify-center py-16">
-                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--primary)] border-t-transparent" />
-                    <p className="text-sm text-[var(--text-muted)] mt-4">Loading activity logs…</p>
-                </div>
-            ) : (
-                <section className="content-section">
-                    <div className="section-header flex flex-wrap items-center justify-between gap-3">
+            <section className="content-section overflow-hidden rounded-xl p-0">
+                {error && (
+                    <div className="rounded-t-xl border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-16">
+                        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--primary)] border-t-transparent" />
+                        <p className="text-sm text-[var(--text-muted)] mt-4">Loading activity logs…</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className={`section-header flex flex-wrap items-center justify-between gap-3 ${error ? 'section-header--nested' : ''}`}>
                         <div>
                             <h2 className="text-base sm:text-lg font-bold text-[var(--text)]">Activity Logs</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded. Refreshes every 30s.</p>
@@ -177,8 +177,9 @@ const AuditTrail = () => {
                             </button>
                         </div>
                     )}
-                </section>
-            )}
+                    </>
+                )}
+            </section>
         </div>
     );
 };

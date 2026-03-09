@@ -1,24 +1,24 @@
 import React from 'react';
 
 /**
- * Reusable page header with title, subtitle, and optional actions.
+ * Reusable page header: title, optional subtitle, optional actions (right-aligned).
+ * @param {boolean} insideCard - When true, header is the top of a card.
+ * @param {string} variant - 'default' | 'minimal'
  */
-const PageHeader = ({ title, subtitle, children, titleSize = 'lg' }) => {
+const PageHeader = ({ title, subtitle, children, titleSize = 'lg', insideCard = false, variant = 'default' }) => {
     const titleClass = titleSize === 'lg' ? 'page-title-lg' : 'page-title';
+    const hasActions = Boolean(children);
 
     return (
-        <header className="page-header min-w-0">
-            <div className="flex items-start min-w-0 flex-1">
-                <div className="min-w-0 flex-1">
+        <header className={`page-header min-w-0 ${insideCard ? 'page-header--inside' : ''} ${variant === 'minimal' ? 'page-header--minimal' : ''}`}>
+            <div className="page-header__accent" aria-hidden />
+            <div className="page-header__inner">
+                <div className="page-header__main">
                     <h1 className={titleClass}>{title}</h1>
-                    {subtitle && <p className="page-subtitle mt-1">{subtitle}</p>}
+                    {subtitle && <p className="page-header__subtitle">{subtitle}</p>}
                 </div>
+                {hasActions && <div className="page-header__actions">{children}</div>}
             </div>
-            {children && (
-                <div className="flex-shrink-0 flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                    {children}
-                </div>
-            )}
         </header>
     );
 };

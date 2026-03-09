@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { dashboardService, calendarEventService, documentService } from '../services/api';
-import { ROLES } from '../utils/roles';
+import { ROLES, mapOldRoleToNew } from '../utils/roles';
 import { MdCheckCircle, MdSchedule, MdChevronLeft, MdChevronRight, MdAdd, MdClose, MdWarning, MdEdit } from 'react-icons/md';
 import NotificationBell from '../components/NotificationBell';
 import PageHeader from '../components/PageHeader';
@@ -149,7 +149,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     }
 
     const hasEvent = (dateStr) => events.some((e) => e.date === dateStr);
-    const isAdmin = user?.role === ROLES.ADMIN;
+    const isAdmin = mapOldRoleToNew(user?.role) === ROLES.ADMIN;
 
     const openAddEvent = (dateStr) => {
         if (!isAdmin) return;
@@ -350,9 +350,9 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
     ];
 
     return (
-        <div className="space-y-8 pb-10">
+        <div className="space-y-5 pb-8">
             <PageHeader
-                title={isAdmin ? 'BAC Dashboard' : 'Employee Dashboard'}
+                title="BAC Dashboard"
                 subtitle={dateLabel}
                 titleSize="default"
             >
@@ -362,27 +362,29 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 </div>
             </PageHeader>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 dashboard-stat-cards">
-                {statCards.map(({ value, label, icon: Icon, iconBg, iconColor, link }, i) => {
-                    const accentClass = label === 'Complete' ? 'stat-card--complete' : label === 'On-going' ? 'stat-card--ongoing' : 'stat-card--pending';
-                    return (
-                        <Link key={label} to={link || '#'} className={`card stat-card ${accentClass} overflow-visible p-4 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0 dashboard-stat-card`} style={{ animationDelay: `${i * 0.08}s` }}>
-                            <div className="mb-3">
-                                <span className={`inline-flex w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 shadow-sm ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
-                                    <Icon className="w-5 h-5" />
-                                </span>
-                            </div>
-                            <p className="text-xs sm:text-sm font-medium text-[var(--text-muted)]">{label}</p>
-                            <p className="text-xl sm:text-2xl font-bold text-[var(--text)] tabular-nums mt-0.5">{loading ? '—' : formatNumber(value)}</p>
-                        </Link>
-                    );
-                })}
-            </div>
+            <div className="content-section overflow-hidden rounded-xl p-0">
+                <div className="p-6 sm:p-7 border-b border-[var(--border-light)]">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 dashboard-stat-cards">
+                        {statCards.map(({ value, label, icon: Icon, iconBg, iconColor, link }, i) => {
+                            const accentClass = label === 'Complete' ? 'stat-card--complete' : label === 'On-going' ? 'stat-card--ongoing' : 'stat-card--pending';
+                            return (
+                                <Link key={label} to={link || '#'} className={`card stat-card ${accentClass} overflow-visible p-5 sm:p-6 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0 dashboard-stat-card`} style={{ animationDelay: `${i * 0.08}s` }}>
+                                    <div className="mb-3">
+                                        <span className={`inline-flex w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 shadow-sm ${iconBg} ${iconColor} transition-transform duration-300 group-hover:scale-110`}>
+                                            <Icon className="w-5 h-5" />
+                                        </span>
+                                    </div>
+<p className="text-sm font-medium text-[var(--text-muted)]">{label}</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-[var(--text)] tabular-nums mt-0.5">{loading ? '—' : formatNumber(value)}</p>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
 
-            <div className="w-full">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 w-full dashboard-grid">
-                    <section className="content-section overflow-visible min-w-0 dashboard-section" style={{ animationDelay: '0.15s' }}>
-                        <div className="section-header">
+                <div className="grid grid-cols-1 lg:grid-cols-2 w-full dashboard-grid">
+                    <section className="overflow-visible min-w-0 dashboard-section border-b lg:border-b-0 lg:border-r border-[var(--border-light)]" style={{ animationDelay: '0.15s' }}>
+                        <div className="section-header section-header--nested">
                             <h2 className="text-base font-bold text-[var(--text)]">Calendar</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">BAC events and deadlines</p>
                         </div>
@@ -493,8 +495,8 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                             </div>
                         </div>
                     </section>
-                    <section className="content-section overflow-visible flex flex-col min-w-0 dashboard-section dashboard-section-progress" style={{ animationDelay: '0.25s' }}>
-                        <div className="section-header">
+                    <section className="overflow-visible flex flex-col min-w-0 dashboard-section dashboard-section-progress" style={{ animationDelay: '0.25s' }}>
+                        <div className="section-header section-header--nested">
                             <h2 className="text-base font-bold text-[var(--text)]">Procurement Progress</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Overview by completion</p>
                         </div>
@@ -622,6 +624,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                         </div>
                     </section>
                 </div>
+            </div>
 
                 {eventModal && !confirmAddEvent && (
                     <div
@@ -821,7 +824,6 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                                     </div>
                                 </div>
                             )}
-            </div>
         </div>
     );
 };
