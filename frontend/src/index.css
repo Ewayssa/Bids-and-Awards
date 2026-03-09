@@ -64,7 +64,6 @@
     --page-bg-gradient: linear-gradient(165deg, #f0f7f0 0%, #e5efe5 40%, #dceadc 100%);
     --header-bg: #ffffff;
     --header-border: #dde5dd;
-    --header-accent: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
     --page-dot: rgba(0,0,0,0.06);
 }
 
@@ -118,7 +117,6 @@
         --page-bg-gradient: linear-gradient(165deg, #0f1814 0%, #0d1612 50%, #0a120e 100%);
         --header-bg: #152219;
         --header-border: #2d3d30;
-        --header-accent: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
         --page-dot: rgba(255,255,255,0.03);
     }
 }
@@ -173,7 +171,6 @@
     --page-bg-gradient: linear-gradient(165deg, #0f1814 0%, #0d1612 50%, #0a120e 100%);
     --header-bg: #152219;
     --header-border: #2d3d30;
-    --header-accent: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
     --page-dot: rgba(255,255,255,0.03);
 }
 
@@ -321,16 +318,6 @@ textarea {
         position: relative;
         overflow: visible;
     }
-    .page-header__accent {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 5px;
-        flex-shrink: 0;
-        border-radius: 0.75rem 0 0 0.75rem;
-        background: var(--header-accent);
-    }
     .page-header__inner {
         display: flex;
         flex-direction: column;
@@ -338,7 +325,6 @@ textarea {
         flex: 1;
         min-width: 0;
         padding: 1.25rem 1.5rem 1.25rem 1.75rem;
-        padding-left: calc(1rem + 5px + 0.75rem);
     }
     @media (min-width: 640px) {
         .page-header__inner {
@@ -347,7 +333,6 @@ textarea {
             justify-content: space-between;
             gap: 1.5rem;
             padding: 1.5rem 1.75rem 1.5rem 2rem;
-            padding-left: calc(1.25rem + 5px + 0.75rem);
         }
     }
     .page-header__main {
@@ -407,20 +392,6 @@ textarea {
         border-color: var(--border-light);
         box-shadow: none;
         background: var(--background-subtle);
-    }
-    .page-header--minimal .page-header__accent {
-        width: 3px;
-        border-radius: 0.5rem 0 0 0.5rem;
-    }
-    .page-header--inside {
-        margin-bottom: 0;
-        border-radius: 0.75rem 0.75rem 0 0;
-        border-width: 0;
-        border-bottom: 1px solid var(--border-light);
-        box-shadow: none;
-    }
-    .page-header--inside .page-header__accent {
-        border-radius: 0.75rem 0 0 0;
     }
     .table-header {
         background: var(--primary-muted);
@@ -850,11 +821,6 @@ input[type="password"]::-ms-clear {
         opacity: 1;
         transform: translateX(0);
     }
-}
-
-/* Procurement Progress section accent */
-.dashboard-section-progress .section-header {
-    padding-bottom: 0.25rem;
 }
 
 /* Toast animation for Profile (and other) notifications */

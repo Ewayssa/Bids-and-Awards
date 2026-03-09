@@ -383,7 +383,7 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 w-full dashboard-grid">
-                    <section className="overflow-visible min-w-0 dashboard-section border-b lg:border-b-0 lg:border-r border-[var(--border-light)]" style={{ animationDelay: '0.15s' }}>
+                    <section className="overflow-visible min-w-0 dashboard-section border-b-2 lg:border-b-0 lg:border-r-2 border-[var(--border)]" style={{ animationDelay: '0.15s' }}>
                         <div className="section-header section-header--nested">
                             <h2 className="text-base font-bold text-[var(--text)]">Calendar</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">BAC events and deadlines</p>
@@ -495,12 +495,12 @@ const Dashboard = ({ user, sidebarOpen = true, onLogout }) => {
                             </div>
                         </div>
                     </section>
-                    <section className="overflow-visible flex flex-col min-w-0 dashboard-section dashboard-section-progress" style={{ animationDelay: '0.25s' }}>
+                    <section className="overflow-visible flex flex-col min-w-0 dashboard-section border-b-2 lg:border-b-0 border-[var(--border)] dashboard-section-progress" style={{ animationDelay: '0.25s' }}>
                         <div className="section-header section-header--nested">
                             <h2 className="text-base font-bold text-[var(--text)]">Procurement Progress</h2>
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Overview by completion</p>
                         </div>
-                        <div className="p-5 sm:p-6 flex flex-col sm:flex-row gap-6 min-w-0 overflow-visible items-center sm:items-stretch">
+                        <div className="p-4 sm:p-5 flex flex-col sm:flex-row gap-6 min-w-0 overflow-visible items-center sm:items-stretch">
                             <div className="flex flex-col items-center py-4 sm:py-0 flex-shrink-0">
                                 <div className="relative w-56 h-56 sm:w-72 sm:h-72 flex-shrink-0 dashboard-pie-container">
                                     <svg viewBox="0 0 100 100" className="w-full h-full dashboard-pie-svg" aria-hidden>

@@ -1395,9 +1395,9 @@ const Encode = ({ user }) => {
                 title="Document Encoding"
                 subtitle={canViewAllDocuments
                     ? isAdmin
-                        ? 'View all documents uploaded by users. Status is set automatically from document completeness. View or download files.'
-                        : 'View all documents uploaded by users. Status is set automatically from document completeness.'
-                    : 'Create new procurements and maintain accurate document records.'}
+                        ? 'View all submitted documents. Status is updated automatically based on completeness. You may view or download files.'
+                        : 'View documents for your procurements. Status is updated automatically based on completeness.'
+                    : 'Create new procurement records and keep document details complete and updated.'}
             />
 
             <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0">
@@ -1407,7 +1407,7 @@ const Encode = ({ user }) => {
                             <div className="card overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
                                 <div className="min-w-0 flex-1">
                                     <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Start New Procurement</p>
-                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Use this to submit new documents. This is the only way to submit documents.</p>
+                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Use this section to submit new procurement documents for BAC processing. New documents should be filed here.</p>
                                 </div>
                                 <button type="button" onClick={openNew} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                                     <MdUpload className="w-5 h-5" />
@@ -1417,7 +1417,7 @@ const Encode = ({ user }) => {
                             <div className="card overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
                                 <div className="min-w-0 flex-1">
                                     <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Update Documents</p>
-                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Update documents to add missing fields or change existing ones. Click ongoing documents in the checklist to complete them.</p>
+                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Use this section to update existing documents, add missing details, or correct information. To complete a document, click its ongoing entry in the checklist.</p>
                                 </div>
                                 <button type="button" onClick={openUpdate} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                                     <MdEdit className="w-5 h-5" />
