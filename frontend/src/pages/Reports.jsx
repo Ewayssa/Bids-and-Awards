@@ -6,7 +6,7 @@ import { ROLES } from '../utils/roles';
 import { MdUpload, MdClose, MdDownload, MdChevronLeft, MdChevronRight, MdAdd, MdDelete } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 
-const TABLE_PAGE_SIZE = 5;
+const TABLE_PAGE_SIZE = 10;
 
 // Column keys, labels, and types for encode/export (procurement monitoring report)
 const SOURCE_OF_FUNDS_OPTIONS = [
@@ -127,15 +127,21 @@ const Reports = ({ user }) => {
         } catch (_) {}
     }, [encodedRows]);
 
-    const formatDate = (d) => {
-        if (!d) return '—';
-        const str = typeof d === 'string' ? d : (d.toISO && d.toISOString ? d.toISOString() : String(d));
-        return str.split('T')[0];
+    const formatDate = (d, { forFilter = false } = {}) => {
+        if (!d) return forFilter ? '' : '—';
+        const dateObj = typeof d === 'string' ? new Date(d) : d instanceof Date ? d : new Date(String(d));
+        if (Number.isNaN(dateObj.getTime())) return forFilter ? '' : '—';
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const isoDate = `${year}-${month}-${day}`;
+        return isoDate;
     };
 
     const filteredReports = useMemo(() => {
         return reports.filter((r) => {
-            const dateStr = formatDate(r.uploaded_at);
+            const dateStr = formatDate(r.uploaded_at, { forFilter: true });
+            if (!dateStr) return false;
             if (filters.date_from && dateStr < filters.date_from) return false;
             if (filters.date_to && dateStr > filters.date_to) return false;
             return true;
@@ -684,7 +690,7 @@ const Reports = ({ user }) => {
                                         <td className="table-td font-medium">{r.title || '—'}</td>
                                         <td className="table-td-muted">{r.submitting_office || '—'}</td>
                                         <td className="table-td-muted">{r.uploadedBy || '—'}</td>
-                                        <td className="table-td-muted">{formatDate(r.uploaded_at)}</td>
+                                        <td className="table-td-muted">{formatDate(r.uploaded_at) || '—'}</td>
                                         {isAdmin && (
                                             <td className="table-td whitespace-nowrap">
                                                 {(r.file_url || r.file || r.id) ? (
@@ -747,7 +753,7 @@ const Reports = ({ user }) => {
             {/* Upload Report modal */}
             {uploadModalOpen && !confirmUpload && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
                     aria-modal="true"
                     role="dialog"
                 >
@@ -832,7 +838,7 @@ const Reports = ({ user }) => {
             {/* Encode Report modal — Excel-like table (portal so it appears above sidebar) */}
             {encodeModalOpen && createPortal(
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60"
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
                     aria-modal="true"
                     role="dialog"
                     aria-labelledby="encode-report-title"
@@ -1055,7 +1061,7 @@ const Reports = ({ user }) => {
             {/* Preview modal — same as Encode: blob URL in embed/img/iframe */}
             {previewReport && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
                     aria-modal="true"
                     role="dialog"
                 >
@@ -1128,7 +1134,7 @@ const Reports = ({ user }) => {
             {/* Confirm upload dialog */}
             {confirmUpload && (
                 <div
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
                     aria-modal="true"
                     role="alertdialog"
                     aria-labelledby="reports-confirm-title"

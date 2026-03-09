@@ -3,7 +3,7 @@ import PageHeader from '../components/PageHeader';
 import { auditLogService } from '../services/api';
 import { MdHistory, MdRefresh, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 
-const TABLE_PAGE_SIZE = 5;
+const TABLE_PAGE_SIZE = 10;
 
 const ACTION_LABELS = {
     user_login: 'Login',

@@ -111,7 +111,7 @@ const Encode = ({ user }) => {
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'grouped'
     const [expandedGroups, setExpandedGroups] = useState(new Set());
     const [tablePage, setTablePage] = useState(1);
-    const TABLE_PAGE_SIZE = 5;
+    const TABLE_PAGE_SIZE = 10;
     const [showFilters, setShowFilters] = useState(false);
     const [selectedDocForComment, setSelectedDocForComment] = useState(null);
     const [commentText, setCommentText] = useState('');
