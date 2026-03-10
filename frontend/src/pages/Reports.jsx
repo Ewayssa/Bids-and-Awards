@@ -41,6 +41,14 @@ const REPORT_COLUMNS = [
     { key: 'contract_cost_total', label: 'Contract Cost (PhP) - Total', type: 'number', shortLabel: 'Total' },
     { key: 'contract_cost_mooe', label: 'Contract Cost (PhP) - MOOE', type: 'number', shortLabel: 'MOOE' },
     { key: 'contract_cost_co', label: 'Contract Cost (PhP) - CO', type: 'number', shortLabel: 'CO' },
+    // Columns that appear after Contract Cost in the Excel template
+    { key: 'co3', label: 'CO3', type: 'text', shortLabel: 'CO3' },
+    { key: 'list_of_invited_observers', label: 'List of Invited Observers', type: 'text', shortLabel: 'List of Invited Observers' },
+    { key: 'invitation_eligibility_check', label: 'Eligibility Check', type: 'date', shortLabel: 'Eligibility Check' },
+    { key: 'invitation_sub_open_bids', label: 'Sub/Open of Bids', type: 'date', shortLabel: 'Sub/Open of Bids' },
+    { key: 'invitation_bid_evaluation', label: 'Bid Evaluation', type: 'date', shortLabel: 'Bid Evaluation' },
+    { key: 'invitation_post_qual', label: 'Post Qual', type: 'date', shortLabel: 'Post Qual' },
+    { key: 'invitation_delivery_completion_acceptance', label: 'Delivery/Completion/Acceptance (If applicable)', type: 'date', shortLabel: 'Delivery/Completion/Acceptance (If applicable)' },
     { key: 'remarks', label: 'Remarks (Explaining changes from the APP)', type: 'text', shortLabel: 'Remarks (Explaining changes from the APP)' },
 ];
 
@@ -60,6 +68,9 @@ const HEADER_GROUPS = [
     { groupLabel: 'Source of Funds', colKeys: ['source_of_funds'] },
     { groupLabel: 'ABC (PhP)', colKeys: ['abc_total', 'abc_mooe', 'abc_co'] },
     { groupLabel: 'Contract Cost (PhP)', colKeys: ['contract_cost_total', 'contract_cost_mooe', 'contract_cost_co'] },
+    { groupLabel: 'CO3', colKeys: ['co3'] },
+    { groupLabel: 'List of Invited Observers', colKeys: ['list_of_invited_observers'] },
+    { groupLabel: 'Date of Receipt of Invitation', colKeys: ['invitation_eligibility_check', 'invitation_sub_open_bids', 'invitation_bid_evaluation', 'invitation_post_qual', 'invitation_delivery_completion_acceptance'] },
     { groupLabel: 'Remarks (Explaining changes from the APP)', colKeys: ['remarks'] },
 ];
 
@@ -102,6 +113,7 @@ const Reports = ({ user }) => {
         }
     });
     const [encodeModalOpen, setEncodeModalOpen] = useState(false);
+    const [encodeFinalized, setEncodeFinalized] = useState(false);
 
     const load = async () => {
         try {
@@ -119,6 +131,10 @@ const Reports = ({ user }) => {
     useEffect(() => {
         load();
     }, []);
+
+    useEffect(() => {
+        if (encodeModalOpen) setEncodeFinalized(false);
+    }, [encodeModalOpen]);
 
     useEffect(() => {
         try {
@@ -297,7 +313,7 @@ const Reports = ({ user }) => {
             ? encodedRows.map((row) =>
                 REPORT_COLUMNS.map((col) => {
                     const v = row[col.key] ?? '';
-                    if (col.type === 'date') return toDDMMYYYY(v) || v;
+                    if (col.type === 'date') return v ? (toDDMMYYYY(v) || v) : 'N/A';
                     if (col.type === 'number') return formatNumberDisplay(v) || ''; // always include peso sign in export
                     return v;
                 })
@@ -478,6 +494,12 @@ const Reports = ({ user }) => {
                 __owner: currentEncoderId || 'Unknown',
             },
         ]);
+
+    const handleSaveEncoding = () => {
+        // Encoded rows are already persisted to localStorage via effect;
+        // this toggles the post-encoding display (blank dates -> N/A).
+        setEncodeFinalized(true);
+    };
     const updateEncodedRow = (index, key, value) => {
         setEncodedRows((prev) => {
             const next = [...prev];
@@ -854,9 +876,20 @@ const Reports = ({ user }) => {
                                     type="button"
                                     onClick={addEncodedRow}
                                     className="inline-flex items-center gap-1.5 rounded-lg text-sm py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold shadow"
+                                    disabled={encodeFinalized}
+                                    aria-disabled={encodeFinalized}
                                 >
                                     <MdAdd className="w-5 h-5" />
                                     Add row
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveEncoding}
+                                    disabled={encodedRows.length === 0}
+                                    className="inline-flex items-center gap-1.5 rounded-lg text-sm py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold shadow"
+                                    title="Save encoded entries"
+                                >
+                                    Save
                                 </button>
                                 <button
                                     type="button"
@@ -946,6 +979,13 @@ const Reports = ({ user }) => {
                                                         const val = row[col.key] ?? '';
                                                         const isDateInvalid = col.type === 'date' && val && !validateDateRange(val);
                                                         if (col.type === 'date') {
+                                                            if (encodeFinalized) {
+                                                                return (
+                                                                    <td key={col.key} className="bg-pink-50 border-r border-gray-300 px-2 py-1.5 text-sm text-gray-800 align-top last:border-r-0">
+                                                                        {val ? (toDDMMYYYY(String(val)) || String(val)) : 'N/A'}
+                                                                    </td>
+                                                                );
+                                                            }
                                                             return (
                                                                 <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top last:border-r-0">
                                                                     <input
@@ -955,7 +995,7 @@ const Reports = ({ user }) => {
                                                                         max={DATE_MAX}
                                                                         onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
                                                                         title={isDateInvalid ? 'Invalid: Input must be between 1/1/2000 and 12/31/2060' : ''}
-                                                                        disabled={!isOwner}
+                                                                        disabled={!isOwner || encodeFinalized}
                                                                         className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 ${isDateInvalid ? 'bg-red-200' : 'bg-transparent'} ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
                                                                     />
                                                                 </td>
@@ -989,7 +1029,7 @@ const Reports = ({ user }) => {
                                                                             const n = parseFloat(String(r).replace(/[^0-9.]/g, ''));
                                                                             if (!Number.isNaN(n)) updateEncodedRow(index, col.key, Number(n).toFixed(2));
                                                                         }}
-                                                                        disabled={!isOwner}
+                                                                        disabled={!isOwner || encodeFinalized}
                                                                         className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded text-right focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
                                                                         placeholder="₱0.00"
                                                                         title="Numbers and decimal (tuldok) only, e.g. 1234567.89"
@@ -1003,7 +1043,7 @@ const Reports = ({ user }) => {
                                                                     <select
                                                                         value={String(val)}
                                                                         onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
-                                                                        disabled={!isOwner}
+                                                                        disabled={!isOwner || encodeFinalized}
                                                                         className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
                                                                     >
                                                                         <option value="">—</option>
@@ -1020,7 +1060,7 @@ const Reports = ({ user }) => {
                                                                     type="text"
                                                                     value={String(val)}
                                                                     onChange={(e) => updateEncodedRow(index, col.key, e.target.value)}
-                                                                    disabled={!isOwner}
+                                                                    disabled={!isOwner || encodeFinalized}
                                                                     className={`w-full min-w-0 py-1.5 px-2 text-sm border-0 rounded focus:ring-2 focus:ring-green-500 text-gray-800 bg-transparent ${!isOwner ? 'cursor-not-allowed bg-gray-100 text-gray-500' : ''}`}
                                                                 />
                                                             </td>
@@ -1030,7 +1070,7 @@ const Reports = ({ user }) => {
                                                         <button
                                                             type="button"
                                                             onClick={() => removeEncodedRow(index)}
-                                                            disabled={!isOwner}
+                                                            disabled={!isOwner || encodeFinalized}
                                                             className={`p-2 text-red-600 rounded border border-transparent hover:border-red-300 ${isOwner ? 'hover:bg-red-100 cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
                                                             title={isOwner ? 'Remove row' : 'You can only remove rows you encoded'}
                                                             aria-label="Remove row"

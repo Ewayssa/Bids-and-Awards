@@ -182,58 +182,58 @@ const Login = ({ onLogin, infoMessage }) => {
         <div
             className="min-h-screen flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
             style={{
-                backgroundImage: 'linear-gradient(135deg, #f97316 0%, #ea580c 35%, #dc2626 65%, #b91c1c 100%), repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.03) 12px, rgba(255,255,255,0.03) 24px)',
+                background: 'linear-gradient(165deg, #0f172a 0%, #1e293b 40%, #0f172a 100%)',
+                backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(22, 163, 74, 0.12) 0%, transparent 50%), linear-gradient(165deg, #0f172a 0%, #1e293b 40%, #0f172a 100%)',
                 scrollbarGutter: 'stable',
             }}
         >
             <div
-                className="w-full max-w-5xl min-w-[min(100%,22rem)] rounded-2xl overflow-hidden flex flex-col lg:flex-row min-h-[32rem] lg:min-h-[30rem] max-h-[95vh] lg:max-h-[38rem] shadow-2xl shrink-0"
-                style={{ backgroundColor: '#fefefe', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05)' }}
+                className="w-full max-w-md min-w-[min(100%,20rem)] rounded-2xl overflow-hidden shrink-0 bg-white font-sans antialiased"
+                style={{
+                    boxShadow: '0 32px 64px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
+                }}
             >
-                {/* Left – full-bleed image + overlay text (gaya sa picture) */}
-                <div className="relative flex-[0_0_100%] lg:flex-[0_0_40%] min-h-[14rem] lg:min-h-0">
-                    <img
-                        src={LEFT_PANEL_IMAGE}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/20" />
-                </div>
+                <div className="flex flex-col items-center p-4 sm:p-6 pt-4 sm:pt-6">
+                    <div className="flex flex-col items-center gap-3 mb-3 w-full">
+                        <img
+                            src={LEFT_PANEL_IMAGE}
+                            alt=""
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-contain flex-shrink-0"
+                        />
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight text-center leading-snug" style={{ letterSpacing: '-0.02em' }}>
+                            BAC Documents Tracking System
+                        </h1>
+                    </div>
 
-                {/* Right – white form (layout from reference) */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center p-8 sm:p-10 lg:p-12 bg-white">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight tracking-tight">BAC Documents Tracking System</h2>
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight mt-4">Login</h1>
-
-                    <div className="mt-3 min-h-[2.5rem]" aria-live="polite">
+                    <div className="min-h-[1.5rem] w-full max-w-xs" aria-live="polite">
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
+                            <div className="bg-red-50 border border-red-200/80 text-red-800 text-sm px-4 py-2.5 rounded-xl" role="alert">
                                 {error}
                             </div>
                         )}
                         {!error && infoMessage && !hasTriedLogin && (
-                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-3 py-2 rounded-lg" role="status">
+                            <div className="bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-sm px-4 py-2.5 rounded-xl" role="status">
                                 {infoMessage}
                             </div>
                         )}
                     </div>
 
-                    <form onSubmit={handleSubmit} className="mt-6 flex flex-col">
-                        <div className="space-y-6">
+                    <form onSubmit={handleSubmit} className="mt-1 flex flex-col w-full max-w-xs">
+                        <div className="space-y-5">
                             <div>
-                                <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Email
+                                <label htmlFor="login-email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                                    Username or email
                                 </label>
-                                <div className="relative border-b border-gray-300 focus-within:border-gray-700 transition-colors">
+                                <div className="relative rounded-xl border border-slate-200 bg-slate-50/50 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
                                     <input
                                         id="login-email"
                                         type="text"
-                                        className="w-full pl-0 pr-4 py-2.5 bg-transparent text-gray-900 placeholder-gray-400 outline-none border-0 focus:ring-0 text-[15px]"
+                                        className="w-full px-4 py-3 bg-transparent text-slate-900 placeholder-slate-400 outline-none border-0 focus:ring-0 text-[15px] rounded-xl"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        autoComplete="email"
+                                        autoComplete="username"
                                         required
-                                        placeholder="Enter email"
+                                        placeholder="Enter username or email"
                                     />
                                 </div>
                             </div>
@@ -245,34 +245,35 @@ const Login = ({ onLogin, infoMessage }) => {
                                 placeholder="Enter password"
                                 autoComplete="current-password"
                                 required
+                                variant="rounded"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full mt-6 py-3.5 rounded-lg font-semibold text-white text-center text-sm uppercase tracking-wide transition-all duration-200 disabled:opacity-70 hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#16a34a] focus:ring-offset-2"
+                            className="w-full mt-5 py-3 rounded-xl font-semibold text-white text-center text-sm tracking-wide transition-all duration-200 disabled:opacity-70 hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 active:scale-[0.99]"
                             style={{
                                 background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)',
-                                boxShadow: '0 4px 14px rgba(22, 163, 74, 0.45)',
+                                boxShadow: '0 4px 14px rgba(22, 163, 74, 0.4)',
                             }}
                         >
-                            {loading ? 'Signing in…' : 'LOGIN'}
+                            {loading ? 'Signing in…' : 'Sign in'}
                         </button>
 
-                        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-4">
+                        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-5 text-sm">
                             <button
                                 type="button"
                                 onClick={openRegisterModal}
-                                className="text-sm text-[#16a34a] hover:underline focus:outline-none font-medium"
+                                className="text-emerald-600 hover:text-emerald-700 hover:underline focus:outline-none font-medium transition-colors"
                             >
                                 Create account
                             </button>
-                            <span className="text-gray-400">|</span>
+                            <span className="text-slate-300" aria-hidden>·</span>
                             <button
                                 type="button"
                                 onClick={openForgotModal}
-                                className="text-sm text-[#D4140F] hover:underline focus:outline-none"
+                                className="text-slate-600 hover:text-slate-900 hover:underline focus:outline-none transition-colors"
                             >
                                 Forgot password?
                             </button>

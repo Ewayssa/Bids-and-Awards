@@ -1444,11 +1444,6 @@ const Encode = ({ user }) => {
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <h2 className="text-base sm:text-lg font-semibold text-[var(--text)] truncate">
                                 {canViewAllDocuments ? 'All Uploaded Documents' : 'Submitted Documents'}
-                                {hasActiveFilters && (
-                                    <span className="ml-2 text-sm font-normal text-[var(--text-muted)]">
-                                        ({filteredDocuments.length} of {updateListDocs.length})
-                                    </span>
-                                )}
                             </h2>
                             <button
                                 type="button"
@@ -1498,16 +1493,10 @@ const Encode = ({ user }) => {
                                 </div>
                             ) : filteredDocuments.length === 0 ? (
                                 <div className="p-8 text-center text-[var(--text-muted)]">
-                                    No documents match your filters.
-                                    {hasActiveFilters && (
-                                        <button
-                                            type="button"
-                                            onClick={clearFilters}
-                                            className="block mx-auto mt-2 text-[var(--primary)] hover:underline"
-                                        >
-                                            Clear filters
-                                        </button>
-                                    )}
+                                    {filterStatus === 'complete' && 'No completed documents.'}
+                                    {filterStatus === 'ongoing' && 'No ongoing documents.'}
+                                    {filterStatus === 'pending' && 'No pending documents.'}
+                                    {!filterStatus && hasActiveFilters && 'No documents match your filters.'}
                                 </div>
                             ) : viewMode === 'grouped' ? (
                                 // Grouped view by transaction number
