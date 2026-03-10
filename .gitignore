@@ -1,0 +1,26 @@
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+ENV/
+env/
+
+# Django / local runtime
+backend/media/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
+

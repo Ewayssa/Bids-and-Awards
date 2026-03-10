@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import ExcelJS from 'exceljs';
 import { reportService } from '../services/api';
 import { ROLES } from '../utils/roles';
-import { MdUpload, MdClose, MdDownload, MdChevronLeft, MdChevronRight, MdAdd, MdDelete } from 'react-icons/md';
+import { MdUpload, MdClose, MdDownload, MdChevronLeft, MdChevronRight, MdAdd, MdDelete, MdSearch } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 
 const TABLE_PAGE_SIZE = 10;
@@ -97,10 +97,7 @@ const Reports = ({ user }) => {
     });
     const [confirmUpload, setConfirmUpload] = useState(null); // { onConfirm }
     const [previewReport, setPreviewReport] = useState(null); // same as Encode: { title, file_url, previewBlobUrl, previewBlobType }
-    const [filters, setFilters] = useState({
-        date_from: '',
-        date_to: '',
-    });
+    const [searchQuery, setSearchQuery] = useState('');
     const [tablePage, setTablePage] = useState(1);
     const [encodedRows, setEncodedRows] = useState(() => {
         try {
@@ -155,14 +152,16 @@ const Reports = ({ user }) => {
     };
 
     const filteredReports = useMemo(() => {
+        const q = (searchQuery || '').trim().toLowerCase();
+        if (!q) return reports;
         return reports.filter((r) => {
-            const dateStr = formatDate(r.uploaded_at, { forFilter: true });
-            if (!dateStr) return false;
-            if (filters.date_from && dateStr < filters.date_from) return false;
-            if (filters.date_to && dateStr > filters.date_to) return false;
-            return true;
+            const title = String(r.title || '').toLowerCase();
+            const office = String(r.submitting_office || '').toLowerCase();
+            const by = String(r.uploadedBy || '').toLowerCase();
+            const dateStr = String(formatDate(r.uploaded_at) || '').toLowerCase();
+            return title.includes(q) || office.includes(q) || by.includes(q) || dateStr.includes(q);
         });
-    }, [reports, filters]);
+    }, [reports, searchQuery]);
 
     const totalPages = Math.max(1, Math.ceil(filteredReports.length / TABLE_PAGE_SIZE));
     const paginatedReports = useMemo(() => {
@@ -174,8 +173,8 @@ const Reports = ({ user }) => {
         setTablePage(1);
     }, [filteredReports.length]);
 
-    const hasActiveFilters = !!(filters.date_from || filters.date_to);
-    const clearFilters = () => setFilters({ date_from: '', date_to: '' });
+    const hasActiveSearch = !!(searchQuery && searchQuery.trim());
+    const clearSearch = () => setSearchQuery('');
 
     const toDDMMYYYY = (val) => {
         if (val == null || val === '') return '';
@@ -613,7 +612,7 @@ const Reports = ({ user }) => {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0 flex-1 overflow-hidden">
                             <h2 className="text-base sm:text-lg font-bold text-[var(--text)] truncate block">All Uploaded Reports</h2>
-                            {hasActiveFilters && (
+                            {hasActiveSearch && (
                                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
                                     Showing {filteredReports.length} of {reports.length} report{reports.length !== 1 ? 's' : ''}
                                 </p>
@@ -638,32 +637,21 @@ const Reports = ({ user }) => {
                             </button>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-[var(--border-light)]">
-                        <div className="flex items-center gap-2 shrink-0">
-                            <label className="text-xs text-[var(--text-muted)] shrink-0">From</label>
+                    <div className="mt-3 pt-3 border-t border-[var(--border-light)]">
+                        <div className="relative w-full max-w-3xl">
+                            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" aria-hidden />
                             <input
-                                type="date"
-                                value={filters.date_from}
-                                onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value }))}
-                                className="input-field py-1.5 text-xs px-2 min-w-[120px] rounded-lg"
+                                type="search"
+                                placeholder="Search reports (title, office, uploaded by, date)..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="input-field w-full pl-10 rounded-lg"
+                                aria-label="Search reports"
                             />
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <label className="text-xs text-[var(--text-muted)] shrink-0">To</label>
-                            <input
-                                type="date"
-                                value={filters.date_to}
-                                onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
-                                className="input-field py-1.5 text-xs px-2 min-w-[120px] rounded-lg"
-                            />
-                        </div>
-                        {hasActiveFilters && (
-                            <button
-                                type="button"
-                                onClick={clearFilters}
-                                className="text-xs text-[var(--primary)] hover:underline font-medium shrink-0"
-                            >
-                                Clear
+                        {hasActiveSearch && (
+                            <button type="button" onClick={clearSearch} className="mt-2 text-xs text-[var(--primary)] hover:underline font-medium">
+                                Clear search
                             </button>
                         )}
                     </div>
@@ -701,7 +689,7 @@ const Reports = ({ user }) => {
                             ) : filteredReports.length === 0 ? (
                                 <tr>
                                     <td colSpan={isAdmin ? 5 : 4} className="table-td text-center py-12 text-[var(--text-muted)]">
-                                        No reports match your filters. <button type="button" onClick={clearFilters} className="text-[var(--primary)] hover:underline font-medium mt-1 inline-block">Clear filters</button>
+                                        No reports match your search. <button type="button" onClick={clearSearch} className="text-[var(--primary)] hover:underline font-medium mt-1 inline-block">Clear search</button>
                                     </td>
                                 </tr>
                             ) : (

@@ -3,7 +3,7 @@ import { MdBackup, MdRestore } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 import { backupRestoreService } from '../services/api';
 
-const Settings = () => {
+const Settings = ({ user }) => {
     const [backingUp, setBackingUp] = useState(false);
     const [restoring, setRestoring] = useState(false);
     const [message, setMessage] = useState(null);
@@ -18,7 +18,8 @@ const Settings = () => {
         setMessage(null);
         setBackingUp(true);
         try {
-            const data = await backupRestoreService.backup();
+            const actor = (user?.username || user?.fullName || '').trim();
+            const data = await backupRestoreService.backup(actor);
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -53,7 +54,8 @@ const Settings = () => {
         try {
             const text = await file.text();
             const data = JSON.parse(text);
-            const result = await backupRestoreService.restore(data);
+            const actor = (user?.username || user?.fullName || '').trim();
+            const result = await backupRestoreService.restore(data, actor);
             setMessage(result?.detail || 'Restore completed.');
             if (result?.restored) {
                 setMessage((m) => {

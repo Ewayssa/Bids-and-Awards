@@ -19,6 +19,7 @@ import {
     MdSchedule,
     MdWarning,
     MdFolder,
+    MdDownload,
     MdChevronLeft,
     MdChevronRight,
 } from 'react-icons/md';
@@ -1231,6 +1232,7 @@ const Encode = ({ user }) => {
     };
 
     const triggerDownload = async (doc, { blob: existingBlob, blobUrl } = {}) => {
+        if (!isAdmin) return;
         const r = { file_url: doc?.file_url, title: doc?.title };
         if (!r?.file_url && !blobUrl) return;
         const ext = getSuggestedExt(r?.file_url || blobUrl);
@@ -1997,7 +1999,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2109,7 +2111,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2210,7 +2212,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2301,7 +2303,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2392,7 +2394,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2498,7 +2500,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2625,7 +2627,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                 />
@@ -2721,7 +2723,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2792,7 +2794,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -2840,7 +2842,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                 />
@@ -2956,7 +2958,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                 />
@@ -3087,7 +3089,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3144,7 +3146,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3178,7 +3180,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3207,7 +3209,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:text-white file:font-semibold file:cursor-pointer flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3236,7 +3238,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3255,7 +3257,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3274,7 +3276,7 @@ const Encode = ({ user }) => {
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3360,7 +3362,7 @@ const Encode = ({ user }) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
                                                         if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
                                                     aria-invalid={!!newFormErrors.file}
                                                     aria-describedby={newFormErrors.file ? 'err-file' : undefined}
@@ -3528,22 +3530,36 @@ const Encode = ({ user }) => {
                 );
                 const totalDocs = docs.length;
                 const currentIndex = Math.min(manageFolderPopupIndex, Math.max(0, totalDocs - 1));
+                const currentDoc = docs[currentIndex] || null;
                 const showNav = totalDocs > 1;
                 return (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" aria-modal="true" role="dialog">
                         <div className="bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0">
                                 <h3 className="text-base font-semibold text-[var(--text)]">BAC Folder No. {manageFolderPopup.prNo}</h3>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setManageFolderPopup(null);
-                                    }}
-                                    className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg"
-                                    aria-label="Close"
-                                >
-                                    <MdClose className="w-5 h-5" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {isAdmin && currentDoc?.file_url && (
+                                        <button
+                                            type="button"
+                                            onClick={() => triggerDownload(currentDoc)}
+                                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm font-semibold shadow-sm transition-colors"
+                                            aria-label="Download file"
+                                        >
+                                            <MdDownload className="w-4 h-4" />
+                                            Download
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setManageFolderPopup(null);
+                                        }}
+                                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg"
+                                        aria-label="Close"
+                                    >
+                                        <MdClose className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                                 {totalDocs === 0 ? (
@@ -4452,7 +4468,7 @@ const Encode = ({ user }) => {
                                     </div>
                                     <div>
                                         <label className="label">Upload</label>
-                                        <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }))} className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] w-full" accept=".pdf,.doc,.docx,.xls,.xlsx" />
+                                        <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }))} className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 w-full" accept=".pdf,.doc,.docx,.xls,.xlsx" />
                                     </div>
                                 </>
                             ) : selectedDoc?.subDoc === 'Certificate of DILG R1 Website Posting of Award' ? (
@@ -4467,7 +4483,7 @@ const Encode = ({ user }) => {
                                     </div>
                                     <div>
                                         <label className="label">Upload</label>
-                                        <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }))} className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] w-full" accept=".pdf,.doc,.docx,.xls,.xlsx" />
+                                        <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }))} className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 w-full" accept=".pdf,.doc,.docx,.xls,.xlsx" />
                                     </div>
                                 </>
                             ) : selectedDoc?.subDoc === 'Notice of Award (Posted)' || selectedDoc?.subDoc === 'Abstract of Quotation (Posted)' || selectedDoc?.subDoc === 'BAC Resolution (Posted)' ? (
@@ -4558,7 +4574,7 @@ const Encode = ({ user }) => {
                                                 file: e.target.files?.[0] ?? null,
                                             }))
                                         }
-                                        className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[var(--background-subtle)] file:text-[var(--text)] flex-1 min-w-0"
+                                        className="input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0"
                                         accept=".xls,.xlsx,.csv,.pdf,.png,.jpeg,.jpg"
                                     />
                                     {form.file ? (

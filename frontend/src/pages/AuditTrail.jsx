@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { auditLogService } from '../services/api';
-import { MdHistory, MdRefresh, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { MdHistory, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 
 const TABLE_PAGE_SIZE = 10;
 
 const ACTION_LABELS = {
     user_login: 'Login',
-    user_registered: 'Registration',
-    password_changed: 'Password changed',
+    user_registered: 'Account created',
+    password_changed: 'Change password',
     password_reset: 'Password reset',
-    user_created: 'User created',
+    user_created: 'Added new user',
     user_updated: 'User updated',
     user_deleted: 'User deleted',
-    document_created: 'Document created',
-    document_updated: 'Document updated',
+    document_created: 'Upload new procurement',
+    document_updated: 'Update existing procurement',
     document_completed: 'Document completed',
     document_deleted: 'Document deleted',
-    report_created: 'Report created',
+    report_created: 'Upload report',
     report_updated: 'Report updated',
     report_deleted: 'Report deleted',
     calendar_event_created: 'Calendar event created',
     calendar_event_updated: 'Calendar event updated',
     calendar_event_deleted: 'Calendar event deleted',
-    backup_exported: 'Backup exported',
-    restore_completed: 'Restore completed',
+    backup_exported: 'Back up',
+    restore_completed: 'Restore',
 };
 
 const formatDate = (iso) => {
@@ -64,9 +64,9 @@ const AuditTrail = () => {
         loadLogs();
     }, [loadLogs]);
 
-    // Auto-refresh every 30 seconds so new activities appear without leaving the page
+    // Auto-refresh so new activities appear without leaving the page
     useEffect(() => {
-        const interval = setInterval(loadLogs, 30000);
+        const interval = setInterval(loadLogs, 5000);
         return () => clearInterval(interval);
     }, [loadLogs]);
 
@@ -101,18 +101,8 @@ const AuditTrail = () => {
                         <div className={`section-header flex flex-wrap items-center justify-between gap-3 ${error ? 'section-header--nested' : ''}`}>
                         <div>
                             <h2 className="text-base sm:text-lg font-bold text-[var(--text)]">Activity Logs</h2>
-                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded. Refreshes every 30s.</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded. Auto-updates in real time.</p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => loadLogs()}
-                            disabled={loading}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--background-subtle)] disabled:opacity-50 text-sm font-medium text-[var(--text)]"
-                            aria-label="Refresh activity logs"
-                        >
-                            <MdRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full w-full divide-y divide-[var(--border)]" style={{ tableLayout: 'fixed' }}>

@@ -98,7 +98,14 @@ const Personnel = ({ user }) => {
         setSubmitting(true);
         setShowConfirmAdd(false);
         try {
-            const created = await userService.create({ username: username.trim(), fullName: fullName.trim() || undefined, position: position.trim() || undefined, office: office.trim() || undefined, role });
+            await userService.create({
+                username: username.trim(),
+                fullName: fullName.trim() || undefined,
+                position: position.trim() || undefined,
+                office: office.trim() || undefined,
+                role,
+                created_by: (user?.username || user?.fullName || 'System').trim(),
+            });
             closeAddModal();
             setSuccessMessage('User added successfully.');
             setLoading(true);
@@ -163,6 +170,7 @@ const Personnel = ({ user }) => {
                 office: editForm.office.trim() || undefined,
                 role: editForm.role,
                 is_active: editForm.is_active,
+                updated_by: (user?.username || user?.fullName || 'System').trim(),
             });
             closeEditModal();
             setSuccessMessage('User updated successfully.');
@@ -208,7 +216,7 @@ const Personnel = ({ user }) => {
                         </button>
                         )}
                     </div>
-                    <div className="relative w-full max-w-lg sm:max-w-xl mt-3 pt-3 border-t border-[var(--border-light)]">
+                    <div className="relative w-full max-w-2xl sm:max-w-3xl mt-3 pt-3 border-t border-[var(--border-light)]">
                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" aria-hidden />
                         <input
                             type="search"
@@ -369,7 +377,7 @@ const Personnel = ({ user }) => {
                                 />
                             </div>
                             <div>
-                                <label htmlFor="add-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation</label>
+                                <label htmlFor="add-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation *</label>
                                 <input
                                     id="add-position"
                                     type="text"
@@ -378,6 +386,7 @@ const Personnel = ({ user }) => {
                                     className="input-field w-full"
                                     placeholder="e.g. BAC Member, Procurement Officer"
                                     disabled={submitting}
+                                    required
                                 />
                             </div>
                             <div>

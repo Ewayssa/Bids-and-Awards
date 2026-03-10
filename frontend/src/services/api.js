@@ -124,12 +124,14 @@ export const calendarEventService = {
 };
 
 export const backupRestoreService = {
-    async backup() {
-        const response = await axios.get(`${API_BASE_URL}/backup/`, { responseType: 'json' });
+    async backup(username = '') {
+        const params = username ? { username } : undefined;
+        const response = await axios.get(`${API_BASE_URL}/backup/`, { responseType: 'json', params });
         return response.data;
     },
-    async restore(data) {
-        const response = await axios.post(`${API_BASE_URL}/restore/`, data, {
+    async restore(data, username = '') {
+        const payload = username ? { ...(data || {}), username } : data;
+        const response = await axios.post(`${API_BASE_URL}/restore/`, payload, {
             headers: { 'Content-Type': 'application/json' },
         });
         return response.data;
