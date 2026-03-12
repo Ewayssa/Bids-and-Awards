@@ -857,45 +857,51 @@ const Reports = ({ user }) => {
                         onClick={(e) => e.stopPropagation()}
                         style={{ minHeight: '400px' }}
                     >
-                        <div className="p-4 border-b-2 border-gray-200 flex items-center justify-between shrink-0 bg-gray-50">
-                            <h2 id="encode-report-title" className="text-xl font-bold text-gray-800">Encode Report</h2>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={addEncodedRow}
-                                    className="inline-flex items-center gap-1.5 rounded-lg text-sm py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold shadow"
-                                    disabled={encodeFinalized}
-                                    aria-disabled={encodeFinalized}
-                                >
-                                    <MdAdd className="w-5 h-5" />
-                                    Add row
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSaveEncoding}
-                                    disabled={encodedRows.length === 0}
-                                    className="inline-flex items-center gap-1.5 rounded-lg text-sm py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold shadow"
-                                    title="Save encoded entries"
-                                >
-                                    Save
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleExportExcel}
-                                    disabled={encodedRows.length === 0}
-                                    className="inline-flex items-center gap-1.5 rounded-lg text-sm py-2.5 px-4 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold shadow"
-                                >
-                                    <MdDownload className="w-5 h-5" />
-                                    Export
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setEncodeModalOpen(false)}
-                                    className="p-2.5 text-gray-600 hover:bg-gray-200 rounded-lg border border-gray-300"
-                                    aria-label="Isara"
-                                >
-                                    <MdClose className="w-6 h-6" />
-                                </button>
+                        <div className="p-4 border-b-2 border-gray-200 shrink-0 bg-gray-50">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <h2 id="encode-report-title" className="text-xl font-bold text-gray-800">
+                                    Encode Report
+                                </h2>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={addEncodedRow}
+                                            className="inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 bg-green-600 hover:bg-green-700 text-white font-semibold shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                                            disabled={encodeFinalized}
+                                            aria-disabled={encodeFinalized}
+                                        >
+                                            <MdAdd className="w-5 h-5" />
+                                            Add row
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleExportExcel}
+                                            disabled={encodedRows.length === 0}
+                                            className="inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold shadow"
+                                        >
+                                            <MdDownload className="w-5 h-5" />
+                                            Export
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveEncoding}
+                                            disabled={encodedRows.length === 0}
+                                            className="inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold shadow"
+                                            title="Save encoded entries"
+                                        >
+                                            Save
+                                        </button>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEncodeModalOpen(false)}
+                                        className="inline-flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-gray-200 rounded-lg border border-gray-300 shrink-0"
+                                        aria-label="Close"
+                                    >
+                                        <MdClose className="w-6 h-6" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div className="flex-1 min-h-0 overflow-auto p-4 bg-gray-100">
