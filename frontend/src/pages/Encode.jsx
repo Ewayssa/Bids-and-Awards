@@ -3538,17 +3538,6 @@ const Encode = ({ user }) => {
                             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0">
                                 <h3 className="text-base font-semibold text-[var(--text)]">BAC Folder No. {manageFolderPopup.prNo}</h3>
                                 <div className="flex items-center gap-2">
-                                    {isAdmin && currentDoc?.file_url && (
-                                        <button
-                                            type="button"
-                                            onClick={() => triggerDownload(currentDoc)}
-                                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm font-semibold shadow-sm transition-colors"
-                                            aria-label="Download file"
-                                        >
-                                            <MdDownload className="w-4 h-4" />
-                                            Download
-                                        </button>
-                                    )}
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -3588,48 +3577,69 @@ const Encode = ({ user }) => {
                                                     const isImage = /^image\//.test(ct);
                                                     const previewBoxClass = 'w-full min-h-[480px] flex-1 rounded-lg border border-[var(--border)] bg-white overflow-hidden flex flex-col';
                                                     const docTitle = manageFolderPopupPreview.doc?.title || manageFolderPopupPreview.doc?.subDoc || 'Document';
+                                                    const previewActionBar = (
+                                                        <div className="w-full flex items-center justify-between gap-3 px-1">
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-semibold text-[var(--text)] truncate">{docTitle}</p>
+                                                                <p className="text-xs text-[var(--text-muted)] truncate">Preview</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                {isAdmin && currentDoc?.file_url && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => triggerDownload(currentDoc)}
+                                                                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm font-semibold shadow-sm transition-colors whitespace-nowrap"
+                                                                        aria-label="Download file"
+                                                                    >
+                                                                        <MdDownload className="w-4 h-4" />
+                                                                        Download
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
                                                     if (isPdf) {
                                                         return (
-                                                            <div className={previewBoxClass}>
-                                                                <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--background-subtle)] text-sm font-semibold text-[var(--text)] truncate">
-                                                                    {docTitle}
-                                                                </div>
-                                                                <embed
-                                                                    src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
-                                                                    type="application/pdf"
-                                                                    className="w-full min-h-[440px] flex-1 border-0"
-                                                                    title={docTitle}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    }
-                                                    if (isImage) {
-                                                        return (
-                                                            <div className={previewBoxClass}>
-                                                                <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--background-subtle)] text-sm font-semibold text-[var(--text)] truncate">
-                                                                    {docTitle}
-                                                                </div>
-                                                                <div className="flex-1 flex items-center justify-center p-4">
-                                                                    <img
-                                                                        src={manageFolderPopupPreview.previewBlobUrl}
-                                                                        alt={docTitle}
-                                                                        className="max-w-full max-h-[70vh] object-contain"
+                                                            <div className="space-y-3">
+                                                                {previewActionBar}
+                                                                <div className={previewBoxClass}>
+                                                                    <embed
+                                                                        src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
+                                                                        type="application/pdf"
+                                                                        className="w-full min-h-[440px] flex-1 border-0"
+                                                                        title={docTitle}
                                                                     />
                                                                 </div>
                                                             </div>
                                                         );
                                                     }
-                                                    return (
-                                                        <div className={previewBoxClass}>
-                                                            <div className="px-4 py-2 border-b border-[var(--border)] bg-[var(--background-subtle)] text-sm font-semibold text-[var(--text)] truncate">
-                                                                {docTitle}
+                                                    if (isImage) {
+                                                        return (
+                                                            <div className="space-y-3">
+                                                                {previewActionBar}
+                                                                <div className={previewBoxClass}>
+                                                                    <div className="flex-1 flex items-center justify-center p-4">
+                                                                        <img
+                                                                            src={manageFolderPopupPreview.previewBlobUrl}
+                                                                            alt={docTitle}
+                                                                            className="max-w-full max-h-[70vh] object-contain"
+                                                                        />
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <iframe
-                                                                src={manageFolderPopupPreview.previewBlobUrl}
-                                                                title={docTitle}
-                                                                className="w-full min-h-[440px] flex-1 border-0"
-                                                                sandbox="allow-same-origin"
-                                                            />
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div className="space-y-3">
+                                                            {previewActionBar}
+                                                            <div className={previewBoxClass}>
+                                                                <iframe
+                                                                    src={manageFolderPopupPreview.previewBlobUrl}
+                                                                    title={docTitle}
+                                                                    className="w-full min-h-[440px] flex-1 border-0"
+                                                                    sandbox="allow-same-origin"
+                                                                />
+                                                            </div>
                                                         </div>
                                                     );
                                                 })()

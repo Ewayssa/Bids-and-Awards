@@ -499,6 +499,10 @@ const Reports = ({ user }) => {
         // this toggles the post-encoding display (blank dates -> N/A).
         setEncodeFinalized(true);
     };
+
+    const handleEditEncoding = () => {
+        setEncodeFinalized(false);
+    };
     const updateEncodedRow = (index, key, value) => {
         setEncodedRows((prev) => {
             const next = [...prev];
@@ -885,12 +889,12 @@ const Reports = ({ user }) => {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={handleSaveEncoding}
+                                            onClick={encodeFinalized ? handleEditEncoding : handleSaveEncoding}
                                             disabled={encodedRows.length === 0}
-                                            className="inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold shadow"
-                                            title="Save encoded entries"
+                                            className={`inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold shadow ${encodeFinalized ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                            title={encodeFinalized ? 'Edit encoded entries' : 'Save encoded entries'}
                                         >
-                                            Save
+                                            {encodeFinalized ? 'Edit' : 'Save'}
                                         </button>
                                     </div>
                                     <button
