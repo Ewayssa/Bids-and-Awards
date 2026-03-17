@@ -6,6 +6,7 @@ import json
 import os
 import re
 import uuid
+from .utils.document_status import DocumentStatusCalculator
 
 
 def document_file_upload_to(instance, filename):
@@ -129,169 +130,9 @@ class Document(models.Model):
     def calculate_status(self):
         """
         Automatically calculate status based on document completeness.
-        Pending = not yet uploaded (no document record). For existing documents:
-        - Ongoing: Any detail field is missing or empty
-        - Complete: All detail fields are filled out
-        For most sub-docs: requires date. For "Activity Design" and "Project Procurement Management Plan/Supplemental PPMP": requires source_of_fund. For "Annual Procurement Plan": requires app_no, app_type, and Signed by when Certified True Copy.
+        Uses DocumentStatusCalculator for clean, maintainable logic.
         """
-        # Check title - must have a value (except types that have no title in the fill-out form: Invitation to COA; Small Value Procurement, Public Bidding, Lease of Venue)
-        sub_doc_trim = (self.subDoc or '').strip()
-        _no_title_required = (
-            sub_doc_trim == 'Invitation to COA'
-            or sub_doc_trim == 'List of Venue'
-            or sub_doc_trim.endswith(' - List of Venue')
-            or sub_doc_trim == 'Lease of Venue: Table Rating Factor'
-            or sub_doc_trim == 'PHILGEPS - Small Value Procurement'
-            or sub_doc_trim == 'PHILGEPS - Public Bidding'
-            or sub_doc_trim == 'Certificate of DILG - Small Value Procurement'
-            or sub_doc_trim == 'Certificate of DILG - List of Venue'
-            or sub_doc_trim == 'Certificate of DILG - Public Bidding'
-            or sub_doc_trim in ('Small Value Procurement', 'Public Bidding')
-        )
-        has_title = (bool(self.title and self.title.strip()) if not _no_title_required else True)
-
-        # Check PR No - must have a value
-        has_pr_no = bool(self.prNo and self.prNo.strip())
-
-        # Check category - must have a value (not empty, not just whitespace)
-        has_category = bool(self.category and self.category.strip())
-
-        # Check subDoc - must have a value (not empty, not just whitespace)
-        has_sub_doc = bool(sub_doc_trim)
-
-        # Date / Source of Fund / APP fields depending on subDoc
-        if sub_doc_trim == 'Annual Procurement Plan':
-            has_app_type = bool(self.app_type and self.app_type.strip())
-            has_app_no = has_app_type and (self.app_type.strip() != 'Updated' or bool(self.app_no and self.app_no.strip()))
-            has_certified = not self.certified_true_copy or bool(self.certified_signed_by and self.certified_signed_by.strip())
-            has_date = has_app_type and has_app_no and has_certified
-        elif sub_doc_trim in ('Activity Design', 'Project Procurement Management Plan/Supplemental PPMP'):
-            has_date = bool(self.source_of_fund and self.source_of_fund.strip())
-        elif sub_doc_trim == 'Market Scopping':
-            has_budget = self.market_budget is not None
-            has_period = bool(self.market_period_from and self.market_period_from.strip()) and bool(self.market_period_to and self.market_period_to.strip())
-            has_expected = bool(self.market_expected_delivery and self.market_expected_delivery.strip())
-            has_all_3 = (
-                bool(self.market_service_provider_1 and self.market_service_provider_1.strip()) and
-                bool(self.market_service_provider_2 and self.market_service_provider_2.strip()) and
-                bool(self.market_service_provider_3 and self.market_service_provider_3.strip())
-            )
-            has_date = has_budget and has_period and has_expected and has_all_3
-        elif sub_doc_trim == 'Requisition and Issue Slip':
-            has_date = (
-                bool(self.date) and
-                bool(self.office_division and self.office_division.strip()) and
-                bool(self.received_by and self.received_by.strip())
-            )
-        elif sub_doc_trim == 'List of Venue':
-            has_date = True  # No date required for Philgeps List of Venue
-        elif sub_doc_trim.endswith(' - List of Venue'):
-            has_date = True  # RFQ List of Venue variants
-        elif sub_doc_trim in ('Public Bidding', 'Small Value Procurement', 'PHILGEPS', 'Certificate of DILG'):
-            has_date = bool(self.date)
-        elif sub_doc_trim.endswith(' - Small Value Procurement') or sub_doc_trim.endswith(' - Public Bidding'):
-            has_date = bool(self.date)
-        elif sub_doc_trim == 'Invitation to COA':
-            has_date = bool(self.date) and bool(self.date_received)
-        elif sub_doc_trim == 'Attendance Sheet':
-            try:
-                members = json.loads(self.attendance_members or '[]') if (self.attendance_members or '').strip() else []
-                has_date = bool(self.date) and isinstance(members, list) and len(members) > 0
-            except (TypeError, ValueError):
-                has_date = False
-        elif sub_doc_trim == 'BAC Resolution':
-            has_date = (
-                bool(self.resolution_no and self.resolution_no.strip()) and
-                bool(self.title and self.title.strip()) and
-                bool(self.winning_bidder and self.winning_bidder.strip()) and
-                self.total_amount is not None and
-                bool(self.resolution_option and self.resolution_option.strip()) and
-                bool(self.office_division and self.office_division.strip()) and
-                bool(self.date) and
-                bool(self.venue and self.venue.strip())
-            )
-        elif sub_doc_trim == 'Abstract of Quotation':
-            try:
-                bidders = json.loads(self.abstract_bidders or '[]') if (self.abstract_bidders or '').strip() else []
-                if not isinstance(bidders, list) or len(bidders) < 3:
-                    has_date = False
-                else:
-                    def _bidder_ok(b):
-                        name_ok = bool((b.get('name') or '').strip())
-                        amt = b.get('amount')
-                        amount_ok = amt is not None and str(amt).strip() != ''
-                        remarks_ok = bool((b.get('remarks') or '').strip())
-                        return name_ok and amount_ok and remarks_ok
-                    all_filled = all(_bidder_ok(b) for b in bidders)
-                    has_date = (
-                        bool(self.aoq_no and self.aoq_no.strip()) and
-                        bool(self.date) and
-                        bool(self.title and self.title.strip()) and
-                        all_filled
-                    )
-            except (TypeError, ValueError):
-                has_date = False
-        elif sub_doc_trim == 'Lease of Venue: Table Rating Factor':
-            has_date = True  # No file, no extra fields required; once submitted = complete
-        elif sub_doc_trim == 'Notice of Award':
-            has_date = (
-                bool(self.date) and
-                bool(self.notice_award_service_provider and self.notice_award_service_provider.strip()) and
-                bool(self.notice_award_authorized_rep and self.notice_award_authorized_rep.strip()) and
-                bool(self.notice_award_conforme and self.notice_award_conforme.strip())
-            )
-        elif sub_doc_trim == 'Contract Services/Purchase Order':
-            has_date = (
-                bool(self.date) and
-                self.contract_amount is not None and
-                bool(self.notarized_place and self.notarized_place.strip()) and
-                bool(self.notarized_date)
-            )
-        elif sub_doc_trim == 'Notice to Proceed':
-            has_date = (
-                bool(self.date) and
-                bool(self.ntp_service_provider and self.ntp_service_provider.strip()) and
-                bool(self.ntp_authorized_rep and self.ntp_authorized_rep.strip()) and
-                bool(self.ntp_received_by and self.ntp_received_by.strip())
-            )
-        elif sub_doc_trim == 'OSS':
-            has_date = (
-                bool(self.oss_service_provider and self.oss_service_provider.strip()) and
-                bool(self.oss_authorized_rep and self.oss_authorized_rep.strip()) and
-                bool(self.date)
-            )
-        elif sub_doc_trim == "Applicable: Secretary's Certificate and Special Power of Attorney":
-            has_date = (
-                bool(self.secretary_service_provider and self.secretary_service_provider.strip()) and
-                bool(self.secretary_owner_rep and self.secretary_owner_rep.strip()) and
-                bool(self.date)
-            )
-        else:
-            has_date = bool(self.date)
-        
-        # Check file - must be uploaded (except List of Venue, Lease of Venue: Table Rating Factor, Minutes of the Meeting, and Award Posting "date only" sub-docs)
-        has_file = True
-        _no_file_required = (
-            sub_doc_trim == 'List of Venue' or sub_doc_trim.endswith(' - List of Venue') or
-            sub_doc_trim == 'Lease of Venue: Table Rating Factor' or
-            sub_doc_trim == 'Minutes of the Meeting' or
-            sub_doc_trim in ('Notice of Award (Posted)', 'Abstract of Quotation (Posted)', 'BAC Resolution (Posted)')
-        )
-        if not _no_file_required:
-            has_file = bool(self.file)
-            if has_file and hasattr(self.file, 'name'):
-                # For saved files, check that name is not empty
-                has_file = bool(self.file.name and str(self.file.name).strip())
-        
-        # Check uploadedBy - must have a value
-        has_uploaded_by = bool(self.uploadedBy and self.uploadedBy.strip())
-        
-        # If ANY field is missing or empty, status is ongoing
-        if not (has_title and has_pr_no and has_category and has_sub_doc and has_date and has_file and has_uploaded_by):
-            return 'ongoing'
-        
-        # All fields are present and filled
-        return 'complete'
+        return DocumentStatusCalculator.calculate_status(self)
 
     def save(self, *args, **kwargs):
         # Always auto-calculate status before saving

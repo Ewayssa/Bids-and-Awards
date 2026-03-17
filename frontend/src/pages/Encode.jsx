@@ -25,112 +25,100 @@ import {
 } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 import { DOC_TYPES, RFQ_PROCUREMENT_METHODS } from '../constants/docTypes';
-
-const REQUIRED_NEW_FIELDS = ['title', 'date', 'file'];
-const CHECKLIST_ITEMS = [
-    { key: 'title', label: 'Title' },
-    { key: 'category', label: 'Category' },
-    { key: 'subDoc', label: 'Sub-document' },
-    { key: 'date', label: 'Date' },
-    { key: 'file', label: 'File uploaded' },
-];
-
-const toLettersOnly = (value) => value.replace(/[^A-Za-z\s]/g, '');
-const toNumbersOnly = (value) => {
-    const cleaned = String(value || '').replace(/[^0-9.]/g, '');
-    if (!cleaned) return '';
-    const parts = cleaned.split('.');
-    const intPart = parts[0] || '';
-    const decPart = parts.length > 1 ? parts[1].slice(0, 2) : '';
-    return decPart ? `${intPart}.${decPart}` : intPart;
-};
-const formatCurrencyValue = (value) => {
-    const cleaned = toNumbersOnly(String(value || ''));
-    if (!cleaned) return '';
-    const num = parseFloat(cleaned);
-    if (Number.isNaN(num)) return '';
-    return num.toLocaleString('en-PH', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-};
+import {
+    REQUIRED_NEW_FIELDS,
+    CHECKLIST_ITEMS,
+    TABLE_PAGE_SIZE,
+    MODAL_TYPES,
+    VIEW_MODES,
+    SORT_DIRECTIONS
+} from '../utils/constants';
+import { toLettersOnly, toNumbersOnly, formatCurrencyValue } from '../utils/validation';
+import { computeRFQNoFromDate } from '../utils/formatters';
+import { parseApiError } from '../utils/api-errors';
+import {
+    filterDocumentsByQuery,
+    filterDocumentsByCategory,
+    filterDocumentsByStatus,
+    sortDocuments,
+    groupDocumentsByCategory
+} from '../utils/documentHelpers';
+import { useDocumentForm } from '../hooks/useDocumentForm';
+import { useDocumentFilters } from '../hooks/useDocumentFilters';
+import { useDocumentPagination } from '../hooks/useDocumentPagination';
+import { useDocumentValidation } from '../hooks/useDocumentValidation';
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [newSubmitting, setNewSubmitting] = useState(false);
     const [updateSubmitting, setUpdateSubmitting] = useState(false);
-    const [newError, setNewError] = useState('');
     const [updateError, setUpdateError] = useState('');
-    const [newFormErrors, setNewFormErrors] = useState({}); // { title: 'required', ... }
     const [activeModal, setActiveModal] = useState(null); // 'new' | 'update' | 'updateList' | 'manage' | null
     const [newStep, setNewStep] = useState('docType'); // 'docType' | 'subDoc' | 'form'
     const [selectedDocType, setSelectedDocType] = useState(null);
     const [selectedSubDocType, setSelectedSubDocType] = useState(null);
     const [selectedDoc, setSelectedDoc] = useState(null);
-    const [form, setForm] = useState({
-        title: '',
-        prNo: '',
-        user_pr_no: '',
-        total_amount: '',
-        source_of_fund: '',
-        ppmp_no: '',
-        app_no: '',
-        app_type: '',
-        certified_true_copy: false,
-        certified_signed_by: '',
-        market_budget: '',
-        market_period_from: '',
-        market_period_to: '',
-        market_expected_delivery: '',
-        deadline_date: '',
-        deadline_time: '',
-        market_service_provider_1: '',
-        market_service_provider_2: '',
-        market_service_provider_3: '',
-        office_division: '',
-        received_by: '',
-        date_received: '',
-        attendance_members: '',
-        resolution_no: '',
-        winning_bidder: '',
-        resolution_option: '',
-        venue: '',
-        aoq_no: '',
-        abstract_bidders: '',
-        contract_received_by_coa: false,
-        contract_amount: '',
-        notarized_place: '',
-        notarized_date: '',
-        ntp_service_provider: '',
-        ntp_authorized_rep: '',
-        ntp_received_by: '',
-        oss_service_provider: '',
-        oss_authorized_rep: '',
-        secretary_service_provider: '',
-        secretary_owner_rep: '',
-        category: '',
-        subDoc: '',
-        date: '',
-        file: null,
-        status: 'pending',
-    });
     const [alertMessage, setAlertMessage] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filterCategory, setFilterCategory] = useState('');
-    const [filterStatus, setFilterStatus] = useState('');
-    const [filterPRNo, setFilterPRNo] = useState('');
-    const [filterDateFrom, setFilterDateFrom] = useState('');
-    const [filterDateTo, setFilterDateTo] = useState('');
-    const [sortKey, setSortKey] = useState(''); // '' | 'uploaded_at' | 'updated_at' | 'status' | 'category'
-    const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+
+    // Custom hooks
+    const {
+        form,
+        submitting: newSubmitting,
+        error: newError,
+        updateFormField,
+        resetForm,
+        submitNewDocument,
+        setError: setNewError
+    } = useDocumentForm();
+
+    const {
+        searchQuery,
+        setSearchQuery,
+        filterCategory,
+        setFilterCategory,
+        filterStatus,
+        setFilterStatus,
+        filterPRNo,
+        setFilterPRNo,
+        filterDateFrom,
+        setFilterDateFrom,
+        filterDateTo,
+        setFilterDateTo,
+        sortKey,
+        setSortKey,
+        sortDir,
+        setSortDir,
+        showFilters,
+        setShowFilters,
+        resetFilters,
+        hasActiveFilters,
+        toggleSort
+    } = useDocumentFilters();
+
+    const {
+        tablePage,
+        setTablePage,
+        resetPage,
+        getPaginatedDocuments,
+        getTotalPages,
+        isValidPage,
+        nextPage,
+        prevPage,
+        goToPage
+    } = useDocumentPagination();
+
+    const {
+        newFormErrors,
+        isFormValid,
+        checklistData,
+        validateAttendanceMembers,
+        validateAbstractBidders
+    } = useDocumentValidation(form, selectedSubDocType);
+
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'grouped'
     const [expandedGroups, setExpandedGroups] = useState(new Set());
-    const [tablePage, setTablePage] = useState(1);
-    const TABLE_PAGE_SIZE = 10;
-    const [showFilters, setShowFilters] = useState(false);
     const [selectedDocForComment, setSelectedDocForComment] = useState(null);
     const [commentText, setCommentText] = useState('');
     const [comments, setComments] = useState({}); // { docId: [{ text, author, date }] }
@@ -151,15 +139,6 @@ const Encode = ({ user }) => {
     const [manageFolderPopupIndex, setManageFolderPopupIndex] = useState(0); // which doc (with file) is shown when multiple
     const [manageRefreshing, setManageRefreshing] = useState(false);
 
-    const computeRFQNoFromDate = (dateStr) => {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        if (Number.isNaN(d.getTime())) return '';
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const seq = String(d.getMonth() + 1).padStart(3, '0'); // 001 = Jan, 002 = Feb, etc.
-        return `${month}/${day}/${seq}`;
-    };
     const load = async () => {
         try {
             const data = await documentService.getAll();
@@ -197,114 +176,26 @@ const Encode = ({ user }) => {
     }, [activeModal, newStep, form.date]);
 
     const performNewSubmit = async () => {
-        setNewError('');
-        setNewSubmitting(true);
-        try {
-            const fd = new FormData();
-            fd.append('title', form.title);
-            // BAC Folder No. (prNo) is auto-generated by the backend (not sent)
-            fd.append('category', form.category || 'General');
-            fd.append('subDoc', form.subDoc || 'N/A');
-            if (form.date) fd.append('date', form.date);
-            fd.append('uploadedBy', user?.fullName || user?.username || '');
-            fd.append('status', form.status || 'pending');
-            if (form.user_pr_no !== undefined && form.user_pr_no !== '') fd.append('user_pr_no', form.user_pr_no);
-            if (form.total_amount !== undefined && form.total_amount !== '') fd.append('total_amount', form.total_amount);
-            if (form.source_of_fund !== undefined && form.source_of_fund !== '') fd.append('source_of_fund', form.source_of_fund);
-            if (form.ppmp_no !== undefined && form.ppmp_no !== '') fd.append('ppmp_no', form.ppmp_no);
-            if (form.app_no !== undefined && form.app_no !== '') fd.append('app_no', form.app_no);
-            if (form.app_type !== undefined && form.app_type !== '') fd.append('app_type', form.app_type);
-            fd.append('certified_true_copy', form.certified_true_copy ? 'true' : 'false');
-            if (form.certified_signed_by !== undefined) fd.append('certified_signed_by', form.certified_signed_by || '');
-            if (form.market_budget !== undefined && form.market_budget !== '') fd.append('market_budget', form.market_budget);
-            if (form.market_period_from !== undefined) fd.append('market_period_from', form.market_period_from || '');
-            if (form.market_period_to !== undefined) fd.append('market_period_to', form.market_period_to || '');
-            if (form.market_expected_delivery !== undefined) {
-                let value = form.market_expected_delivery || '';
-                if (!value && form.deadline_date) {
-                    // Combine separate date & time into a single string for backend
-                    value = `${form.deadline_date}${form.deadline_time ? ' ' + form.deadline_time : ''}`;
-                }
-                if (value) fd.append('market_expected_delivery', value);
+        const result = await submitNewDocument(
+            user,
+            selectedSubDocType,
+            attendanceMembers,
+            abstractBidders,
+            () => {
+                setSelectedDoc(null);
+                // Small delay to ensure backend has processed status calculation
+                setTimeout(() => {
+                    load();
+                }, 300);
+                setActiveModal(null);
+                setAlertMessage('New procurement document saved.');
+                setAttendanceMembers([]);
+                setAbstractBidders([]);
+                // Notify dashboard to refresh stats
+                window.dispatchEvent(new CustomEvent('documentChanged'));
             }
-            if (form.market_service_provider_1 !== undefined) fd.append('market_service_provider_1', form.market_service_provider_1 || '');
-            if (form.market_service_provider_2 !== undefined) fd.append('market_service_provider_2', form.market_service_provider_2 || '');
-            if (form.market_service_provider_3 !== undefined) fd.append('market_service_provider_3', form.market_service_provider_3 || '');
-            if (form.office_division !== undefined) fd.append('office_division', form.office_division || '');
-            if (form.received_by !== undefined) fd.append('received_by', form.received_by || '');
-            if (form.date_received) fd.append('date_received', form.date_received);
-            if (selectedSubDocType === 'Attendance Sheet' && attendanceMembers.length > 0) {
-                const members = attendanceMembers
-                    .filter((m) => (m.name || '').trim())
-                    .map((m) => ({ name: (m.name || '').trim(), present: !!m.present }));
-                if (members.length > 0) fd.append('attendance_members', JSON.stringify(members));
-            }
-            if (form.resolution_no !== undefined) fd.append('resolution_no', form.resolution_no || '');
-            if (form.winning_bidder !== undefined) fd.append('winning_bidder', form.winning_bidder || '');
-            if (form.resolution_option !== undefined) fd.append('resolution_option', form.resolution_option || '');
-            if (form.venue !== undefined) fd.append('venue', form.venue || '');
-            if (selectedSubDocType === 'Abstract of Quotation' && abstractBidders.length >= 3) {
-                const bidders = abstractBidders
-                    .filter((b) => (b.name || '').trim() && (b.amount !== undefined && b.amount !== '') && (b.remarks || '').trim())
-                    .map((b) => ({ name: (b.name || '').trim(), amount: b.amount === undefined || b.amount === null ? '' : String(b.amount).trim(), remarks: (b.remarks || '').trim() }));
-                if (bidders.length >= 3) fd.append('abstract_bidders', JSON.stringify(bidders));
-            }
-            if (form.aoq_no !== undefined) fd.append('aoq_no', form.aoq_no || '');
-            if (selectedSubDocType === 'Contract Services/Purchase Order') {
-                fd.append('contract_received_by_coa', form.contract_received_by_coa ? 'true' : 'false');
-                if (form.contract_amount !== undefined && form.contract_amount !== '') fd.append('contract_amount', form.contract_amount);
-                if (form.notarized_place !== undefined) fd.append('notarized_place', form.notarized_place || '');
-                if (form.notarized_date) fd.append('notarized_date', form.notarized_date);
-            }
-            if (selectedSubDocType === 'Notice to Proceed') {
-                if (form.ntp_service_provider !== undefined) fd.append('ntp_service_provider', form.ntp_service_provider || '');
-                if (form.ntp_authorized_rep !== undefined) fd.append('ntp_authorized_rep', form.ntp_authorized_rep || '');
-                if (form.ntp_received_by !== undefined) fd.append('ntp_received_by', form.ntp_received_by || '');
-            }
-            if (selectedSubDocType === 'OSS') {
-                if (form.oss_service_provider !== undefined) fd.append('oss_service_provider', form.oss_service_provider || '');
-                if (form.oss_authorized_rep !== undefined) fd.append('oss_authorized_rep', form.oss_authorized_rep || '');
-            }
-            if (selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney") {
-                if (form.secretary_service_provider !== undefined) fd.append('secretary_service_provider', form.secretary_service_provider || '');
-                if (form.secretary_owner_rep !== undefined) fd.append('secretary_owner_rep', form.secretary_owner_rep || '');
-            }
-            if (form.file) fd.append('file', form.file);
-
-            await documentService.create(fd);
-
-            setSelectedDoc(null);
-            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', date_received: '', attendance_members: '', resolution_no: '', winning_bidder: '', resolution_option: '', venue: '', aoq_no: '', abstract_bidders: '', contract_received_by_coa: false, contract_amount: '', notarized_place: '', notarized_date: '', ntp_service_provider: '', ntp_authorized_rep: '', ntp_received_by: '', oss_service_provider: '', oss_authorized_rep: '', secretary_service_provider: '', secretary_owner_rep: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
-            // Small delay to ensure backend has processed status calculation
-            setTimeout(() => {
-                load();
-            }, 300);
-            setActiveModal(null);
-            setAlertMessage('New procurement document saved.');
-            setAttendanceMembers([]);
-            setAbstractBidders([]);
-        } catch (err) {
-            const data = err?.response?.data;
-            let message = '';
-            if (data) {
-                if (typeof data === 'string') {
-                    message = data;
-                } else if (data.detail) {
-                    message = Array.isArray(data.detail) ? data.detail.join(' ') : String(data.detail);
-                } else {
-                    const firstKey = Object.keys(data)[0];
-                    const firstVal = firstKey ? data[firstKey] : null;
-                    if (Array.isArray(firstVal)) {
-                        message = firstVal.join(' ');
-                    } else if (firstVal) {
-                        message = String(firstVal);
-                    }
-                }
-            }
-            setNewError(message || err.message || 'Failed to save.');
-        } finally {
-            setNewSubmitting(false);
-        }
+        );
+        return result;
     };
 
     const validateNewForm = () => {
@@ -330,7 +221,6 @@ const Encode = ({ user }) => {
         e.preventDefault();
 
         if (!validateNewForm()) {
-            setNewError('Please complete required fields (Title).');
             return;
         }
 
@@ -340,14 +230,8 @@ const Encode = ({ user }) => {
             selectedSubDocType?.startsWith('PHILGEPS - ') &&
             !selectedSubDocType.includes('List of Venue')
         ) {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for this PHILGEPS document.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for this PHILGEPS document.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (!form.file) return;
         }
 
         // Certificate of DILG RFQ Concerns - Small Value Procurement: validate Date, RFQ No., Deadline, Service Providers
@@ -355,30 +239,15 @@ const Encode = ({ user }) => {
             selectedDocType?.name === 'RFQ Concerns' &&
             selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement')
         ) {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for this Certificate of DILG document.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
             const autoRFQ = form.user_pr_no && form.user_pr_no.trim()
                 ? form.user_pr_no.trim()
                 : computeRFQNoFromDate(form.date);
-            if (!autoRFQ) {
-                setNewError('RFQ No. could not be generated. Please check the date.');
-                return;
-            }
-            if (!(form.deadline_date && form.deadline_date.trim())) {
-                setNewError('Deadline date is required for this Certificate of DILG document.');
-                return;
-            }
-            if (!(form.deadline_time && form.deadline_time.trim())) {
-                setNewError('Deadline time is required for this Certificate of DILG document.');
-                return;
-            }
+            if (!autoRFQ) return;
+            if (!(form.deadline_date && form.deadline_date.trim())) return;
+            if (!(form.deadline_time && form.deadline_time.trim())) return;
             const trimmedProviders = certificateServiceProviders.map((p) => (p || '').trim());
-            if (trimmedProviders.slice(0, 3).some((p) => !p)) {
-                setNewError('Please enter at least 3 service providers.');
-                return;
-            }
+            if (trimmedProviders.slice(0, 3).some((p) => !p)) return;
             // Sync first three providers into the form fields so they are saved
             setForm((f) => ({
                 ...f,
@@ -393,255 +262,92 @@ const Encode = ({ user }) => {
             const s1 = (form.market_service_provider_1 || '').trim();
             const s2 = (form.market_service_provider_2 || '').trim();
             const s3 = (form.market_service_provider_3 || '').trim();
-            if (!s1 || !s2 || !s3) {
-                setNewError('All 3 Service Providers must be entered. Document will not be uploaded until all 3 are filled.');
-                return;
-            }
+            if (!s1 || !s2 || !s3) return;
         }
         if (selectedSubDocType === 'Requisition and Issue Slip') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Requisition and Issue Slip.');
-                return;
-            }
-            if (!(form.office_division && form.office_division.trim())) {
-                setNewError('Office/Division is required for Requisition and Issue Slip.');
-                return;
-            }
-            if (!(form.received_by && form.received_by.trim())) {
-                setNewError('Received By is required for Requisition and Issue Slip.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (!(form.office_division && form.office_division.trim())) return;
+            if (!(form.received_by && form.received_by.trim())) return;
         }
         if (selectedSubDocType === 'Notice of BAC Meeting') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Notice of BAC Meeting.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for Notice of BAC Meeting.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Invitation to COA') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Invitation to COA.');
-                return;
-            }
-            if (!(form.date_received && form.date_received.trim())) {
-                setNewError('Date received is required for Invitation to COA.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for Invitation to COA.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (!(form.date_received && form.date_received.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Attendance Sheet') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Attendance Sheet.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
             const withNames = attendanceMembers.filter((m) => (m.name || '').trim());
-            if (withNames.length === 0) {
-                setNewError('Add at least one BAC member with a name.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for Attendance Sheet.');
-                return;
-            }
+            if (withNames.length === 0) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Minutes of the Meeting') {
-            if (!(form.title && form.title.trim())) {
-                setNewError('Agenda/Others is required for Minutes of the Meeting.');
-                return;
-            }
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Minutes of the Meeting.');
-                return;
-            }
+            if (!(form.title && form.title.trim())) return;
+            if (!(form.date && form.date.trim())) return;
         }
         if (selectedSubDocType === 'BAC Resolution') {
-            if (!(form.resolution_no && form.resolution_no.trim())) {
-                setNewError('Resolution No. is required for BAC Resolution.');
-                return;
-            }
-            if (!(form.title && form.title.trim())) {
-                setNewError('Title is required for BAC Resolution.');
-                return;
-            }
-            if (!(form.winning_bidder && form.winning_bidder.trim())) {
-                setNewError('Winning Bidder is required for BAC Resolution.');
-                return;
-            }
-            if (form.total_amount === '' || form.total_amount === undefined || form.total_amount === null) {
-                setNewError('Amount is required for BAC Resolution.');
-                return;
-            }
-            if (!(form.resolution_option && form.resolution_option.trim())) {
-                setNewError('Options is required for BAC Resolution.');
-                return;
-            }
-            if (!(form.office_division && form.office_division.trim())) {
-                setNewError('Office/Division is required for BAC Resolution.');
-                return;
-            }
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date of Adoption is required for BAC Resolution.');
-                return;
-            }
-            if (!(form.venue && form.venue.trim())) {
-                setNewError('Venue is required for BAC Resolution.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for BAC Resolution.');
-                return;
-            }
+            if (!(form.resolution_no && form.resolution_no.trim())) return;
+            if (!(form.title && form.title.trim())) return;
+            if (!(form.winning_bidder && form.winning_bidder.trim())) return;
+            if (form.total_amount === '' || form.total_amount === undefined || form.total_amount === null) return;
+            if (!(form.resolution_option && form.resolution_option.trim())) return;
+            if (!(form.office_division && form.office_division.trim())) return;
+            if (!(form.date && form.date.trim())) return;
+            if (!(form.venue && form.venue.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Abstract of Quotation') {
-            if (!(form.aoq_no && form.aoq_no.trim())) {
-                setNewError('AOQ No. is required for Abstract of Quotation.');
-                return;
-            }
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Abstract of Quotation.');
-                return;
-            }
-            if (!(form.title && form.title.trim())) {
-                setNewError('Purpose is required for Abstract of Quotation.');
-                return;
-            }
-            if (abstractBidders.length < 3) {
-                setNewError('At least 3 bidders are required. Add bidders and fill Bidder name, Amount, and Remarks for each.');
-                return;
-            }
+            if (!(form.aoq_no && form.aoq_no.trim())) return;
+            if (!(form.date && form.date.trim())) return;
+            if (!(form.title && form.title.trim())) return;
+            if (abstractBidders.length < 3) return;
             const filled = abstractBidders.filter((b) => (b.name || '').trim() && (b.amount !== undefined && b.amount !== '') && (b.remarks || '').trim());
-            if (filled.length < 3) {
-                setNewError('All 3 required bidder rows must have Bidder name, Amount, and Remarks filled. You cannot proceed until all 3 are complete.');
-                return;
-            }
+            if (filled.length < 3) return;
             const hasIncomplete = abstractBidders.some((b) => !(b.name || '').trim() || (b.amount === undefined || b.amount === '') || !(b.remarks || '').trim());
-            if (hasIncomplete) {
-                setNewError('Every bidder row must have Bidder name, Amount, and Remarks filled. Complete all rows or remove empty ones.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for Abstract of Quotation.');
-                return;
-            }
+            if (hasIncomplete) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Contract Services/Purchase Order') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Contract Services.');
-                return;
-            }
-            if (form.contract_received_by_coa !== true && form.contract_received_by_coa !== false) {
-                setNewError('Received by COA (Yes or No) is required for Contract Services.');
-                return;
-            }
-            if (form.contract_amount === '' || form.contract_amount === undefined || form.contract_amount === null) {
-                setNewError('Contract Amount is required for Contract Services.');
-                return;
-            }
-            if (!(form.notarized_place && form.notarized_place.trim())) {
-                setNewError('Notarized (place) is required for Contract Services.');
-                return;
-            }
-            if (!(form.notarized_date && form.notarized_date.trim())) {
-                setNewError('Notarized (date) is required for Contract Services.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for Contract Services.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (form.contract_received_by_coa !== true && form.contract_received_by_coa !== false) return;
+            if (form.contract_amount === '' || form.contract_amount === undefined || form.contract_amount === null) return;
+            if (!(form.notarized_place && form.notarized_place.trim())) return;
+            if (!(form.notarized_date && form.notarized_date.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Notice to Proceed') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Notice to Proceed.');
-                return;
-            }
-            if (!(form.ntp_service_provider && form.ntp_service_provider.trim())) {
-                setNewError('Service Provider is required for Notice to Proceed.');
-                return;
-            }
-            if (!(form.ntp_authorized_rep && form.ntp_authorized_rep.trim())) {
-                setNewError('Authorized Representative/Owner is required for Notice to Proceed.');
-                return;
-            }
-            if (!(form.ntp_received_by && form.ntp_received_by.trim())) {
-                setNewError('Received By is required for Notice to Proceed.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for Notice to Proceed.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (!(form.ntp_service_provider && form.ntp_service_provider.trim())) return;
+            if (!(form.ntp_authorized_rep && form.ntp_authorized_rep.trim())) return;
+            if (!(form.ntp_received_by && form.ntp_received_by.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'OSS') {
-            if (!(form.oss_service_provider && form.oss_service_provider.trim())) {
-                setNewError('Service Provider is required for OSS.');
-                return;
-            }
-            if (!(form.oss_authorized_rep && form.oss_authorized_rep.trim())) {
-                setNewError('Authorized Representative/Owner is required for OSS.');
-                return;
-            }
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for OSS.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for OSS.');
-                return;
-            }
+            if (!(form.oss_service_provider && form.oss_service_provider.trim())) return;
+            if (!(form.oss_authorized_rep && form.oss_authorized_rep.trim())) return;
+            if (!(form.date && form.date.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney") {
-            if (!(form.secretary_service_provider && form.secretary_service_provider.trim())) {
-                setNewError("Service Provider is required for Secretary's Certificate.");
-                return;
-            }
-            if (!(form.secretary_owner_rep && form.secretary_owner_rep.trim())) {
-                setNewError("Owner/Authorized Representative is required for Secretary's Certificate.");
-                return;
-            }
-            if (!(form.date && form.date.trim())) {
-                setNewError("Date is required for Secretary's Certificate.");
-                return;
-            }
-            if (!form.file) {
-                setNewError("Upload is required for Secretary's Certificate.");
-                return;
-            }
+            if (!(form.secretary_service_provider && form.secretary_service_provider.trim())) return;
+            if (!(form.secretary_owner_rep && form.secretary_owner_rep.trim())) return;
+            if (!(form.date && form.date.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'PhilGEPS Posting of Award') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for PhilGEPS Posting of Award.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for PhilGEPS Posting of Award.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Certificate of DILG R1 Website Posting of Award') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for Certificate of DILG R1 Website Posting of Award.');
-                return;
-            }
-            if (!form.file) {
-                setNewError('Upload is required for Certificate of DILG R1 Website Posting of Award.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
+            if (!form.file) return;
         }
         if (selectedSubDocType === 'Notice of Award (Posted)' || selectedSubDocType === 'Abstract of Quotation (Posted)' || selectedSubDocType === 'BAC Resolution (Posted)') {
-            if (!(form.date && form.date.trim())) {
-                setNewError('Date is required for this document.');
-                return;
-            }
+            if (!(form.date && form.date.trim())) return;
         }
-        setNewError('');
         setConfirmDialog({
             message: 'Are you sure you want to submit this new procurement?',
             onConfirm: () => {
@@ -740,6 +446,8 @@ const Encode = ({ user }) => {
             }, 300);
             setActiveModal(null);
             setAlertMessage('Document updated successfully.');
+            // Notify dashboard to refresh stats
+            window.dispatchEvent(new CustomEvent('documentChanged'));
         } catch (err) {
             setUpdateError(err.response?.data?.detail || err.message || 'Failed to update.');
         } finally {
@@ -766,6 +474,8 @@ const Encode = ({ user }) => {
         try {
             await documentService.delete(id);
             load();
+            // Notify dashboard to refresh stats
+            window.dispatchEvent(new CustomEvent('documentChanged'));
         } catch (err) {
             setAlertMessage('Failed to delete.');
         }
@@ -1911,7 +1621,7 @@ const Encode = ({ user }) => {
                                                         onClick={() => {
                                                             if (alreadyUploaded) return;
                                                             setSelectedSubDocType(sd);
-                                                            setForm((f) => ({ ...f, subDoc: sd }));
+                                                            updateFormField('subDoc', sd);
                                                             setNewStep('form');
                                                         }}
                                                         aria-disabled={alreadyUploaded}
@@ -3434,6 +3144,12 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                     </>
+                                )}
+                                {newError && (
+                                    <div className="flex items-start gap-3 rounded-xl border-2 border-red-300 bg-red-50 px-4 py-3.5 mt-2" role="alert">
+                                        <MdError className="w-5 h-5 flex-shrink-0 text-red-600 mt-0.5" aria-hidden />
+                                        <p className="text-sm font-semibold text-red-800">{newError}</p>
+                                    </div>
                                 )}
                                 <div className="flex justify-between gap-3 pt-2">
                                     <button
