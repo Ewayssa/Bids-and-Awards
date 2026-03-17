@@ -367,7 +367,24 @@ const Reports = ({ user }) => {
             setUploadError('');
             load();
         } catch (err) {
-            setUploadError(err.response?.data?.detail || err.message || 'Failed to upload report.');
+            const data = err?.response?.data;
+            let message = '';
+            if (data) {
+                if (typeof data === 'string') {
+                    message = data;
+                } else if (data.detail) {
+                    message = Array.isArray(data.detail) ? data.detail.join(' ') : String(data.detail);
+                } else {
+                    const firstKey = Object.keys(data)[0];
+                    const firstVal = firstKey ? data[firstKey] : null;
+                    if (Array.isArray(firstVal)) {
+                        message = firstVal.join(' ');
+                    } else if (firstVal) {
+                        message = String(firstVal);
+                    }
+                }
+            }
+            setUploadError(message || err.message || 'Failed to upload report.');
         } finally {
             setUploading(false);
         }
