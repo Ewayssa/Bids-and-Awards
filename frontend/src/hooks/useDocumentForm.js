@@ -246,7 +246,4 @@ export function useDocumentForm() {
         error,
         updateFormField,
         resetForm,
-        submitNewDocument,
-        setError
-    };
-}
+

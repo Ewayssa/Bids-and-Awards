@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { REQUIRED_NEW_FIELDS, CHECKLIST_ITEMS } from '../utils/constants';
 import { validateRequiredFields, isValidDateFormat } from '../utils/validation';
 

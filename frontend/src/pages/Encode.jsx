@@ -63,10 +63,9 @@ const Encode = ({ user }) => {
     const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
 
     // Custom hooks
-    const {
-        form,
-        submitting: newSubmitting,
-        error: newError,
+
+error: newError,
+        setForm,
         updateFormField,
         resetForm,
         submitNewDocument,
@@ -112,7 +111,7 @@ const Encode = ({ user }) => {
     const {
         newFormErrors,
         isFormValid,
-        checklistData,
+        formChecklistData,
         validateAttendanceMembers,
         validateAbstractBidders
     } = useDocumentValidation(form, selectedSubDocType);
@@ -676,7 +675,7 @@ const Encode = ({ user }) => {
     };
 
     // Checklist data for Update modal: which sub-docs are completed (any document matching category+subDoc)
-    const checklistData = useMemo(() => {
+    const updateChecklistData = useMemo(() => {
         return DOC_TYPES.map((docType) => {
             const categoryName = (docType.name || '').trim().toLowerCase();
             const isRfq = docType.id === 'afq';
@@ -713,7 +712,7 @@ const Encode = ({ user }) => {
             return;
         }
         if (lastAutoPreviewFolderId === activeChecklistCategoryId) return;
-        const activeType = checklistData.find((dt) => dt.id === activeChecklistCategoryId);
+        const activeType = updateChecklistData.find((dt) => dt.id === activeChecklistCategoryId);
         if (!activeType) return;
         const folderName = (activeType.name || '').toLowerCase().trim();
         const typeSubDocs = new Set((activeType.subDocs || []).map((s) => (s || '').trim().toLowerCase()));
@@ -739,7 +738,7 @@ const Encode = ({ user }) => {
         // Reuse existing viewer behavior; only admins can preview files
         openPreview(firstWithFile);
         setLastAutoPreviewFolderId(activeChecklistCategoryId);
-    }, [activeModal, activeChecklistCategoryId, checklistData, documents, lastAutoPreviewFolderId]);
+    }, [activeModal, activeChecklistCategoryId, updateChecklistData, documents, lastAutoPreviewFolderId]);
 
     // Export to CSV
     const exportToCSV = () => {
@@ -809,7 +808,7 @@ const Encode = ({ user }) => {
         else { setSortKey(key); setSortDir('asc'); }
     };
 
-    const hasActiveFilters = searchQuery || filterCategory || filterStatus || filterPRNo || filterDateFrom || filterDateTo;
+    const pageHasActiveFilters = searchQuery || filterCategory || filterStatus || filterPRNo || filterDateFrom || filterDateTo;
 
     // Comment functions
     const handleAddComment = async (docId) => {
@@ -1230,7 +1229,7 @@ const Encode = ({ user }) => {
                                     {filterStatus === 'complete' && 'No completed documents.'}
                                     {filterStatus === 'ongoing' && 'No ongoing documents.'}
                                     {filterStatus === 'pending' && 'No pending documents.'}
-                                    {!filterStatus && hasActiveFilters && 'No documents match your filters.'}
+                                    {!filterStatus && pageHasActiveFilters && 'No documents match your filters.'}
                                 </div>
                             ) : viewMode === 'grouped' ? (
                                 // Grouped view by transaction number

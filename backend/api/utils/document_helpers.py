@@ -1,5 +1,6 @@
 from django.utils import timezone
 import json
+from .document_status import DocumentStatusCalculator
 
 def get_next_transaction_number(date=None):
     """
@@ -59,9 +60,10 @@ def get_document_missing_count(document):
     )
     
     # Core identifying fields
+    ignore_prno = DocumentStatusCalculator.is_new_procurement(document)
     if not _no_title_required and not (document.title and str(document.title).strip()):
         count += 1
-    if not (document.prNo and str(document.prNo).strip()):
+    if not ignore_prno and not (document.prNo and str(document.prNo).strip()):
         count += 1
     if not (document.category and str(document.category).strip()):
         count += 1

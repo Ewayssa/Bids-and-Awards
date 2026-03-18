@@ -9,6 +9,28 @@ import uuid
 from .utils.document_status import DocumentStatusCalculator
 
 
+CHECKLIST_DOC_TYPES = [
+    ('Planning', [
+        'Annual Procurement Plan',
+        'Activity Design', 
+        'Project Procurement Management Plan/Supplemental PPMP',
+        'Market Scopping'
+    ]),
+    ('Procurement', ['Requisition and Issue Slip']),
+    ('Pre-Bidding', ['List of Venue', 'Invitation to COA']),
+    ('Bidding', ['Attendance Sheet', 'BAC Resolution', 'Abstract of Quotation']),
+    ('Post Qualification', ['Lease of Venue: Table Rating Factor', 'Notice of Award']),
+    ('Contract', ['Contract Services/Purchase Order', 'Notice to Proceed', 'OSS']),
+    ('RFQ', [
+        'PHILGEPS - Small Value Procurement',
+        'PHILGEPS - Public Bidding', 
+        'Certificate of DILG - Small Value Procurement',
+        'Certificate of DILG - Public Bidding'
+    ]),
+    ('Secretary Cert', ["Applicable: Secretary's Certificate and Special Power of Attorney"])
+]
+
+
 def document_file_upload_to(instance, filename):
     """
     Store uploaded document in a folder by category and BAC Folder No. (prNo).

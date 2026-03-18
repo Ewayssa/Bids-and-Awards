@@ -5,6 +5,7 @@ Handles the complex logic for determining document completeness status.
 
 import json
 from typing import Dict, Any, Optional
+from django.utils import timezone
 
 
 class DocumentStatusCalculator:
@@ -35,6 +36,23 @@ class DocumentStatusCalculator:
     }
 
     @classmethod
+    def is_new_procurement(cls, document) -> bool:
+        """Check if document is new procurement (Procurement category or Requisition and Issue Slip, recent/empty prNo)."""
+        category = (document.category or '').strip()
+        sub_doc = (document.subDoc or '').strip()
+        is_proc_type = category == 'Procurement' or sub_doc == 'Requisition and Issue Slip'
+        if not is_proc_type:
+            return False
+        pr_no = (document.prNo or '').strip()
+        if not pr_no:
+            return True
+        try:
+            current_ym = timezone.now().date().strftime('%Y-%m')
+            return pr_no.startswith(current_ym + '-')
+        except:
+            return True  # fallback if date issues
+
+    @classmethod
     def calculate_status(cls, document) -> str:
         """
         Calculate document status based on completeness requirements.
@@ -47,8 +65,9 @@ class DocumentStatusCalculator:
         """
         sub_doc = (document.subDoc or '').strip()
 
-        # Basic field checks
-        if not cls._has_basic_fields(document):
+        # Basic field checks for new procurement
+        ignore_prno = cls.is_new_procurement(document)
+        if not cls._has_basic_fields(document, ignore_prno=ignore_prno):
             return 'ongoing'
 
         # Sub-document specific checks
@@ -62,16 +81,18 @@ class DocumentStatusCalculator:
         return 'complete'
 
     @classmethod
-    def _has_basic_fields(cls, document) -> bool:
-        """Check basic required fields that apply to all documents."""
+    def _has_basic_fields(cls, document, ignore_prno=False) -> bool:
+        """Check basic required fields that apply to all documents.
+        ignore_prno: Skip prNo check for new procurements."""
         # Title check (with exceptions)
         sub_doc = (document.subDoc or '').strip()
         no_title_required = any(sub_doc == item or sub_doc.endswith(f' - {item}') for item in ['List of Venue']) or sub_doc in cls.NO_TITLE_REQUIRED
         has_title = (bool(document.title and document.title.strip()) if not no_title_required else True)
 
+        prno_ok = ignore_prno or bool(document.prNo and document.prNo.strip())
         return (
             has_title and
-            bool(document.prNo and document.prNo.strip()) and
+            prno_ok and
             bool(document.category and document.category.strip()) and
             bool(sub_doc) and
             bool(document.uploadedBy and document.uploadedBy.strip())
