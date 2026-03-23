@@ -6,58 +6,81 @@ class DashboardService:
     @staticmethod
     def get_document_status_counts(docs_qs):
         """
-        Count documents by real-time status (calculate_status per document).
+        Count documents per user expectation:
+        - total: all documents
+        - completed: docs with calculate_status() == 'complete'
+        - ongoing: submitted docs that are not complete
+        - pending: total - completed (all non-completed docs)
         """
-        completed = ongoing = pending = 0
-        for doc in docs_qs:
-            status = (doc.calculate_status() or '').lower().strip() or 'ongoing'
-            if status == 'complete':
-                completed += 1
-            elif status == 'pending':
-                pending += 1
-            else:
-                ongoing += 1
+        total_docs = docs_qs.count()
+        completed_docs = 0
+        submitted_qs = docs_qs.filter(uploaded_at__isnull=False)
+        
+        for doc in submitted_qs:
+            if (doc.calculate_status() or '').lower().strip() == 'complete':
+                completed_docs += 1
+        
+        ongoing_docs = submitted_qs.count() - completed_docs
+        pending_docs = docs_qs.filter(uploaded_at__isnull=True).count()
+        
         return {
-            'total': completed + ongoing + pending,
-            'completed': completed,
-            'ongoing': ongoing,
-            'pending': pending
+            'total': total_docs,
+            'completed': completed_docs,
+            'ongoing': ongoing_docs,
+            'pending': pending_docs
         }
 
     @staticmethod
     def get_checklist_counts(docs_qs):
-        """
-        Compute checklist counts based on CHECKLIST_DOC_TYPES slots.
-        """
-        docs = list(docs_qs)
-        completed = ongoing = pending = 0
+        """Legacy checklist slot counts."""
+        docs = list(docs_qs.filter(uploaded_at__isnull=False))
         
-        for category, sub_docs in CHECKLIST_DOC_TYPES:
-            cat_trim = (category or '').strip()
-            for sub_doc in sub_docs:
-                sub_trim = (sub_doc or '').strip()
-                matches = [
-                    d for d in docs
-                    if (d.category or '').strip() == cat_trim and (d.subDoc or '').strip() == sub_trim
-                ]
-                
-                if not matches:
-                    pending += 1
-                else:
-                    any_complete = any(
-                        (m.calculate_status() or '').lower().strip() == 'complete'
-                        for m in matches
-                    )
-                    if any_complete:
-                        completed += 1
+        folders = {}
+        for d in docs:
+            pr = (d.prNo or '').strip()
+            if pr:
+                if pr not in folders:
+                    folders[pr] = []
+                folders[pr].append(d)
+        
+        completed = ongoing = pending_slot = 0
+        
+        for pr, folder_docs in folders.items():
+            is_svp = any('Small Value Procurement' in (d.subDoc or '') for d in folder_docs)
+            is_pb = any('Public Bidding' in (d.subDoc or '') for d in folder_docs)
+            
+            for category, sub_docs in CHECKLIST_DOC_TYPES:
+                cat_trim = (category or '').strip()
+                for sub_doc in sub_docs:
+                    sub_trim = (sub_doc or '').strip()
+                    
+                    if is_svp and 'Public Bidding' in sub_trim:
+                        continue
+                    if is_pb and 'Small Value Procurement' in sub_trim:
+                        continue
+                    
+                    matches = [
+                        d for d in folder_docs
+                        if (d.category or '').strip() == cat_trim and (d.subDoc or '').strip() == sub_trim
+                    ]
+                    
+                    if not matches:
+                        pending_slot += 1
                     else:
-                        ongoing += 1
-                        
+                        any_complete = any(
+                            (m.calculate_status() or '').lower().strip() == 'complete'
+                            for m in matches
+                        )
+                        if any_complete:
+                            completed += 1
+                        else:
+                            ongoing += 1
+                            
         return {
-            'total': completed + ongoing + pending,
+            'total': completed + ongoing + pending_slot,
             'completed': completed,
             'ongoing': ongoing,
-            'pending': pending
+            'pending': pending_slot
         }
 
     @classmethod
@@ -66,19 +89,18 @@ class DashboardService:
         if uploaded_by:
             docs_qs = docs_qs.filter(uploadedBy=uploaded_by)
 
-        status_counts = cls.get_document_status_counts(docs_qs)
-        checklist_counts = cls.get_checklist_counts(docs_qs)
+        doc_counts = cls.get_document_status_counts(docs_qs)
         
-        completed_docs = status_counts['completed']
-        ongoing_docs = status_counts['ongoing']
-        pending_slots = checklist_counts['pending']
-        total = completed_docs + ongoing_docs + pending_slots
+        pie_data = [
+            doc_counts['total'],
+            doc_counts['completed'],
+            doc_counts['ongoing'],
+            doc_counts['pending']
+        ]
         
-        pie_data = [total, completed_docs, ongoing_docs, pending_slots]
-        total_documents_uploaded = docs_qs.count()
+        total_documents_uploaded = docs_qs.filter(uploaded_at__isnull=False).count()
 
-        # Procurement method counts
-        docs_list = list(docs_qs)
+        docs_list = list(docs_qs.filter(uploaded_at__isnull=False))
         procurement_method_counts = {
             'List of Venue': cls._count_subdoc(docs_list, 'List of Venue'),
             'Small Value Procurement': cls._count_subdoc(docs_list, 'Small Value Procurement'),
@@ -123,7 +145,7 @@ class DashboardService:
 
     @staticmethod
     def _get_recent_submissions(uploaded_by, limit=5):
-        qs = Document.objects.all().order_by('-uploaded_at')
+        qs = Document.objects.filter(uploaded_at__isnull=False).order_by('-uploaded_at')
         if uploaded_by:
             qs = qs.filter(uploadedBy=uploaded_by)
         return [

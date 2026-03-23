@@ -17,7 +17,7 @@ export const DOCUMENT_STATUS_LABELS = {
 };
 
 // Required fields for new document submission
-export const REQUIRED_NEW_FIELDS = ['title', 'category', 'subDoc', 'date', 'file'];
+export const REQUIRED_NEW_FIELDS = ['title'];
 
 // Checklist items for document validation
 export const CHECKLIST_ITEMS = [

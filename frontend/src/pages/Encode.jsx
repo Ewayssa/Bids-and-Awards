@@ -34,7 +34,7 @@ import {
     SORT_DIRECTIONS
 } from '../utils/constants';
 import { toLettersOnly, toNumbersOnly, formatCurrencyValue } from '../utils/validation';
-import { computeRFQNoFromDate } from '../utils/formatters';
+import { computeRFQNoFromDate, formatInputDate as formatDate } from '../utils/formatters';
 import { parseApiError } from '../utils/api-errors';
 import {
     filterDocumentsByQuery,
@@ -60,16 +60,20 @@ const Encode = ({ user }) => {
     const [selectedSubDocType, setSelectedSubDocType] = useState(null);
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [alertMessage, setAlertMessage] = useState(null);
+    const [manualErrors, setManualErrors] = useState({});
     const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
 
     // Custom hooks
 
-error: newError,
+    const {
+        form,
+        error: newError,
         setForm,
         updateFormField,
         resetForm,
         submitNewDocument,
-        setError: setNewError
+        setError: setNewError,
+        submitting: newSubmitting,
     } = useDocumentForm();
 
     const {
@@ -109,12 +113,21 @@ error: newError,
     } = useDocumentPagination();
 
     const {
-        newFormErrors,
-        isFormValid,
-        formChecklistData,
+        newFormErrors: internalErrors,
+        isFormValid: isInternalValid,
+        checklistData: formChecklistData,
         validateAttendanceMembers,
         validateAbstractBidders
     } = useDocumentValidation(form, selectedSubDocType);
+
+    // Combine validation errors from hook and manual checks
+    const newFormErrors = useMemo(() => {
+        return { ...internalErrors, ...manualErrors };
+    }, [internalErrors, manualErrors]);
+
+    const isFormValid = useMemo(() => {
+        return Object.keys(newFormErrors).length === 0;
+    }, [newFormErrors]);
 
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'grouped'
     const [expandedGroups, setExpandedGroups] = useState(new Set());
@@ -199,20 +212,13 @@ error: newError,
 
     const validateNewForm = () => {
         const err = {};
-        const isLeaseOfVenue = selectedSubDocType === 'Lease of Venue: Table Rating Factor' || (selectedSubDocType && (selectedSubDocType.includes('Lease of Venue') || selectedSubDocType.includes('List of Venue')));
-        // Only require Title when the "fill out details" form actually shows a Title/Agenda field
-        const formShowsTitleField = !(
-            selectedSubDocType === 'Invitation to COA' ||
-            isLeaseOfVenue ||
-            (selectedDocType?.name === 'RFQ Concerns' && (
-                selectedSubDocType?.startsWith('PHILGEPS - List of Venue') ||
-                (selectedSubDocType?.startsWith('PHILGEPS - ') && !selectedSubDocType.includes('List of Venue')) ||
-                selectedSubDocType?.startsWith('Certificate of DILG - List of Venue') ||
-                selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement')
-            ))
-        );
-        if (formShowsTitleField && !(form.title && form.title.trim())) err.title = 'This field is required';
-        setNewFormErrors(err);
+
+        // ONLY require Title/Purpose for Start New - all else optional
+        if (!(form.title && form.title.trim())) {
+            err.title = 'Title/Purpose is required';
+        }
+
+        setManualErrors(err);
         return Object.keys(err).length === 0;
     };
 
@@ -223,30 +229,15 @@ error: newError,
             return;
         }
 
-        // PHILGEPS RFQ Concerns: require Date + Upload for SVP / Public Bidding only
-        if (
-            selectedDocType?.name === 'RFQ Concerns' &&
-            selectedSubDocType?.startsWith('PHILGEPS - ') &&
-            !selectedSubDocType.includes('List of Venue')
-        ) {
-            if (!(form.date && form.date.trim())) return;
-            if (!form.file) return;
-        }
-
-        // Certificate of DILG RFQ Concerns - Small Value Procurement: validate Date, RFQ No., Deadline, Service Providers
+        // Special handling for some forms before confirmation
         if (
             selectedDocType?.name === 'RFQ Concerns' &&
             selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement')
         ) {
-            if (!(form.date && form.date.trim())) return;
             const autoRFQ = form.user_pr_no && form.user_pr_no.trim()
                 ? form.user_pr_no.trim()
                 : computeRFQNoFromDate(form.date);
-            if (!autoRFQ) return;
-            if (!(form.deadline_date && form.deadline_date.trim())) return;
-            if (!(form.deadline_time && form.deadline_time.trim())) return;
             const trimmedProviders = certificateServiceProviders.map((p) => (p || '').trim());
-            if (trimmedProviders.slice(0, 3).some((p) => !p)) return;
             // Sync first three providers into the form fields so they are saved
             setForm((f) => ({
                 ...f,
@@ -257,96 +248,6 @@ error: newError,
             }));
         }
 
-        if (selectedSubDocType === 'Market Scopping') {
-            const s1 = (form.market_service_provider_1 || '').trim();
-            const s2 = (form.market_service_provider_2 || '').trim();
-            const s3 = (form.market_service_provider_3 || '').trim();
-            if (!s1 || !s2 || !s3) return;
-        }
-        if (selectedSubDocType === 'Requisition and Issue Slip') {
-            if (!(form.date && form.date.trim())) return;
-            if (!(form.office_division && form.office_division.trim())) return;
-            if (!(form.received_by && form.received_by.trim())) return;
-        }
-        if (selectedSubDocType === 'Notice of BAC Meeting') {
-            if (!(form.date && form.date.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Invitation to COA') {
-            if (!(form.date && form.date.trim())) return;
-            if (!(form.date_received && form.date_received.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Attendance Sheet') {
-            if (!(form.date && form.date.trim())) return;
-            const withNames = attendanceMembers.filter((m) => (m.name || '').trim());
-            if (withNames.length === 0) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Minutes of the Meeting') {
-            if (!(form.title && form.title.trim())) return;
-            if (!(form.date && form.date.trim())) return;
-        }
-        if (selectedSubDocType === 'BAC Resolution') {
-            if (!(form.resolution_no && form.resolution_no.trim())) return;
-            if (!(form.title && form.title.trim())) return;
-            if (!(form.winning_bidder && form.winning_bidder.trim())) return;
-            if (form.total_amount === '' || form.total_amount === undefined || form.total_amount === null) return;
-            if (!(form.resolution_option && form.resolution_option.trim())) return;
-            if (!(form.office_division && form.office_division.trim())) return;
-            if (!(form.date && form.date.trim())) return;
-            if (!(form.venue && form.venue.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Abstract of Quotation') {
-            if (!(form.aoq_no && form.aoq_no.trim())) return;
-            if (!(form.date && form.date.trim())) return;
-            if (!(form.title && form.title.trim())) return;
-            if (abstractBidders.length < 3) return;
-            const filled = abstractBidders.filter((b) => (b.name || '').trim() && (b.amount !== undefined && b.amount !== '') && (b.remarks || '').trim());
-            if (filled.length < 3) return;
-            const hasIncomplete = abstractBidders.some((b) => !(b.name || '').trim() || (b.amount === undefined || b.amount === '') || !(b.remarks || '').trim());
-            if (hasIncomplete) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Contract Services/Purchase Order') {
-            if (!(form.date && form.date.trim())) return;
-            if (form.contract_received_by_coa !== true && form.contract_received_by_coa !== false) return;
-            if (form.contract_amount === '' || form.contract_amount === undefined || form.contract_amount === null) return;
-            if (!(form.notarized_place && form.notarized_place.trim())) return;
-            if (!(form.notarized_date && form.notarized_date.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Notice to Proceed') {
-            if (!(form.date && form.date.trim())) return;
-            if (!(form.ntp_service_provider && form.ntp_service_provider.trim())) return;
-            if (!(form.ntp_authorized_rep && form.ntp_authorized_rep.trim())) return;
-            if (!(form.ntp_received_by && form.ntp_received_by.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'OSS') {
-            if (!(form.oss_service_provider && form.oss_service_provider.trim())) return;
-            if (!(form.oss_authorized_rep && form.oss_authorized_rep.trim())) return;
-            if (!(form.date && form.date.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney") {
-            if (!(form.secretary_service_provider && form.secretary_service_provider.trim())) return;
-            if (!(form.secretary_owner_rep && form.secretary_owner_rep.trim())) return;
-            if (!(form.date && form.date.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'PhilGEPS Posting of Award') {
-            if (!(form.date && form.date.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Certificate of DILG R1 Website Posting of Award') {
-            if (!(form.date && form.date.trim())) return;
-            if (!form.file) return;
-        }
-        if (selectedSubDocType === 'Notice of Award (Posted)' || selectedSubDocType === 'Abstract of Quotation (Posted)' || selectedSubDocType === 'BAC Resolution (Posted)') {
-            if (!(form.date && form.date.trim())) return;
-        }
         setConfirmDialog({
             message: 'Are you sure you want to submit this new procurement?',
             onConfirm: () => {
@@ -667,7 +568,9 @@ error: newError,
     };
 
     const isUserUploader = (doc) => {
-        if (!doc?.uploadedBy || !user) return false;
+        if (!user) return false;
+        if (isAdmin) return true; // Admins can update anything
+        if (!doc?.uploadedBy) return false;
         const uploadedBy = (doc.uploadedBy || '').trim().toLowerCase();
         const meFull = (user.fullName || '').trim().toLowerCase();
         const meUser = (user.username || '').trim().toLowerCase();
@@ -1036,14 +939,16 @@ error: newError,
     const stepIndex = newStep === 'docType' ? 0 : newStep === 'subDoc' ? 1 : 2;
 
     const openNew = () => {
-        setActiveModal('new');
-        setNewStep('docType');
+        resetForm();
+        setManualErrors({});
+        setNewError('');
         setSelectedDocType(null);
         setSelectedSubDocType(null);
-        setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', date_received: '', attendance_members: '', resolution_no: '', winning_bidder: '', resolution_option: '', venue: '', aoq_no: '', abstract_bidders: '', contract_received_by_coa: false, contract_amount: '', notarized_place: '', notarized_date: '', ntp_service_provider: '', ntp_authorized_rep: '', ntp_received_by: '', oss_service_provider: '', oss_authorized_rep: '', secretary_service_provider: '', secretary_owner_rep: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
-        setNewError('');
-        setNewFormErrors({});
+        setNewStep('docType');
+        setAttendanceMembers([]);
+        setAbstractBidders([]);
         setCertificateServiceProviders(['', '', '']);
+        setActiveModal('new');
     };
     const openUpdate = () => {
         setActiveModal('updateList');
@@ -1097,6 +1002,7 @@ error: newError,
             winning_bidder: subDocWithStatus.doc.winning_bidder ?? '',
             resolution_option: subDocWithStatus.doc.resolution_option ?? '',
             venue: subDocWithStatus.doc.venue ?? '',
+            aoq_no: subDocWithStatus.doc.aoq_no ?? '',
             contract_received_by_coa: !!subDocWithStatus.doc.contract_received_by_coa,
             contract_amount: subDocWithStatus.doc.contract_amount != null ? String(subDocWithStatus.doc.contract_amount) : '',
             notarized_place: subDocWithStatus.doc.notarized_place ?? '',
@@ -1127,6 +1033,27 @@ error: newError,
             }
         } else {
             setAttendanceMembers([]);
+        }
+        if ((subDocWithStatus.doc.subDoc || '').trim() === 'Abstract of Quotation' && subDocWithStatus.doc.abstract_bidders) {
+            try {
+                const parsed = typeof subDocWithStatus.doc.abstract_bidders === 'string' 
+                    ? JSON.parse(subDocWithStatus.doc.abstract_bidders) 
+                    : subDocWithStatus.doc.abstract_bidders;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setAbstractBidders(parsed.map((b, i) => ({ 
+                        id: b.id ?? Date.now() + i, 
+                        name: b.name || '', 
+                        amount: b.amount || '', 
+                        remarks: b.remarks || '' 
+                    })));
+                } else {
+                    setAbstractBidders([]);
+                }
+            } catch {
+                setAbstractBidders([]);
+            }
+        } else {
+            setAbstractBidders([]);
         }
         setUpdateError('');
         setActiveModal('update');
@@ -1289,8 +1216,11 @@ error: newError,
                                                                     <th className="table-th uppercase">Procurement Type</th>
                                                                     <th className="table-th uppercase">Date</th>
                                                                     <th className="table-th uppercase">Status</th>
-                                                                    {(canViewAllDocuments || isAdmin) && <th className="table-th">Actions</th>}
+                                                                    {isAdmin && <th className="table-th">Actions</th>}
                                                                 </tr>
+</xai:function_call >
+<xai:function_call name="edit_file">
+<parameter name="path">c:/Users/elyss/OneDrive/Documents/GitHub/Bids-and-Awards/frontend/src/pages/Encode.jsx
                                                             </thead>
                                                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                                                                 {docs.map((doc) => {
@@ -1316,10 +1246,9 @@ error: newError,
                                                                                     {doc.status || 'pending'}
                                                                                 </span>
                                                                             </td>
-                                                                            {(canViewAllDocuments || isAdmin) && (
                                                                             <td className="table-td">
-                                                                                {doc.file_url ? (
-                                                                                    <div className="flex items-center justify-center gap-2">
+                                                                                <div className="flex items-center justify-center gap-2">
+                                                                                    {doc.file_url ? (
                                                                                         <button
                                                                                             type="button"
                                                                                             onClick={() => {
@@ -1331,13 +1260,20 @@ error: newError,
                                                                                         >
                                                                                             <MdVisibility className="w-3.5 h-3.5" />
                                                                                         </button>
-                                                                                        {isAdmin && null}
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <span className="text-[var(--text-muted)]">—</span>
-                                                                                )}
+                                                                                    ) : null}
+                                                                                    {isUserUploader(doc) && (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => handleChecklistSubDocClick({ doc })}
+                                                                                            className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-green-600 hover:border-green-600 hover:bg-green-50 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
+                                                                                            title="Edit document"
+                                                                                        >
+                                                                                            <MdEdit className="w-3.5 h-3.5" />
+                                                                                        </button>
+                                                                                    )}
+                                                                                    {!doc.file_url && !isUserUploader(doc) && <span className="text-[var(--text-muted)]">—</span>}
+                                                                                </div>
                                                                             </td>
-                                                                            )}
                                                                         </tr>
                                                                     );
                                                                 })}
@@ -1377,7 +1313,7 @@ error: newError,
                                                     Status {sortKey === 'status' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
-                                            {(canViewAllDocuments || isAdmin) && <th className="table-th">Actions</th>}
+{isAdmin && <th className="table-th">Actions</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
@@ -1406,27 +1342,35 @@ error: newError,
                                                             {doc.status === 'complete' ? 'Completed' : doc.status === 'ongoing' ? 'Ongoing' : (doc.status || 'Pending')}
                                                         </span>
                                                     </td>
-                                                    {(canViewAllDocuments || isAdmin) && (
-                                                    <td className="table-td">
-                                                        {doc.file_url ? (
+                    {isAdmin && (
+                                                        <td className="table-td">
                                                             <div className="flex items-center justify-center gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setPreviewSequence(null);
-                                                                        openPreview(doc);
-                                                                    }}
-                                                                    className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
-                                                                    title="View document"
-                                                                >
-                                                                    View
-                                                                </button>
-                                                                {isAdmin && null}
+                                                                {doc.file_url ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setPreviewSequence(null);
+                                                                            openPreview(doc);
+                                                                        }}
+                                                                        className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
+                                                                        title="View document"
+                                                                    >
+                                                                        <MdVisibility className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                ) : null}
+                                                                {isUserUploader(doc) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleChecklistSubDocClick({ doc })}
+                                                                        className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-green-600 hover:border-green-600 hover:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-600 focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
+                                                                        title="Edit document"
+                                                                    >
+                                                                        <MdEdit className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                                {!doc.file_url && !isUserUploader(doc) && <span className="text-[var(--text-muted)]">—</span>}
                                                             </div>
-                                                        ) : (
-                                                            <span className="text-[var(--text-muted)]">—</span>
-                                                        )}
-                                                    </td>
+                                                        </td>
                                                     )}
                                                 </tr>
                                             );
@@ -1708,7 +1652,7 @@ error: newError,
                                                         date: newDate,
                                                         user_pr_no: computeRFQNoFromDate(newDate),
                                                     }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -1728,7 +1672,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -1761,7 +1705,7 @@ error: newError,
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -1806,7 +1750,7 @@ error: newError,
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="label">Service Providers <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <label className="label">Service Providers <span className="text-red-600 font-semibold">*</span> (all 3 required)</label>
                                             <div className="space-y-2">
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                                     {certificateServiceProviders.map((sp, idx) => (
@@ -1840,7 +1784,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -1856,7 +1800,7 @@ error: newError,
                                             )}
                                         </div>
                                     </>
-                                ) : /* Purchase Request: BAC Folder No., Purpose, PR No., Date, Total amount, Upload */ selectedSubDocType === 'Purchase Request' ? (
+                                ) : selectedSubDocType === 'Purchase Request' || selectedSubDocType === 'Activity Design' || selectedSubDocType === 'Project Procurement Management Plan/Supplemental PPMP' ? (
                                     <>
                                         <div>
                                             <label className="label">BAC Folder No.</label>
@@ -1869,17 +1813,18 @@ error: newError,
                                             />
                                         </div>
                                         <div>
-                                            <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <label className="label">Title/Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+
                                             <input
                                                 type="text"
                                                 value={form.title}
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                placeholder="Purpose of the purchase request"
+                                                placeholder="Document title/purpose"
                                                 aria-invalid={!!newFormErrors.title}
                                                 aria-describedby={newFormErrors.title ? 'err-title' : undefined}
                                             />
@@ -1895,19 +1840,19 @@ error: newError,
                                             <input
                                                 type="text"
                                                 value={form.user_pr_no}
-                                                onChange={(e) => setForm((f) => ({ ...f, user_pr_no: e.target.value }))}
+                                                onChange={(e) => setForm((f) => ({ ...f, user_pr_no: toNumbersOnly(e.target.value) }))}
                                                 className="input-field"
                                                 placeholder="Enter PR number"
                                             />
                                         </div>
                                         <div>
-                                            <label className="label">Date</label>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
                                                 type="date"
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -1919,106 +1864,6 @@ error: newError,
                                                     {newFormErrors.date}
                                                 </p>
                                             )}
-                                        </div>
-                                        <div>
-                                            <label className="label">Total amount</label>
-                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                                <input
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    value={form.total_amount}
-                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
-                                                    onBlur={() => {
-                                                        setForm((f) => {
-                                                            const raw = String(f.total_amount || '').trim();
-                                                            if (!raw) return f;
-                                                            const num = Number(raw);
-                                                            if (Number.isNaN(num)) return f;
-                                                            return { ...f, total_amount: num.toFixed(2) };
-                                                        });
-                                                    }}
-                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
-                                                    placeholder="0.00"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <input
-                                                    type="file"
-                                                    onChange={(e) => {
-                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
-                                                    }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                                                    aria-invalid={!!newFormErrors.file}
-                                                    aria-describedby={newFormErrors.file ? 'err-file' : undefined}
-                                                />
-                                            </div>
-                                            {newFormErrors.file && (
-                                                <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
-                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
-                                                    {newFormErrors.file}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </>
-                                ) : selectedSubDocType === 'Activity Design' ? (
-                                    <>
-                                        <div>
-                                            <label className="label">BAC Folder No.</label>
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={nextTransactionNumber ?? '…'}
-                                                className="input-field bg-[var(--background-subtle)] cursor-default"
-                                                aria-readonly="true"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input
-                                                type="text"
-                                                value={form.title}
-                                                onChange={(e) => {
-                                                    const value = toLettersOnly(e.target.value);
-                                                    setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
-                                                }}
-                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                placeholder="Document title"
-                                                aria-invalid={!!newFormErrors.title}
-                                                aria-describedby={newFormErrors.title ? 'err-title' : undefined}
-                                            />
-                                            {newFormErrors.title && (
-                                                <p id="err-title" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
-                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
-                                                    {newFormErrors.title}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="label">PR No.</label>
-                                            <input
-                                                type="text"
-                                                value={form.user_pr_no}
-                                                onChange={(e) => setForm((f) => ({ ...f, user_pr_no: e.target.value }))}
-                                                className="input-field"
-                                                placeholder="Enter PR number"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="label">Source of Fund</label>
-                                            <input
-                                                type="text"
-                                                value={form.source_of_fund}
-                                                onChange={(e) => setForm((f) => ({ ...f, source_of_fund: toLettersOnly(e.target.value) }))}
-                                                className="input-field"
-                                                placeholder="Source of fund"
-                                            />
                                         </div>
                                         <div>
                                             <label className="label">Total Amount</label>
@@ -2050,98 +1895,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
-                                                    }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                                                    aria-invalid={!!newFormErrors.file}
-                                                    aria-describedby={newFormErrors.file ? 'err-file' : undefined}
-                                                />
-                                            </div>
-                                            {newFormErrors.file && (
-                                                <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
-                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
-                                                    {newFormErrors.file}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </>
-                                ) : selectedSubDocType === 'Project Procurement Management Plan/Supplemental PPMP' ? (
-                                    <>
-                                        <div>
-                                            <label className="label">BAC Folder No.</label>
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={nextTransactionNumber ?? '…'}
-                                                className="input-field bg-[var(--background-subtle)] cursor-default"
-                                                aria-readonly="true"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input
-                                                type="text"
-                                                value={form.title}
-                                                onChange={(e) => {
-                                                    const value = toLettersOnly(e.target.value);
-                                                    setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
-                                                }}
-                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                placeholder="Document title"
-                                                aria-invalid={!!newFormErrors.title}
-                                                aria-describedby={newFormErrors.title ? 'err-title' : undefined}
-                                            />
-                                            {newFormErrors.title && (
-                                                <p id="err-title" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
-                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
-                                                    {newFormErrors.title}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="label">PPMP No.</label>
-                                            <input
-                                                type="text"
-                                                value={form.ppmp_no}
-                                                onChange={(e) => setForm((f) => ({ ...f, ppmp_no: toNumbersOnly(e.target.value) }))}
-                                                className="input-field"
-                                                placeholder="Enter PPMP number"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="label">Source of Fund</label>
-                                            <input
-                                                type="text"
-                                                value={form.source_of_fund}
-                                                onChange={(e) => setForm((f) => ({ ...f, source_of_fund: toLettersOnly(e.target.value) }))}
-                                                className="input-field"
-                                                placeholder="Source of fund"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="label">Total Budget</label>
-                                            <div className="flex items-center border border-[var(--border)] rounded-[var(--radius-sm)] bg-[var(--surface)] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                                                <span className="pl-4 text-[var(--text)] font-medium" aria-hidden="true">₱</span>
-                                                <input
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    value={form.total_amount}
-                                                    onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))}
-                                                    className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
-                                                    placeholder="0.00"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <input
-                                                    type="file"
-                                                    onChange={(e) => {
-                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -2177,7 +1931,7 @@ error: newError,
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 placeholder="Document title"
@@ -2247,7 +2001,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -2283,7 +2037,7 @@ error: newError,
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 placeholder="Document title"
@@ -2383,7 +2137,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -2418,7 +2172,7 @@ error: newError,
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 placeholder="Purpose of the requisition"
@@ -2459,7 +2213,7 @@ error: newError,
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -2479,7 +2233,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -2509,7 +2263,7 @@ error: newError,
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 placeholder="Agenda of the BAC meeting"
@@ -2530,7 +2284,7 @@ error: newError,
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -2550,7 +2304,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -2579,7 +2333,7 @@ error: newError,
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -2598,7 +2352,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -2636,7 +2390,7 @@ error: newError,
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 placeholder="Agenda"
@@ -2656,7 +2410,7 @@ error: newError,
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -2714,7 +2468,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -2743,7 +2497,7 @@ error: newError,
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 placeholder="Agenda or other details"
@@ -2764,7 +2518,7 @@ error: newError,
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -2786,17 +2540,17 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Resolution No. <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.resolution_no} onChange={(e) => { const value = toNumbersOnly(e.target.value); setForm((f) => ({ ...f, resolution_no: value })); if (newFormErrors.resolution_no) setNewFormErrors((e2) => ({ ...e2, resolution_no: '' })); }} className={`input-field ${newFormErrors.resolution_no ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Resolution number" aria-invalid={!!newFormErrors.resolution_no} />
+                                            <input type="text" value={form.resolution_no} onChange={(e) => { const value = toNumbersOnly(e.target.value); setForm((f) => ({ ...f, resolution_no: value })); if (newFormErrors.resolution_no) setManualErrors((e2) => ({ ...e2, resolution_no: '' })); }} className={`input-field ${newFormErrors.resolution_no ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Resolution number" aria-invalid={!!newFormErrors.resolution_no} />
                                             {newFormErrors.resolution_no && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.resolution_no}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.title} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, title: value })); if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' })); }} className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Title" aria-invalid={!!newFormErrors.title} />
+                                            <input type="text" value={form.title} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, title: value })); if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' })); }} className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Title" aria-invalid={!!newFormErrors.title} />
                                             {newFormErrors.title && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.title}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Winning Bidder <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.winning_bidder} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, winning_bidder: value })); if (newFormErrors.winning_bidder) setNewFormErrors((e2) => ({ ...e2, winning_bidder: '' })); }} className={`input-field ${newFormErrors.winning_bidder ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Winning bidder name" aria-invalid={!!newFormErrors.winning_bidder} />
+                                            <input type="text" value={form.winning_bidder} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, winning_bidder: value })); if (newFormErrors.winning_bidder) setManualErrors((e2) => ({ ...e2, winning_bidder: '' })); }} className={`input-field ${newFormErrors.winning_bidder ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Winning bidder name" aria-invalid={!!newFormErrors.winning_bidder} />
                                             {newFormErrors.winning_bidder && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.winning_bidder}</p>}
                                         </div>
                                         <div>
@@ -2810,7 +2564,7 @@ error: newError,
                                                     onChange={(e) => {
                                                         const value = toNumbersOnly(e.target.value);
                                                         setForm((f) => ({ ...f, total_amount: value }));
-                                                        if (newFormErrors.total_amount) setNewFormErrors((e2) => ({ ...e2, total_amount: '' }));
+                                                        if (newFormErrors.total_amount) setManualErrors((e2) => ({ ...e2, total_amount: '' }));
                                                     }}
                                                     className="input-field input-currency border-0 rounded-none focus:ring-0 focus:shadow-none w-full min-w-0"
                                                     placeholder="0.00"
@@ -2820,7 +2574,7 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Options <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <select value={form.resolution_option} onChange={(e) => { setForm((f) => ({ ...f, resolution_option: e.target.value })); if (newFormErrors.resolution_option) setNewFormErrors((e2) => ({ ...e2, resolution_option: '' })); }} className={`input-field ${newFormErrors.resolution_option ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.resolution_option}>
+                                            <select value={form.resolution_option} onChange={(e) => { setForm((f) => ({ ...f, resolution_option: e.target.value })); if (newFormErrors.resolution_option) setManualErrors((e2) => ({ ...e2, resolution_option: '' })); }} className={`input-field ${newFormErrors.resolution_option ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.resolution_option}>
                                                 <option value="">Select option</option>
                                                 <option value="LCB">LCB</option>
                                                 <option value="LCRB">LCRB</option>
@@ -2831,25 +2585,213 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Office/Division <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.office_division} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, office_division: value })); if (newFormErrors.office_division) setNewFormErrors((e2) => ({ ...e2, office_division: '' })); }} className={`input-field ${newFormErrors.office_division ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Office or division" aria-invalid={!!newFormErrors.office_division} />
+                                            <input type="text" value={form.office_division} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, office_division: value })); if (newFormErrors.office_division) setManualErrors((e2) => ({ ...e2, office_division: '' })); }} className={`input-field ${newFormErrors.office_division ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Office or division" aria-invalid={!!newFormErrors.office_division} />
                                             {newFormErrors.office_division && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.office_division}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Date of Adoption <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Venue <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.venue} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, venue: value })); if (newFormErrors.venue) setNewFormErrors((e2) => ({ ...e2, venue: '' })); }} className={`input-field ${newFormErrors.venue ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Venue" aria-invalid={!!newFormErrors.venue} />
+                                            <input type="text" value={form.venue} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, venue: value })); if (newFormErrors.venue) setManualErrors((e2) => ({ ...e2, venue: '' })); }} className={`input-field ${newFormErrors.venue ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Venue" aria-invalid={!!newFormErrors.venue} />
                                             {newFormErrors.venue && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.venue}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Abstract of Quotation' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">AOQ No. <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.aoq_no}
+                                                onChange={(e) => {
+                                                    const value = toNumbersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, aoq_no: value }));
+                                                    if (newFormErrors.aoq_no) setManualErrors((e2) => ({ ...e2, aoq_no: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.aoq_no ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="AOQ number"
+                                                aria-invalid={!!newFormErrors.aoq_no}
+                                            />
+                                            {newFormErrors.aoq_no && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.aoq_no}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">List of Bidders <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <p className="text-xs text-[var(--text-muted)] mb-2">At least 3 bidders with name, amount, and remarks are required.</p>
+                                            {abstractBidders.map((b) => (
+                                                <div key={b.id} className="p-3 mb-3 border border-[var(--border)] rounded-lg bg-[var(--background-subtle)]/30 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">Bidder Details</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setAbstractBidders((prev) => prev.filter((x) => x.id !== b.id))}
+                                                            className="p-1.5 text-[var(--text-muted)] hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            aria-label="Remove bidder"
+                                                        >
+                                                            <MdClose className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[11px] font-medium text-[var(--text-muted)] mb-1 block">NAME</label>
+                                                            <input
+                                                                type="text"
+                                                                value={b.name}
+                                                                onChange={(e) => setAbstractBidders((prev) => prev.map((x) => (x.id === b.id ? { ...x, name: toLettersOnly(e.target.value) } : x)))}
+                                                                className="input-field py-1 px-2 text-sm"
+                                                                placeholder="Bidder name"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-medium text-[var(--text-muted)] mb-1 block">AMOUNT</label>
+                                                            <div className="flex items-center border border-[var(--border)] rounded bg-white overflow-hidden py-1 px-2">
+                                                                <span className="text-sm text-[var(--text-muted)] mr-1">₱</span>
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={b.amount}
+                                                                    onChange={(e) => setAbstractBidders((prev) => prev.map((x) => (x.id === b.id ? { ...x, amount: toNumbersOnly(e.target.value) } : x)))}
+                                                                    className="border-0 p-0 text-sm focus:ring-0 w-full"
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-medium text-[var(--text-muted)] mb-1 block">REMARKS</label>
+                                                        <input
+                                                            type="text"
+                                                            value={b.remarks}
+                                                            onChange={(e) => setAbstractBidders((prev) => prev.map((x) => (x.id === b.id ? { ...x, remarks: e.target.value } : x)))}
+                                                            className="input-field py-1 px-2 text-sm"
+                                                            placeholder="Remarks"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => setAbstractBidders((prev) => [...prev, { id: Date.now(), name: '', amount: '', remarks: '' }])}
+                                                className="text-sm text-[var(--primary)] hover:underline font-medium"
+                                            >
+                                                + Add bidder
+                                            </button>
+                                            {newFormErrors.bidders && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.bidders}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="file"
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                    if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
+                                                }}
+                                                className={`input-field file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:text-white file:font-semibold file:cursor-pointer ${newFormErrors.file ? 'border-2 border-red-500' : ''}`}
+                                                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                            />
+                                            {newFormErrors.file && <p className="mt-1.5 text-sm text-red-700">{newFormErrors.file}</p>}
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'Notice of Award' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                        </div>
+                                        <div>
+                                            <label className="label">Title/Agenda <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Notice of Award title"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="file"
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                    if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
+                                                }}
+                                                className={`input-field file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:text-white file:font-semibold file:cursor-pointer ${newFormErrors.file ? 'border-2 border-red-500' : ''}`}
+                                                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                            />
+                                            {newFormErrors.file && <p className="mt-1.5 text-sm text-red-700">{newFormErrors.file}</p>}
                                         </div>
                                     </>
                                 ) : selectedSubDocType === 'Contract Services/Purchase Order' ? (
@@ -2860,12 +2802,12 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Received by COA <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <select value={form.contract_received_by_coa === true ? 'yes' : form.contract_received_by_coa === false ? 'no' : ''} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, contract_received_by_coa: v === 'yes' ? true : v === 'no' ? false : null })); if (newFormErrors.contract_received_by_coa) setNewFormErrors((e2) => ({ ...e2, contract_received_by_coa: '' })); }} className={`input-field ${newFormErrors.contract_received_by_coa ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.contract_received_by_coa}>
+                                            <select value={form.contract_received_by_coa === true ? 'yes' : form.contract_received_by_coa === false ? 'no' : ''} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, contract_received_by_coa: v === 'yes' ? true : v === 'no' ? false : null })); if (newFormErrors.contract_received_by_coa) setManualErrors((e2) => ({ ...e2, contract_received_by_coa: '' })); }} className={`input-field ${newFormErrors.contract_received_by_coa ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.contract_received_by_coa}>
                                                 <option value="">Select</option>
                                                 <option value="yes">Yes</option>
                                                 <option value="no">No</option>
@@ -2883,7 +2825,7 @@ error: newError,
                                                     onChange={(e) => {
                                                         const value = toNumbersOnly(e.target.value);
                                                         setForm((f) => ({ ...f, contract_amount: value }));
-                                                        if (newFormErrors.contract_amount) setNewFormErrors((e2) => ({ ...e2, contract_amount: '' }));
+                                                        if (newFormErrors.contract_amount) setManualErrors((e2) => ({ ...e2, contract_amount: '' }));
                                                     }}
                                                     onBlur={() => {
                                                         setForm((f) => {
@@ -2902,18 +2844,18 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Notarized (place) <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.notarized_place} onChange={(e) => { setForm((f) => ({ ...f, notarized_place: e.target.value })); if (newFormErrors.notarized_place) setNewFormErrors((e2) => ({ ...e2, notarized_place: '' })); }} className={`input-field ${newFormErrors.notarized_place ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Place of notarization" aria-invalid={!!newFormErrors.notarized_place} />
+                                            <input type="text" value={form.notarized_place} onChange={(e) => { setForm((f) => ({ ...f, notarized_place: e.target.value })); if (newFormErrors.notarized_place) setManualErrors((e2) => ({ ...e2, notarized_place: '' })); }} className={`input-field ${newFormErrors.notarized_place ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Place of notarization" aria-invalid={!!newFormErrors.notarized_place} />
                                             {newFormErrors.notarized_place && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.notarized_place}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Notarized (date) <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.notarized_date} onChange={(e) => { setForm((f) => ({ ...f, notarized_date: e.target.value })); if (newFormErrors.notarized_date) setNewFormErrors((e2) => ({ ...e2, notarized_date: '' })); }} className={`input-field ${newFormErrors.notarized_date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.notarized_date} />
+                                            <input type="date" value={form.notarized_date} onChange={(e) => { setForm((f) => ({ ...f, notarized_date: e.target.value })); if (newFormErrors.notarized_date) setManualErrors((e2) => ({ ...e2, notarized_date: '' })); }} className={`input-field ${newFormErrors.notarized_date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.notarized_date} />
                                             {newFormErrors.notarized_date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.notarized_date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -2926,28 +2868,28 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Service Provider <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.ntp_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_service_provider: value })); if (newFormErrors.ntp_service_provider) setNewFormErrors((e2) => ({ ...e2, ntp_service_provider: '' })); }} className={`input-field ${newFormErrors.ntp_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.ntp_service_provider} />
+                                            <input type="text" value={form.ntp_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_service_provider: value })); if (newFormErrors.ntp_service_provider) setManualErrors((e2) => ({ ...e2, ntp_service_provider: '' })); }} className={`input-field ${newFormErrors.ntp_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.ntp_service_provider} />
                                             {newFormErrors.ntp_service_provider && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.ntp_service_provider}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Authorized Representative/Owner <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.ntp_authorized_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_authorized_rep: value })); if (newFormErrors.ntp_authorized_rep) setNewFormErrors((e2) => ({ ...e2, ntp_authorized_rep: '' })); }} className={`input-field ${newFormErrors.ntp_authorized_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Authorized representative or owner" aria-invalid={!!newFormErrors.ntp_authorized_rep} />
+                                            <input type="text" value={form.ntp_authorized_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_authorized_rep: value })); if (newFormErrors.ntp_authorized_rep) setManualErrors((e2) => ({ ...e2, ntp_authorized_rep: '' })); }} className={`input-field ${newFormErrors.ntp_authorized_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Authorized representative or owner" aria-invalid={!!newFormErrors.ntp_authorized_rep} />
                                             {newFormErrors.ntp_authorized_rep && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.ntp_authorized_rep}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Received By <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.ntp_received_by} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_received_by: value })); if (newFormErrors.ntp_received_by) setNewFormErrors((e2) => ({ ...e2, ntp_received_by: '' })); }} className={`input-field ${newFormErrors.ntp_received_by ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Received by" aria-invalid={!!newFormErrors.ntp_received_by} />
+                                            <input type="text" value={form.ntp_received_by} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, ntp_received_by: value })); if (newFormErrors.ntp_received_by) setManualErrors((e2) => ({ ...e2, ntp_received_by: '' })); }} className={`input-field ${newFormErrors.ntp_received_by ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Received by" aria-invalid={!!newFormErrors.ntp_received_by} />
                                             {newFormErrors.ntp_received_by && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.ntp_received_by}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -2960,23 +2902,23 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Service Provider <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.oss_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, oss_service_provider: value })); if (newFormErrors.oss_service_provider) setNewFormErrors((e2) => ({ ...e2, oss_service_provider: '' })); }} className={`input-field ${newFormErrors.oss_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.oss_service_provider} />
+                                            <input type="text" value={form.oss_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, oss_service_provider: value })); if (newFormErrors.oss_service_provider) setManualErrors((e2) => ({ ...e2, oss_service_provider: '' })); }} className={`input-field ${newFormErrors.oss_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.oss_service_provider} />
                                             {newFormErrors.oss_service_provider && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.oss_service_provider}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Authorized Representative/Owner <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.oss_authorized_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, oss_authorized_rep: value })); if (newFormErrors.oss_authorized_rep) setNewFormErrors((e2) => ({ ...e2, oss_authorized_rep: '' })); }} className={`input-field ${newFormErrors.oss_authorized_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Authorized representative or owner" aria-invalid={!!newFormErrors.oss_authorized_rep} />
+                                            <input type="text" value={form.oss_authorized_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, oss_authorized_rep: value })); if (newFormErrors.oss_authorized_rep) setManualErrors((e2) => ({ ...e2, oss_authorized_rep: '' })); }} className={`input-field ${newFormErrors.oss_authorized_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Authorized representative or owner" aria-invalid={!!newFormErrors.oss_authorized_rep} />
                                             {newFormErrors.oss_authorized_rep && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.oss_authorized_rep}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -2989,23 +2931,23 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Service Provider <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.secretary_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, secretary_service_provider: value })); if (newFormErrors.secretary_service_provider) setNewFormErrors((e2) => ({ ...e2, secretary_service_provider: '' })); }} className={`input-field ${newFormErrors.secretary_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.secretary_service_provider} />
+                                            <input type="text" value={form.secretary_service_provider} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, secretary_service_provider: value })); if (newFormErrors.secretary_service_provider) setManualErrors((e2) => ({ ...e2, secretary_service_provider: '' })); }} className={`input-field ${newFormErrors.secretary_service_provider ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Service provider name" aria-invalid={!!newFormErrors.secretary_service_provider} />
                                             {newFormErrors.secretary_service_provider && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.secretary_service_provider}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Owner/Authorized Representative <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="text" value={form.secretary_owner_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, secretary_owner_rep: value })); if (newFormErrors.secretary_owner_rep) setNewFormErrors((e2) => ({ ...e2, secretary_owner_rep: '' })); }} className={`input-field ${newFormErrors.secretary_owner_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Owner or authorized representative" aria-invalid={!!newFormErrors.secretary_owner_rep} />
+                                            <input type="text" value={form.secretary_owner_rep} onChange={(e) => { const value = toLettersOnly(e.target.value); setForm((f) => ({ ...f, secretary_owner_rep: value })); if (newFormErrors.secretary_owner_rep) setManualErrors((e2) => ({ ...e2, secretary_owner_rep: '' })); }} className={`input-field ${newFormErrors.secretary_owner_rep ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} placeholder="Owner or authorized representative" aria-invalid={!!newFormErrors.secretary_owner_rep} />
                                             {newFormErrors.secretary_owner_rep && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.secretary_owner_rep}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3018,13 +2960,13 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3037,13 +2979,13 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
+                                                <input type="file" onChange={(e) => { setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null })); if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' })); }} className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} accept=".pdf,.doc,.docx,.xls,.xlsx" aria-invalid={!!newFormErrors.file} />
                                             </div>
                                             {newFormErrors.file && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.file}</p>}
                                         </div>
@@ -3056,7 +2998,7 @@ error: newError,
                                         </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
                                             {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
                                         </div>
                                     </>
@@ -3086,7 +3028,7 @@ error: newError,
                                                 onChange={(e) => {
                                                     const value = toLettersOnly(e.target.value);
                                                     setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setNewFormErrors((e2) => ({ ...e2, title: '' }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 placeholder="Document title"
@@ -3107,7 +3049,7 @@ error: newError,
                                                 value={form.date}
                                                 onChange={(e) => {
                                                     setForm((f) => ({ ...f, date: e.target.value }));
-                                                    if (newFormErrors.date) setNewFormErrors((e2) => ({ ...e2, date: '' }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
                                                 }}
                                                 className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                 aria-invalid={!!newFormErrors.date}
@@ -3127,7 +3069,7 @@ error: newError,
                                                     type="file"
                                                     onChange={(e) => {
                                                         setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setNewFormErrors((e2) => ({ ...e2, file: '' }));
+                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
                                                     }}
                                                     className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
                                                     accept=".pdf,.doc,.docx,.xls,.xlsx"
@@ -3499,7 +3441,7 @@ error: newError,
                                     {/* Document checklist – grouped by document type, click a document to update it */}
                                     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
                                         <p className="text-xs text-[var(--text-muted)]">Only documents you uploaded can be updated. Click a document to update it.</p>
-                                        {checklistData.map((docType) => {
+                                        {updateChecklistData.map((docType) => {
                                             const subs = docType.subDocsWithStatus || [];
                                             const completed = subs.filter((s) => s.done).length;
                                             const ongoing = subs.filter((s) => !s.done && s.doc).length;
@@ -4137,6 +4079,127 @@ error: newError,
                                         <input type="text" value={form.venue} onChange={(e) => setForm((f) => ({ ...f, venue: toLettersOnly(e.target.value) }))} className="input-field" placeholder="Venue" />
                                     </div>
                                 </>
+                            ) : selectedDoc?.subDoc === 'Abstract of Quotation' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">AOQ No.</label>
+                                        <input
+                                            type="text"
+                                            value={form.aoq_no}
+                                            onChange={(e) => setForm((f) => ({ ...f, aoq_no: toNumbersOnly(e.target.value) }))}
+                                            className="input-field"
+                                            placeholder="AOQ number"
+                                        />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider">Bidder Details</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAbstractBidders((prev) => [...prev, { id: Date.now(), name: '', amount: '', remarks: '' }])}
+                                                className="text-xs font-semibold text-[var(--primary)] hover:text-[var(--primary-dark)] flex items-center gap-1 transition-colors"
+                                            >
+                                                <MdAdd className="w-4 h-4" /> Add Bidder
+                                            </button>
+                                        </div>
+                                        {abstractBidders.map((b) => (
+                                            <div key={b.id} className="p-4 rounded-xl border border-[var(--border-light)] bg-[var(--background-subtle)]/30 space-y-4 relative group">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">Bidder information</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAbstractBidders((prev) => prev.filter((x) => x.id !== b.id))}
+                                                        className="p-1.5 text-[var(--text-muted)] hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        aria-label="Remove bidder"
+                                                    >
+                                                        <MdClose className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[11px] font-medium text-[var(--text-muted)] mb-1.5 block uppercase tracking-wider">Name</label>
+                                                        <input
+                                                            type="text"
+                                                            value={b.name}
+                                                            onChange={(e) => setAbstractBidders((prev) => prev.map((x) => (x.id === b.id ? { ...x, name: toLettersOnly(e.target.value) } : x)))}
+                                                            className="input-field py-2 px-3 text-sm focus:ring-2 focus:ring-[var(--primary)]/20 shadow-sm"
+                                                            placeholder="Full bidder name"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-medium text-[var(--text-muted)] mb-1.5 block uppercase tracking-wider">Amount</label>
+                                                        <div className="flex items-center border border-[var(--border)] rounded-lg bg-white overflow-hidden py-2 px-3 focus-within:ring-2 focus-within:ring-[var(--primary)]/20 shadow-sm">
+                                                            <span className="text-sm text-[var(--text-muted)] font-medium mr-1.5">₱</span>
+                                                            <input
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                value={b.amount}
+                                                                onChange={(e) => setAbstractBidders((prev) => prev.map((x) => (x.id === b.id ? { ...x, amount: toNumbersOnly(e.target.value) } : x)))}
+                                                                className="border-0 p-0 text-sm focus:ring-0 w-full font-medium"
+                                                                placeholder="0.00"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-medium text-[var(--text-muted)] mb-1.5 block uppercase tracking-wider">Remarks</label>
+                                                    <input
+                                                        type="text"
+                                                        value={b.remarks}
+                                                        onChange={(e) => setAbstractBidders((prev) => prev.map((x) => (x.id === b.id ? { ...x, remarks: e.target.value } : x)))}
+                                                        className="input-field py-2 px-3 text-sm focus:ring-2 focus:ring-[var(--primary)]/20 shadow-sm"
+                                                        placeholder="Any specific notes or remarks..."
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {abstractBidders.length === 0 && (
+                                            <div className="text-center py-8 border-2 border-dashed border-[var(--border-light)] rounded-xl opacity-60">
+                                                <p className="text-sm text-[var(--text-muted)]">No bidders added yet. Click "+ Add Bidder" to start.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Notice of Award' ? (
+                                <>
+                                    <div>
+                                        <label className="label">BAC Folder No.</label>
+                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
+                                    </div>
+                                    <div>
+                                        <label className="label">Title/Agenda</label>
+                                        <input
+                                            type="text"
+                                            value={form.title}
+                                            onChange={(e) => setForm((f) => ({ ...f, title: toLettersOnly(e.target.value) }))}
+                                            className="input-field"
+                                            placeholder="Notice of Award title"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label">Winning Bidder</label>
+                                        <input
+                                            type="text"
+                                            value={form.winning_bidder}
+                                            onChange={(e) => setForm((f) => ({ ...f, winning_bidder: toLettersOnly(e.target.value) }))}
+                                            className="input-field"
+                                            placeholder="Name of winning bidder"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label">Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.date}
+                                            onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                                            className="input-field"
+                                        />
+                                    </div>
+                                </>
                             ) : selectedDoc?.subDoc === 'Contract Services/Purchase Order' ? (
                                 <>
                                     <div>
@@ -4281,12 +4344,17 @@ error: newError,
                             ) : selectedDoc?.subDoc === 'Notice of Award (Posted)' || selectedDoc?.subDoc === 'Abstract of Quotation (Posted)' || selectedDoc?.subDoc === 'BAC Resolution (Posted)' ? (
                                 <>
                                     <div>
-                                        <label className="label">BAC Folder No.</label>
-                                        <input type="text" readOnly value={form.prNo} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
-                                    </div>
-                                    <div>
                                         <label className="label">Date</label>
                                         <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
+                                    </div>
+                                </>
+                            ) : selectedDoc?.subDoc === 'Lease of Venue: Table Rating Factor' ? (
+                                <>
+                                    <div className="text-sm text-[var(--text-muted)] p-4 bg-green-50 rounded-xl border border-green-100 flex items-start gap-3">
+                                        <MdInfo className="w-5 h-5 text-green-600 mt-0.5" aria-hidden />
+                                        <span>
+                                            No file is required for Lease of Venue rating factor. Click <span className="font-semibold text-green-700">Update</span> below to save your progress; the document will be marked as complete.
+                                        </span>
                                     </div>
                                 </>
                             ) : (

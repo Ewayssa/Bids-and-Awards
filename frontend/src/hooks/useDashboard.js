@@ -91,7 +91,7 @@ export const useDashboard = (user) => {
         if (location.pathname !== '/') return;
         const onFocus = () => loadData();
         window.addEventListener('focus', onFocus);
-        const interval = setInterval(loadData, 30000);
+        const interval = setInterval(loadData, 10000);
         
         const onDocumentChanged = () => loadData();
         window.addEventListener('documentChanged', onDocumentChanged);

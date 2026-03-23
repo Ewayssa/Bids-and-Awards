@@ -397,8 +397,8 @@ const Login = ({ onLogin, infoMessage }) => {
                     role="dialog"
                     aria-labelledby="register-title"
                 >
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[min(90vh,40rem)]">
+                        <div className="p-6 border-b border-gray-200 flex items-center justify-between shrink-0">
                             <h2 id="register-title" className="text-xl font-bold text-gray-900">Create account</h2>
                             <button
                                 type="button"
@@ -409,6 +409,7 @@ const Login = ({ onLogin, infoMessage }) => {
                                 <MdClose className="w-5 h-5" />
                             </button>
                         </div>
+                        <div className="overflow-y-auto flex-1 custom-scrollbar">
                         {registerSuccess ? (
                             <div className="p-6 text-center">
                                 <div className="text-green-600 text-4xl mb-3">✓</div>
@@ -508,6 +509,7 @@ const Login = ({ onLogin, infoMessage }) => {
                                 </div>
                             </form>
                         )}
+                        </div>
                     </div>
                 </div>
             )}

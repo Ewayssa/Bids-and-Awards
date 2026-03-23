@@ -242,8 +242,12 @@ export function useDocumentForm() {
 
     return {
         form,
+        setForm,
         submitting,
         error,
         updateFormField,
         resetForm,
-
+        submitNewDocument,
+        setError,
+    };
+}
