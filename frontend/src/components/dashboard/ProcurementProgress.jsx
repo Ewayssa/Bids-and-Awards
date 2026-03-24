@@ -3,9 +3,12 @@ import { formatNumber } from '../../utils/formatNumber';
 
 export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProgress, loading }) => {
     const [hoveredSlice, setHoveredSlice] = useState(null);
-    const [total, completed, ongoing, pending] = pieData.map(Number);
+    const normalizedPieData = Array.isArray(pieData) && pieData.length >= 4
+        ? pieData.map((v) => Number(v) || 0)
+        : [0, 0, 0, 0];
+    const [total, completed, ongoing, pending] = normalizedPieData;
     const totalNorm = total || 1;
-    
+
     const completedPct = (completed / totalNorm) * 100;
     const ongoingPct = (ongoing / totalNorm) * 100;
     const pendingPct = (pending / totalNorm) * 100;
@@ -23,6 +26,10 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
 
     const wedgePath = (startDeg, endDeg) => {
         if (endDeg <= startDeg) return '';
+        // Handle full circle case
+        if (Math.abs(endDeg - startDeg) >= 360) {
+            return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r} Z`;
+        }
         const s = angleToXY(startDeg);
         const e = angleToXY(endDeg);
         const large = endDeg - startDeg > 180 ? 1 : 0;
@@ -133,10 +140,15 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                         <h3 className="text-base font-bold text-[var(--text)]">Procurement Types</h3>
                     </div>
                     <div className="space-y-2">
-                        {barTotal === 0 && !loading ? (
+                        {total === 0 ? (
                             <div className="py-8 px-4 rounded-xl bg-[var(--background-subtle)] border border-dashed border-[var(--border-light)] text-center">
                                 <p className="text-sm font-medium text-[var(--text-muted)]">No documents yet</p>
-                                <p className="text-xs text-[var(--text-subtle)] mt-1">Counts will appear here once docs are added.</p>
+                                <p className="text-xs text-[var(--text-subtle)] mt-1">Counts will appear here once documents are uploaded.</p>
+                            </div>
+                        ) : barTotal === 0 ? (
+                            <div className="py-8 px-4 rounded-xl bg-[var(--background-subtle)] border border-dashed border-[var(--border-light)] text-center">
+                                <p className="text-sm font-medium text-[var(--text-muted)]">No procurement method data</p>
+                                <p className="text-xs text-[var(--text-subtle)] mt-1">Upload documents with Lease of Venue / Small Value Procurement / Public Bidding</p>
                             </div>
                         ) : (
                             barSeries.map((series, i) => {

@@ -54,8 +54,7 @@ class DocumentStatusCalculator:
 
     @classmethod
     def calculate_status(cls, document) -> str:
-        """
-        Calculate document status based on completeness requirements.
+        """Calculate document status based on completeness requirements.
 
         Args:
             document: Document model instance
@@ -83,7 +82,9 @@ class DocumentStatusCalculator:
     @classmethod
     def _has_basic_fields(cls, document, ignore_prno=False) -> bool:
         """Check basic required fields that apply to all documents.
-        ignore_prno: Skip prNo check for new procurements."""
+
+        ignore_prno: Skip prNo check for new procurements.
+        """
         # Title check (with exceptions)
         sub_doc = (document.subDoc or '').strip()
         no_title_required = any(sub_doc == item or sub_doc.endswith(f' - {item}') for item in ['List of Venue']) or sub_doc in cls.NO_TITLE_REQUIRED
@@ -280,7 +281,7 @@ class DocumentStatusCalculator:
 
     @staticmethod
     def _check_rfq_variant(document, sub_doc: str) -> bool:
-        return bool(document.date)
+        return True  # RFQ variants (Lease of venue) auto complete on submit
 
     @staticmethod
     def _check_rfq_base(document, sub_doc: str) -> bool:
@@ -289,3 +290,4 @@ class DocumentStatusCalculator:
     @staticmethod
     def _check_default_date(document) -> bool:
         return bool(document.date)
+

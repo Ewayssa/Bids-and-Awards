@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { documentService } from '../services/api';
+import { documentService, reportService } from '../services/api';
 import { ROLES } from '../utils/roles';
 import {
     MdUpload,
@@ -47,6 +47,8 @@ import { useDocumentForm } from '../hooks/useDocumentForm';
 import { useDocumentFilters } from '../hooks/useDocumentFilters';
 import { useDocumentPagination } from '../hooks/useDocumentPagination';
 import { useDocumentValidation } from '../hooks/useDocumentValidation';
+import { useReportForm } from '../hooks/useReportForm';
+import { documentService, reportService } from '../services/api';
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
@@ -213,8 +215,9 @@ const Encode = ({ user }) => {
     const validateNewForm = () => {
         const err = {};
 
-        // ONLY require Title/Purpose for Start New - all else optional
-        if (!(form.title && form.title.trim())) {
+        // require Title only when this subDoc needs it
+        const requiresTitle = docRequiresTitle({ subDoc: selectedSubDocType });
+        if (requiresTitle && !(form.title && form.title.trim())) {
             err.title = 'Title/Purpose is required';
         }
 
@@ -222,14 +225,14 @@ const Encode = ({ user }) => {
         return Object.keys(err).length === 0;
     };
 
-    const handleNewSubmit = (e) => {
+    const handleNewSubmit = async (e) => {
         e.preventDefault();
 
         if (!validateNewForm()) {
             return;
         }
 
-        // Special handling for some forms before confirmation
+        // Special handling for some forms before submission
         if (
             selectedDocType?.name === 'RFQ Concerns' &&
             selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement')
@@ -248,13 +251,8 @@ const Encode = ({ user }) => {
             }));
         }
 
-        setConfirmDialog({
-            message: 'Are you sure you want to submit this new procurement?',
-            onConfirm: () => {
-                setConfirmDialog(null);
-                performNewSubmit();
-            },
-        });
+        // Direct submit, avoid optional modal-block and make the action immediate.
+        await performNewSubmit();
     };
 
     const performUpdateSubmit = async () => {
@@ -1218,9 +1216,6 @@ const Encode = ({ user }) => {
                                                                     <th className="table-th uppercase">Status</th>
                                                                     {isAdmin && <th className="table-th">Actions</th>}
                                                                 </tr>
-</xai:function_call >
-<xai:function_call name="edit_file">
-<parameter name="path">c:/Users/elyss/OneDrive/Documents/GitHub/Bids-and-Awards/frontend/src/pages/Encode.jsx
                                                             </thead>
                                                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                                                                 {docs.map((doc) => {

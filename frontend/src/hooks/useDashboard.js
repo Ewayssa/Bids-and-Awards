@@ -30,9 +30,9 @@ export const useDashboard = (user) => {
             
             setStats({
                 pieData: data?.pieData ?? [0, 0, 0, 0],
-                totalDocumentsUploaded: typeof data?.totalDocumentsUploaded === 'number' 
-                    ? data.totalDocumentsUploaded 
-                    : (data?.pieData ? (Number(data.pieData[1]) + Number(data.pieData[2])) : 0),
+                totalDocumentsUploaded: typeof data?.totalDocumentsUploaded === 'number'
+                    ? data.totalDocumentsUploaded
+                    : (data?.pieData ? Number(data.pieData[0]) : 0),
                 calendarEvents: data?.calendarEvents ?? [],
                 procurementMethodCounts: data?.procurementMethodCounts ?? { 
                     'List of Venue': 0, 

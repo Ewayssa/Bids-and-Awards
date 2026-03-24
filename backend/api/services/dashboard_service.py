@@ -6,23 +6,20 @@ class DashboardService:
     @staticmethod
     def get_document_status_counts(docs_qs):
         """
-        Count documents per user expectation:
-        - total: all documents
-        - completed: docs with calculate_status() == 'complete'
-        - ongoing: submitted docs that are not complete
-        - pending: total - completed (all non-completed docs)
+        Count uploaded documents by calculated status (form completeness).
+        - total: uploaded documents only
+        - completed: uploaded docs where calculate_status() == 'complete'
+        - ongoing: uploaded docs where calculate_status() == 'ongoing'
+        - pending: total - completed - ongoing
+          (fit 29 total, 3 complete, 0 ongoing => 26 pending)
         """
-        total_docs = docs_qs.count()
-        completed_docs = 0
-        submitted_qs = docs_qs.filter(uploaded_at__isnull=False)
-        
-        for doc in submitted_qs:
-            if (doc.calculate_status() or '').lower().strip() == 'complete':
-                completed_docs += 1
-        
-        ongoing_docs = submitted_qs.count() - completed_docs
-        pending_docs = docs_qs.filter(uploaded_at__isnull=True).count()
-        
+        uploaded_docs = list(docs_qs.filter(uploaded_at__isnull=False))
+
+        total_docs = len(uploaded_docs)
+        completed_docs = sum(1 for d in uploaded_docs if (d.calculate_status() or '').lower().strip() == 'complete')
+        ongoing_docs = sum(1 for d in uploaded_docs if (d.calculate_status() or '').lower().strip() == 'ongoing')
+        pending_docs = max(0, total_docs - completed_docs - ongoing_docs)
+
         return {
             'total': total_docs,
             'completed': completed_docs,
