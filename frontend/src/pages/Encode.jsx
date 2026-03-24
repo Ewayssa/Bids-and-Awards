@@ -48,7 +48,6 @@ import { useDocumentFilters } from '../hooks/useDocumentFilters';
 import { useDocumentPagination } from '../hooks/useDocumentPagination';
 import { useDocumentValidation } from '../hooks/useDocumentValidation';
 import { useReportForm } from '../hooks/useReportForm';
-import { documentService, reportService } from '../services/api';
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
