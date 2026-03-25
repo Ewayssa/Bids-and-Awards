@@ -206,6 +206,11 @@ export const userService = {
         return response.data;
     },
 
+    async getBacMembers() {
+        const response = await axios.get(`${API_BASE_URL}/users/bac_members/`);
+        return response.data;
+    },
+
     async patch(id, userData) {
         const response = await axios.patch(`${API_BASE_URL}/users/${id}/`, userData);
         return response.data;
@@ -216,3 +221,4 @@ export const userService = {
         return response.data;
     },
 };
+

@@ -63,6 +63,7 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ('admin', 'Admin'),
         ('employee', 'Employee'),
+        ('bac_member', 'BAC Member'),
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='employee')
     fullName = models.CharField(max_length=255, blank=True)

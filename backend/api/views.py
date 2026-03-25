@@ -202,6 +202,11 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
 
+    @action(detail=False, methods=['get'])
+    def bac_members(self, request):
+        bac_members = User.objects.filter(role='bac_member').values('id', 'fullName', 'username')
+        return Response(list(bac_members))
+
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
         data.pop('password', None)

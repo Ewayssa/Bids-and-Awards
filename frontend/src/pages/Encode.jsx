@@ -143,6 +143,7 @@ const Encode = ({ user }) => {
     const [activeChecklistCategoryId, setActiveChecklistCategoryId] = useState(null); // which folder is selected in Manage Documents
     const [lastAutoPreviewFolderId, setLastAutoPreviewFolderId] = useState(null); // to auto-open first doc preview once per folder
     const [certificateServiceProviders, setCertificateServiceProviders] = useState(['', '', '']); // For Certificate of DILG - SVP
+    const [bacMembers, setBacMembers] = useState([]);
     const [attendanceMembers, setAttendanceMembers] = useState([]); // For Attendance Sheet: [{ id, name, present }]
     const [abstractBidders, setAbstractBidders] = useState([]); // For Abstract of Quotation: [{ id, name, amount, remarks }]
     const [manageSelectedTypeId, setManageSelectedTypeId] = useState(null); // Manage modal: selected document type (DOC_TYPES id)
@@ -947,6 +948,53 @@ const Encode = ({ user }) => {
         setCertificateServiceProviders(['', '', '']);
         setActiveModal('new');
     };
+
+    // Auto-fetch BAC members for Attendance Sheet
+    useEffect(() => {
+        if (!user) return;
+        import('../services/api.js').then(({ userService }) => {
+            userService.getBacMembers()
+                .then((members) => {
+                    setBacMembers(members || []);
+                })
+                .catch(() => setBacMembers([]));
+        }).catch(() => setBacMembers([]));
+    }, [user]);
+
+    // Auto-populate attendanceMembers when Attendance Sheet is selected
+    useEffect(() => {
+        if (selectedSubDocType !== 'Attendance Sheet') return;
+
+        const populateAttendance = async () => {
+            if (bacMembers.length === 0) return;
+
+            let initialPresent = {};
+            if (selectedDoc?.attendance_members) {
+                try {
+                    const parsed = JSON.parse(selectedDoc.attendance_members);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(m => {
+                            initialPresent[m.name.toLowerCase().trim()] = m.present;
+                        });
+                    }
+                } catch {}
+            }
+
+            const populated = bacMembers.map((u, index) => {
+                const name = u.fullName || u.username || '';
+                const present = initialPresent[name.toLowerCase().trim()] !== undefined ? initialPresent[name.toLowerCase().trim()] : false;
+                return {
+                    id: u.id || `temp-${index}`,
+                    name,
+                    present
+                };
+            });
+
+            setAttendanceMembers(populated);
+        };
+
+        populateAttendance();
+    }, [selectedSubDocType, bacMembers, selectedDoc?.attendance_members]);
     const openUpdate = () => {
         setActiveModal('updateList');
         setUpdateError('');
@@ -1255,16 +1303,7 @@ const Encode = ({ user }) => {
                                                                                             <MdVisibility className="w-3.5 h-3.5" />
                                                                                         </button>
                                                                                     ) : null}
-                                                                                    {isUserUploader(doc) && (
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => handleChecklistSubDocClick({ doc })}
-                                                                                            className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-green-600 hover:border-green-600 hover:bg-green-50 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
-                                                                                            title="Edit document"
-                                                                                        >
-                                                                                            <MdEdit className="w-3.5 h-3.5" />
-                                                                                        </button>
-                                                                                    )}
+
                                                                                     {!doc.file_url && !isUserUploader(doc) && <span className="text-[var(--text-muted)]">—</span>}
                                                                                 </div>
                                                                             </td>
@@ -1346,22 +1385,13 @@ const Encode = ({ user }) => {
                                                                             setPreviewSequence(null);
                                                                             openPreview(doc);
                                                                         }}
-                                                                        className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
+className="inline-flex items-center justify-center w-9 h-9 text-[var(--primary)] hover:bg-[var(--primary-muted)]/50 hover:scale-110 transition-all duration-300 ease-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 rounded-full"
                                                                         title="View document"
                                                                     >
                                                                         <MdVisibility className="w-3.5 h-3.5" />
                                                                     </button>
                                                                 ) : null}
-                                                                {isUserUploader(doc) && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleChecklistSubDocClick({ doc })}
-                                                                        className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-green-600 hover:border-green-600 hover:bg-green-50 focus:outline-none focus:ring-1 focus:ring-green-600 focus:ring-offset-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95"
-                                                                        title="Edit document"
-                                                                    >
-                                                                        <MdEdit className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                )}
+
                                                                 {!doc.file_url && !isUserUploader(doc) && <span className="text-[var(--text-muted)]">—</span>}
                                                             </div>
                                                         </td>
@@ -2418,42 +2448,22 @@ const Encode = ({ user }) => {
                                         </div>
                                         <div>
                                             <label className="label">List of BAC Members <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <p className="text-xs text-[var(--text-muted)] mb-2">Add members and check Present if they attended, or leave unchecked for absent.</p>
+                                            <p className="text-xs text-[var(--text-muted)] mb-2">{bacMembers.length > 0 ? 'All BAC members loaded automatically. Check Present if attended.' : 'Loading BAC members...'}</p>
                                             {attendanceMembers.map((m) => (
-                                                <div key={m.id} className="flex items-center gap-3 mb-2">
-                                                    <input
-                                                        type="text"
-                                                        value={m.name}
-                                                        onChange={(e) => setAttendanceMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)))}
-                                                        className="input-field flex-1 min-w-0"
-                                                        placeholder="Member name"
-                                                    />
+                                                <div key={m.id} className="flex items-center gap-3 mb-2 p-2 bg-[var(--background-subtle)]/50 rounded-lg">
+                                                    <span className="font-medium text-sm min-w-0 flex-1 truncate" title={m.name}>{m.name}</span>
                                                     <label className="flex items-center gap-2 shrink-0 cursor-pointer">
                                                         <input
                                                             type="checkbox"
                                                             checked={m.present}
                                                             onChange={(e) => setAttendanceMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, present: e.target.checked } : x)))}
-                                                            className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
+                                                            className="w-5 h-5 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
                                                         />
                                                         <span className="text-sm text-[var(--text)]">Present</span>
                                                     </label>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setAttendanceMembers((prev) => prev.filter((x) => x.id !== m.id))}
-                                                        className="p-2 text-[var(--text-muted)] hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                        aria-label="Remove member"
-                                                    >
-                                                        <MdClose className="w-5 h-5" />
-                                                    </button>
                                                 </div>
                                             ))}
-                                            <button
-                                                type="button"
-                                                onClick={() => setAttendanceMembers((prev) => [...prev, { id: Date.now(), name: '', present: true }])}
-                                                className="text-sm text-[var(--primary)] hover:underline font-medium"
-                                            >
-                                                + Add BAC member
-                                            </button>
+                                            {attendanceMembers.length === 0 && <p className="text-sm text-[var(--text-muted)] italic">No BAC members found. Assign users 'BAC Member' role in User Management.</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>

@@ -5,11 +5,13 @@
 export const ROLES = {
     ADMIN: 'admin',
     EMPLOYEE: 'employee',
+    BAC_MEMBER: 'bac_member',
 };
 
 export const ROLE_DISPLAY_NAMES = {
     [ROLES.ADMIN]: 'Admin',
     [ROLES.EMPLOYEE]: 'Employee',
+    [ROLES.BAC_MEMBER]: 'BAC Member',
 };
 
 export const PERMISSIONS = {
@@ -78,6 +80,7 @@ export const getRoleDisplayName = (role) => {
 export const getAvailableRoles = () => [
     { value: ROLES.ADMIN, label: ROLE_DISPLAY_NAMES[ROLES.ADMIN] },
     { value: ROLES.EMPLOYEE, label: ROLE_DISPLAY_NAMES[ROLES.EMPLOYEE] },
+    { value: ROLES.BAC_MEMBER, label: ROLE_DISPLAY_NAMES[ROLES.BAC_MEMBER] },
 ];
 
 /** Map backend role to frontend (normalize legacy values). */
