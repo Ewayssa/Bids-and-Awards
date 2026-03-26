@@ -1291,16 +1291,17 @@ const Encode = ({ user }) => {
                                                                             <td className="table-td">
                                                                                 <div className="flex items-center justify-center gap-2">
                                                                                     {doc.file_url ? (
-                                                                                        <button
+<button
                                                                                             type="button"
                                                                                             onClick={() => {
                                                                                                 setPreviewSequence(null);
                                                                                                 openPreview(doc);
                                                                                             }}
-                                                                                            className="inline-flex items-center justify-center px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all duration-300 ease-out hover:scale-105 active:scale-95"
+                                                                                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--primary-muted)]/50 hover:bg-[var(--primary-muted)] text-[var(--primary)] hover:scale-105 transition-all duration-300 ease-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 rounded-full"
                                                                                             title="View document"
                                                                                         >
-                                                                                            <MdVisibility className="w-3.5 h-3.5" />
+                                                                                            <MdVisibility className="w-3.5 h-3.5 flex-shrink-0" />
+                                                                                            View
                                                                                         </button>
                                                                                     ) : null}
 
@@ -1379,16 +1380,17 @@ const Encode = ({ user }) => {
                                                         <td className="table-td">
                                                             <div className="flex items-center justify-center gap-2">
                                                                 {doc.file_url ? (
-                                                                    <button
+<button
                                                                         type="button"
                                                                         onClick={() => {
                                                                             setPreviewSequence(null);
                                                                             openPreview(doc);
                                                                         }}
-className="inline-flex items-center justify-center w-9 h-9 text-[var(--primary)] hover:bg-[var(--primary-muted)]/50 hover:scale-110 transition-all duration-300 ease-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 rounded-full"
+className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--primary-muted)]/50 hover:bg-[var(--primary-muted)] text-[var(--primary)] hover:scale-105 transition-all duration-300 ease-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 rounded-full"
                                                                         title="View document"
                                                                     >
-                                                                        <MdVisibility className="w-3.5 h-3.5" />
+                                                                        <MdVisibility className="w-3.5 h-3.5 flex-shrink-0" />
+                                                                        View
                                                                     </button>
                                                                 ) : null}
 

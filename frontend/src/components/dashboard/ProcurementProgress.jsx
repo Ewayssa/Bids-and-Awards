@@ -6,8 +6,8 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
     const normalizedPieData = Array.isArray(pieData) && pieData.length >= 4
         ? pieData.map((v) => Number(v) || 0)
         : [0, 0, 0, 0];
-    const [total, completed, ongoing, pending] = normalizedPieData;
-    const totalNorm = total || 1;
+    const [_, completed, ongoing, pending] = normalizedPieData;
+    const totalNorm = (completed + ongoing + pending) || 1;
 
     const completedPct = (completed / totalNorm) * 100;
     const ongoingPct = (ongoing / totalNorm) * 100;
@@ -42,9 +42,9 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
     const pendingEnd = ongoingEnd + deg(pendingPct) * ringProgress;
 
     const sliceMeta = [
-        { label: 'Completed', value: completed, pct: completedPct, color: '#22c55e', fill: 'url(#pie-completed)', start: 0, end: completedEnd },
-        { label: 'On-going', value: ongoing, pct: ongoingPct, color: '#facc15', fill: 'url(#pie-ongoing)', start: completedEnd, end: ongoingEnd },
-        { label: 'Pending', value: pending, pct: pendingPct, color: '#e03d3d', fill: 'url(#pie-pending)', start: ongoingEnd, end: pendingEnd },
+        { label: 'Completed', value: completed, pct: completedPct, color: '#10b981', fill: 'url(#pie-completed)', start: 0, end: completedEnd },
+        { label: 'On-going', value: ongoing, pct: ongoingPct, color: '#f59e0b', fill: 'url(#pie-ongoing)', start: completedEnd, end: ongoingEnd },
+        { label: 'Pending', value: pending, pct: pendingPct, color: '#ef4444', fill: 'url(#pie-pending)', start: ongoingEnd, end: pendingEnd },
     ];
 
     const barSeries = [
@@ -77,14 +77,14 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                                 </linearGradient>
                                 <linearGradient id="pie-ongoing" x1="0%" y1="0%" x2="100%" y2="100%">
                                     <stop offset="0%" stopColor="#fde047" />
-                                    <stop offset="100%" stopColor="#facc15" />
+                                    <stop offset="100%" stopColor="#eab308" />
                                 </linearGradient>
                                 <linearGradient id="pie-pending" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#e85c5c" />
-                                    <stop offset="100%" stopColor="#e03d3d" />
+                                    <stop offset="0%" stopColor="#f87171" />
+                                    <stop offset="100%" stopColor="#ef4444" />
                                 </linearGradient>
                             </defs>
-                            {total === 0 ? (
+                            {(completed + ongoing + pending) === 0 ? (
                                 <circle cx={cx} cy={cy} r={r} fill="var(--border-light)" stroke="var(--border)" strokeWidth="2" className="dashboard-pie-empty" />
                             ) : (
                                 <g filter="url(#dashboard-pie-shadow)">
@@ -113,7 +113,7 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                                 </g>
                             )}
                         </svg>
-                        {hoveredSlice && total > 0 && (() => {
+                        {hoveredSlice && (completed + ongoing + pending) > 0 && (() => {
                             const slice = sliceMeta.find((s) => s.label === hoveredSlice);
                             return slice ? (
                                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-2 flex flex-nowrap items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border-light)] shadow-lg whitespace-nowrap z-10 pointer-events-none dashboard-pie-tooltip">
@@ -124,7 +124,7 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                             ) : null;
                         })()}
                     </div>
-                    {total > 0 && (
+                    {(completed + ongoing + pending) > 0 && (
                         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-3 pt-3">
                             {sliceMeta.map((slice) => (
                                 <div key={slice.label} className="flex items-center gap-2 dashboard-pie-legend-item">
@@ -140,8 +140,8 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                         <h3 className="text-base font-bold text-[var(--text)]">Procurement Types</h3>
                     </div>
                     <div className="space-y-2">
-                        {total === 0 ? (
-                            <div className="py-8 px-4 rounded-xl bg-[var(--background-subtle)] border border-dashed border-[var(--border-light)] text-center">
+                        {(completed + ongoing + pending) === 0 ? (
+                                    <div className="py-8 px-4 rounded-xl bg-[var(--background-subtle)] border border-dashed border-[var(--border-light)] text-center">
                                 <p className="text-sm font-medium text-[var(--text-muted)]">No documents yet</p>
                                 <p className="text-xs text-[var(--text-subtle)] mt-1">Counts will appear here once documents are uploaded.</p>
                             </div>

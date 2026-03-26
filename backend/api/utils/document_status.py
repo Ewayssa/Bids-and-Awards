@@ -11,6 +11,45 @@ from django.utils import timezone
 class DocumentStatusCalculator:
     """Calculates document status based on sub-document type requirements."""
 
+    CHECKLIST_DOC_TYPES = [
+        ("Procurement", [
+            "Annual Procurement Plan",
+            "Activity Design", 
+            "Project Procurement Management Plan/Supplemental PPMP",
+            "Market Scopping",
+            "Requisition and Issue Slip"
+        ]),
+        ("Venue", [
+            "List of Venue",
+            "Invitation to COA",
+            "Attendance Sheet"
+        ]),
+        ("Resolution", [
+            "BAC Resolution"
+        ]),
+        ("Quotation", [
+            "Abstract of Quotation"
+        ]),
+        ("Lease", [
+            "Lease of Venue: Table Rating Factor"
+        ]),
+        ("Award", [
+            "Notice of Award"
+        ]),
+        ("Contract", [
+            "Contract Services/Purchase Order"
+        ]),
+        ("Proceed", [
+            "Notice to Proceed"
+        ]),
+        ("OSS", [
+            "OSS"
+        ]),
+        ("Secretary", [
+            "Applicable: Secretary's Certificate and Special Power of Attorney"
+        ]),
+    ]
+
     # Sub-docs that don't require a title
     NO_TITLE_REQUIRED = {
         'Invitation to COA',

@@ -1,17 +1,14 @@
 from datetime import timedelta
 from django.utils import timezone
-from ..models import Document, CalendarEvent, Notification, CHECKLIST_DOC_TYPES
+from ..models import Document, CalendarEvent, Notification
+from ..utils.document_status import DocumentStatusCalculator
+
 
 class DashboardService:
     @staticmethod
     def get_document_status_counts(docs_qs):
         """
         Count uploaded documents by calculated status (form completeness).
-        - total: uploaded documents only
-        - completed: uploaded docs where calculate_status() == 'complete'
-        - ongoing: uploaded docs where calculate_status() == 'ongoing'
-        - pending: total - completed - ongoing
-          (fit 29 total, 3 complete, 0 ongoing => 26 pending)
         """
         uploaded_docs = list(docs_qs.filter(uploaded_at__isnull=False))
 
@@ -28,8 +25,8 @@ class DashboardService:
         }
 
     @staticmethod
-    def get_checklist_counts(docs_qs):
-        """Legacy checklist slot counts."""
+    def get_checklist_global_pending(docs_qs):
+        """Global checklist pending slots across all folders."""
         docs = list(docs_qs.filter(uploaded_at__isnull=False))
         
         folders = {}
@@ -40,13 +37,13 @@ class DashboardService:
                     folders[pr] = []
                 folders[pr].append(d)
         
-        completed = ongoing = pending_slot = 0
+        pending_slot = 0
         
         for pr, folder_docs in folders.items():
             is_svp = any('Small Value Procurement' in (d.subDoc or '') for d in folder_docs)
             is_pb = any('Public Bidding' in (d.subDoc or '') for d in folder_docs)
             
-            for category, sub_docs in CHECKLIST_DOC_TYPES:
+            for category, sub_docs in DocumentStatusCalculator.CHECKLIST_DOC_TYPES:
                 cat_trim = (category or '').strip()
                 for sub_doc in sub_docs:
                     sub_trim = (sub_doc or '').strip()
@@ -63,22 +60,8 @@ class DashboardService:
                     
                     if not matches:
                         pending_slot += 1
-                    else:
-                        any_complete = any(
-                            (m.calculate_status() or '').lower().strip() == 'complete'
-                            for m in matches
-                        )
-                        if any_complete:
-                            completed += 1
-                        else:
-                            ongoing += 1
                             
-        return {
-            'total': completed + ongoing + pending_slot,
-            'completed': completed,
-            'ongoing': ongoing,
-            'pending': pending_slot
-        }
+        return pending_slot
 
     @classmethod
     def get_dashboard_data(cls, uploaded_by=None):
@@ -92,7 +75,7 @@ class DashboardService:
             doc_counts['total'],
             doc_counts['completed'],
             doc_counts['ongoing'],
-            doc_counts['pending']
+            cls.get_checklist_global_pending(docs_qs)
         ]
         
         total_documents_uploaded = docs_qs.filter(uploaded_at__isnull=False).count()
@@ -163,3 +146,4 @@ class DashboardService:
             {'message': n.message, 'created_at': n.created_at.isoformat(), 'id': str(n.id)}
             for n in Notification.objects.all().order_by('-created_at')[:limit]
         ]
+

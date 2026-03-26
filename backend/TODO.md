@@ -1,16 +1,40 @@
-# Ongoing Task: Update Ongoing Status Logic for New Procurements
+# Dashboard Charts Fix Plan
 
-## Steps:
-- [x] 1. Backup current document_status.py and document_helpers.py (copy to .bak)
-- [x] 2. Add `is_new_procurement(document)` helper in `backend/api/utils/document_status.py`
-- [x] 3. Modify `_has_basic_fields` to skip prNo/user_pr_no checks for new procurement
-- [x] 4. Update `calculate_status` to use ignore_prno=True for new procurement
-- [x] 5. Sync `get_document_missing_count` in `backend/api/utils/document_helpers.py`
-- [x] 6. `cd backend && python manage.py check`
-- [ ] 7. Test: `cd backend && python manage.py runserver`, create new Procurement in frontend/encode
-- [ ] 8. `cd backend && python manage.py recalculate_document_status`
-- [ ] 9. Update TODO.md with [x] and attempt_completion
+## Current Status
+- Pie chart (SVG in ProcurementProgress.jsx) and bar chart (procurement types) not showing
+- Likely cause: No data (all zeros), empty DB or API error
 
-## Previous Backend Fixes (Complete):
-- [x] CHECKLIST_DOC_TYPES import fix
+## Step 1: Check Data
+**Backend server must be running** (`cd backend && python manage.py runserver`)
+
+1. Test script executed? Copy output from VSCode terminal where you ran `python test_dashboard.py`
+2. Browser Network tab: Check `/api/dashboard/` response (expect pieData array with numbers)
+3. Django shell:
+   ```
+   cd backend
+   python manage.py shell
+   >>> from api.models import Document
+   >>> Document.objects.count()
+   >>> from api.services.dashboard_service import DashboardService
+   >>> DashboardService.get_dashboard_data()
+   ```
+
+## Step 2: Frontend Debug
+1. Browser console: Any errors? React dev tools: stats.pieData value?
+2. Is pathname '/' ? Check useDashboard hook condition.
+
+## Step 3: Fix No Data
+If Document.objects.count() == 0:
+- Upload a document via Encode page or create via shell:
+  ```
+  from api.models import Document
+  from django.utils import timezone
+  d = Document(title="Test Doc", uploaded_at=timezone.now(), uploadedBy_id=1, category="Test", subDoc="Public Bidding")
+  d.save()
+  ```
+
+## Step 4: Test
+- Refresh dashboard, charts should animate in with data.
+
+Paste outputs here after Step 1!
 
