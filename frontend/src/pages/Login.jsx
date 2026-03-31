@@ -187,13 +187,13 @@ const Login = ({ onLogin, infoMessage }) => {
             }}
         >
             <div
-                className="w-full max-w-md min-w-[min(100%,20rem)] rounded-2xl overflow-hidden shrink-0 bg-white font-sans antialiased"
+                className="w-full max-w-md min-w-[min(100%,20rem)] rounded-2xl shrink-0 bg-white font-sans antialiased"
                 style={{
                     boxShadow: '0 32px 64px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
                 }}
             >
                 <div className="flex flex-col items-center p-4 sm:p-6 pt-4 sm:pt-6">
-                    <div className="flex flex-col items-center gap-3 mb-3 w-full">
+                    <div className="flex flex-col items-center gap-3 mb-1 w-full">
                         <img
                             src={LEFT_PANEL_IMAGE}
                             alt=""
@@ -204,17 +204,27 @@ const Login = ({ onLogin, infoMessage }) => {
                         </h1>
                     </div>
 
-                    <div className="min-h-[1.5rem] w-full max-w-xs" aria-live="polite">
-                        {error && (
-                            <div className="bg-red-50 border border-red-200/80 text-red-800 text-sm px-4 py-2.5 rounded-xl" role="alert">
-                                {error}
-                            </div>
-                        )}
-                        {!error && infoMessage && !hasTriedLogin && (
-                            <div className="bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-sm px-4 py-2.5 rounded-xl" role="status">
-                                {infoMessage}
-                            </div>
-                        )}
+                    {/* Fixed Height Error Container - never changes size or causes the card to shrink */}
+                    <div className="w-full max-w-xs relative h-[4.5rem] flex items-end justify-center pb-2">
+                        <div
+                            aria-live="polite"
+                            className="w-full absolute bottom-2 left-0 transition-all duration-300 pointer-events-none"
+                            style={{
+                                opacity: (error || (!error && infoMessage && !hasTriedLogin)) ? 1 : 0,
+                                transform: (error || (!error && infoMessage && !hasTriedLogin)) ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.95)',
+                            }}
+                        >
+                            {error && (
+                                <div className="bg-red-50 border border-red-200/80 text-red-800 text-sm px-4 py-2.5 rounded-xl text-center shadow-sm pointer-events-auto" role="alert">
+                                    {error}
+                                </div>
+                            )}
+                            {!error && infoMessage && !hasTriedLogin && (
+                                <div className="bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-sm px-4 py-2.5 rounded-xl text-center shadow-sm pointer-events-auto" role="status">
+                                    {infoMessage}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <form onSubmit={handleSubmit} className="mt-1 flex flex-col w-full max-w-xs">

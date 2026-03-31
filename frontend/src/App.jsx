@@ -4,7 +4,7 @@ import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
 import Encode from './pages/Encode';
-import Reports from './pages/Reports';
+import Reports from './pages/ReportsPage';
 import Personnel from './pages/UserManagement';
 import Settings from './pages/Settings';
 import AuditTrail from './pages/AuditTrail';

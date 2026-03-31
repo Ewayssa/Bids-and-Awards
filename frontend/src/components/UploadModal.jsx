@@ -44,11 +44,12 @@ const UploadModal = ({
                             onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                             placeholder="Enter Report Title"
                             className="input-field w-full"
+                            required
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-[var(--text)] mb-1">
-                            Submitting Office
+                            Submitting Office <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -56,6 +57,7 @@ const UploadModal = ({
                             onChange={(e) => setForm((prev) => ({ ...prev, submitting_office: e.target.value }))}
                             placeholder="Enter Submitting Office"
                             className="input-field w-full"
+                            required
                         />
                     </div>
                     <div>

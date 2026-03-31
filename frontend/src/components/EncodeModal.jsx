@@ -1,8 +1,8 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { MdAdd, MdDownload, MdClose, MdDelete } from 'react-icons/md';
-import { REPORT_COLUMNS, HEADER_GROUPS, DATE_MIN, DATE_MAX } from '../reportConstants';
-import { toDDMMYYYY, formatNumberAsYouType, sanitizeNumberInput, validateDateRange } from '../reportHelpers';
+import { REPORT_COLUMNS, HEADER_GROUPS, DATE_MIN, DATE_MAX } from '../constants/reportConstants';
+import { toDDMMYYYY, formatNumberAsYouType, sanitizeNumberInput, validateDateRange } from '../utils/reportHelpers';
 
 const EncodeModal = ({
     onClose,
@@ -35,19 +35,19 @@ const EncodeModal = ({
                             <div className="flex flex-wrap items-center gap-2">
                                 <button
                                     type="button"
-                                    onClick={addRow}
-                                    disabled={isFinalized}
-                                    className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
-                                >
-                                    <MdAdd className="w-5 h-5" /> Add row
-                                </button>
-                                <button
-                                    type="button"
                                     onClick={exportExcel}
                                     disabled={encodedRows.length === 0}
                                     className="btn-secondary inline-flex items-center gap-1.5 py-2.5 px-4"
                                 >
                                     <MdDownload className="w-5 h-5" /> Export
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={addRow}
+                                    disabled={isFinalized}
+                                    className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
+                                >
+                                    <MdAdd className="w-5 h-5" /> Add row
                                 </button>
                                 <button
                                     type="button"

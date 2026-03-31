@@ -15,7 +15,7 @@ class DashboardService:
         total_docs = len(uploaded_docs)
         completed_docs = sum(1 for d in uploaded_docs if (d.calculate_status() or '').lower().strip() == 'complete')
         ongoing_docs = sum(1 for d in uploaded_docs if (d.calculate_status() or '').lower().strip() == 'ongoing')
-        pending_docs = max(0, total_docs - completed_docs - ongoing_docs)
+        pending_docs = sum(1 for d in uploaded_docs if (d.calculate_status() or '').lower().strip() == 'pending')
 
         return {
             'total': total_docs,
@@ -114,7 +114,7 @@ class DashboardService:
             doc_counts['total'],
             doc_counts['completed'],
             doc_counts['ongoing'],
-            cls.get_checklist_global_pending(docs_qs)
+            doc_counts['pending']
         ]
         
         total_documents_uploaded = docs_qs.filter(uploaded_at__isnull=False).count()

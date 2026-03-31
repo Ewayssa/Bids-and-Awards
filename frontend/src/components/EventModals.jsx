@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MdAdd, MdClose, MdEdit } from 'react-icons/md';
-import { calendarEventService, dashboardService } from '../../services/api';
+import { calendarEventService, dashboardService } from '../services/api';
 
 export const EventModals = ({ 
     eventModal, 
@@ -53,7 +53,11 @@ export const EventModals = ({
 
     const handleUpdateEvent = async () => {
         const ev = editEventModal?.ev;
-        if (!ev?.id || !editEventTitle.trim() || !editEventDate.trim()) return;
+        if (!ev?.id) return;
+        if (!editEventTitle.trim() || !editEventDate.trim()) {
+            setEditEventError('Event title and date are required.');
+            return;
+        }
         setEditEventSubmitting(true);
         setEditEventError('');
         try {
@@ -98,15 +102,26 @@ export const EventModals = ({
                                 <MdClose className="w-5 h-5" />
                             </button>
                         </div>
-                        <form onSubmit={(e) => { e.preventDefault(); setConfirmAddEvent(true); }} className="p-6 space-y-4">
+                        <form onSubmit={(e) => { 
+                            e.preventDefault(); 
+                            if (!eventTitle.trim()) {
+                                setEventError('Event title is required.');
+                                return;
+                            }
+                            setEventError('');
+                            setConfirmAddEvent(true); 
+                        }} className="p-6 space-y-4">
                             {eventError && <div className="p-3 rounded-lg bg-red-500/10 text-red-600 text-sm">{eventError}</div>}
                             <div>
                                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Date</label>
                                 <p className="text-[var(--text-muted)]">{eventModal.date}</p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text)] mb-1">Event title</label>
-                                <input type="text" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="input-field w-full" autoFocus />
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">Event title <span className="text-red-500">*</span></label>
+                                <input type="text" value={eventTitle} onChange={(e) => {
+                                    setEventTitle(e.target.value);
+                                    if (eventError) setEventError('');
+                                }} className="input-field w-full" required autoFocus />
                             </div>
                             <div className="flex gap-3 justify-end pt-2">
                                 <button type="button" onClick={() => setEventModal(null)} className="btn-secondary">Cancel</button>
@@ -132,12 +147,18 @@ export const EventModals = ({
                         <div className="p-6 space-y-4">
                             {editEventError && <div className="p-3 rounded-lg bg-red-500/10 text-red-600 text-sm">{editEventError}</div>}
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text)] mb-1">Event title</label>
-                                <input type="text" value={editEventTitle} onChange={(e) => setEditEventTitle(e.target.value)} className="input-field w-full" />
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">Event title <span className="text-red-500">*</span></label>
+                                <input type="text" value={editEventTitle} onChange={(e) => {
+                                    setEditEventTitle(e.target.value);
+                                    if (editEventError) setEditEventError('');
+                                }} className="input-field w-full" required />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[var(--text)] mb-1">Date</label>
-                                <input type="date" value={editEventDate} onChange={(e) => setEditEventDate(e.target.value)} className="input-field w-full" />
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">Date <span className="text-red-500">*</span></label>
+                                <input type="date" value={editEventDate} onChange={(e) => {
+                                    setEditEventDate(e.target.value);
+                                    if (editEventError) setEditEventError('');
+                                }} className="input-field w-full" required />
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button 

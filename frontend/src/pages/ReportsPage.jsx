@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { reportService } from '../../services/api';
-import { ROLES } from '../../utils/auth';
+import { reportService } from '../services/api';
+import { ROLES } from '../utils/auth';
 import { MdUpload, MdChevronLeft, MdChevronRight, MdAdd, MdSearch } from 'react-icons/md';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../components/PageHeader';
 
 // Constants & Helpers
-import { TABLE_PAGE_SIZE } from './reportConstants';
+import { TABLE_PAGE_SIZE } from '../constants/reportConstants';
 import { 
     formatDate, 
     getFetchUrl, 
     toFullUrl, 
     getSuggestedExt 
-} from './reportHelpers';
-import { exportToExcel } from './reportExporter';
-import { useEncodedReports } from './useEncodedReports';
+} from '../utils/reportHelpers';
+import { exportToExcel } from '../utils/reportExporter';
+import { useEncodedReports } from '../hooks/useEncodedReports';
 
 // Sub-components
-import UploadModal from './components/UploadModal';
-import EncodeModal from './components/EncodeModal';
-import PreviewModal from './components/PreviewModal';
+import UploadModal from '../components/UploadModal';
+import EncodeModal from '../components/EncodeModal';
+import PreviewModal from '../components/PreviewModal';
 
 const Reports = ({ user }) => {
     const isAdmin = user?.role === ROLES.ADMIN;

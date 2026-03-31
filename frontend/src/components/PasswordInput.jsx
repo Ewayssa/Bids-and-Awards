@@ -6,10 +6,7 @@ export const DEFAULT_PASSWORD_RULES = [
     { test: (v) => v.length >= 8, label: 'At least 8 characters' },
 ];
 
-/**
- * 21st.dev-style password input with show/hide toggle and live requirements checklist.
- * Checklist items show ✓ (met) or ○ (not met) and update as the user types.
- */
+
 const PasswordInput = ({
     id,
     label,
@@ -56,7 +53,6 @@ const PasswordInput = ({
                 }`}
             >
                 <input
-                    key={visible ? 'visible' : 'hidden'}
                     id={id}
                     type={visible ? 'text' : 'password'}
                     className={`w-full ${inputBaseClass} bg-transparent text-gray-900 placeholder-gray-400 outline-none border-0 focus:ring-0 disabled:opacity-60 disabled:cursor-not-allowed text-[15px] ${
@@ -80,21 +76,21 @@ const PasswordInput = ({
                     <button
                         type="button"
                         tabIndex={-1}
-                        onClick={(e) => {
+                        onPointerDown={(e) => {
+                            // Using pointer down instead of click guarantees it runs before focus loss
                             e.preventDefault();
                             setVisible((v) => !v);
                         }}
-                        onMouseDown={(e) => e.preventDefault()}
-                        className={`absolute top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-700 rounded-lg transition-colors ${
-                            variant === 'rounded' ? 'right-2' : 'right-0'
+                        className={`absolute top-1/2 -translate-y-1/2 p-2 z-[20] flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200/50 rounded-lg transition-all cursor-pointer ${
+                            variant === 'rounded' ? 'right-1.5' : 'right-0'
                         }`}
                         aria-label={visible ? 'Hide password' : 'Show password'}
                         disabled={disabled}
                     >
                         {visible ? (
-                            <MdVisibilityOff className="w-5 h-5" aria-hidden />
+                            <MdVisibility className="w-5 h-5 pointer-events-none" aria-hidden="true" />
                         ) : (
-                            <MdVisibility className="w-5 h-5" aria-hidden />
+                            <MdVisibilityOff className="w-5 h-5 pointer-events-none" aria-hidden="true" />
                         )}
                     </button>
                 )}

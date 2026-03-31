@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY_ENCODED_REPORT, REPORT_COLUMNS } from './reportConstants';
+import { STORAGE_KEY_ENCODED_REPORT, REPORT_COLUMNS } from '../constants/reportConstants';
 
 /**
  * Custom hook for managing encoded report rows and persistence.

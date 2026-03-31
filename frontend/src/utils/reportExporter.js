@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { REPORT_COLUMNS, HEADER_GROUPS } from './reportConstants';
+import { REPORT_COLUMNS, HEADER_GROUPS } from '../constants/reportConstants';
 import { formatNumberDisplay, toDDMMYYYY } from './reportHelpers';
 
 /**
@@ -39,7 +39,7 @@ export const exportToExcel = async (encodedRows, filteredReports) => {
     ws.getCell(rowNum, 1).fill = makeFill('FFFFFFFF');
     ws.getCell(rowNum, 1).border = borderAll;
     ws.mergeCells(rowNum, 1, rowNum, Math.floor(totalCols / 2));
-    
+
     const midStart = Math.floor(totalCols / 2) + 1;
     ws.getCell(rowNum, midStart).value = 'Procurement Monitoring Report';
     ws.getCell(rowNum, midStart).font = { bold: true };
@@ -69,33 +69,33 @@ export const exportToExcel = async (encodedRows, filteredReports) => {
     // 2-Tier Table Header
     const groupStartCols = {};
     let currentCol = 1;
-    
+
     // Write Top Level (Groups)
     HEADER_GROUPS.forEach(grp => {
         const start = currentCol;
         const width = grp.colKeys.length;
         const end = start + width - 1;
-        
+
         ws.getCell(rowNum, start).value = grp.groupLabel;
         ws.getCell(rowNum, start).font = { bold: true, color: { argb: 'FFFFFFFF' } };
         ws.getCell(rowNum, start).fill = makeFill('FF15803D'); // Darker green for top header
         ws.getCell(rowNum, start).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-        
+
         // Merge if it spans multiple columns, else just format
         if (width > 1) {
             ws.mergeCells(rowNum, start, rowNum, end);
         } else {
-             ws.mergeCells(rowNum, start, rowNum + 1, start); // Merge down
+            ws.mergeCells(rowNum, start, rowNum + 1, start); // Merge down
         }
-        
+
         for (let i = start; i <= end; i++) {
             ws.getCell(rowNum, i).border = borderAll;
         }
-        
+
         groupStartCols[grp.groupLabel] = start;
         currentCol += width;
     });
-    
+
     rowNum += 1;
 
     // Write Sub Level (Individual Columns)
@@ -117,8 +117,8 @@ export const exportToExcel = async (encodedRows, filteredReports) => {
             currentCol += 1;
         }
         // Force borders on the second row for merged cells too
-        for(let i = groupStartCols[grp.groupLabel]; i < currentCol; i++) {
-             ws.getCell(rowNum, i).border = borderAll;
+        for (let i = groupStartCols[grp.groupLabel]; i < currentCol; i++) {
+            ws.getCell(rowNum, i).border = borderAll;
         }
     });
 

@@ -6,12 +6,10 @@ import PageHeader from '../components/PageHeader';
 import UserAccountDropdown from '../components/UserAccountDropdown';
 
 import { useDashboard } from '../hooks/useDashboard';
-import { 
-    StatsGrid, 
-    DashboardCalendar, 
-    ProcurementProgress, 
-    EventModals 
-} from '../components/dashboard';
+import { StatsGrid } from '../components/StatsGrid';
+import { DashboardCalendar } from '../components/DashboardCalendar';
+import { ProcurementProgress } from '../components/ProcurementProgress';
+import { EventModals } from '../components/EventModals';
 
 const Dashboard = ({ user, onLogout }) => {
     const location = useLocation();

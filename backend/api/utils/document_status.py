@@ -106,15 +106,15 @@ class DocumentStatusCalculator:
         # Basic field checks for new procurement
         ignore_prno = cls.is_new_procurement(document)
         if not cls._has_basic_fields(document, ignore_prno=ignore_prno):
-            return 'ongoing'
+            return 'pending'
 
         # Sub-document specific checks
         if not cls._has_subdoc_specific_fields(document, sub_doc):
-            return 'ongoing'
+            return 'pending'
 
         # File check (if required)
         if not cls._has_required_file(document, sub_doc):
-            return 'ongoing'
+            return 'pending'
 
         return 'complete'
 

@@ -490,7 +490,7 @@ const Personnel = ({ user }) => {
                                         onChange={(e) => setAddForm(f => ({ ...f, office: e.target.value }))}
                                         onBlur={() => setAddTouched(t => ({ ...t, office: true }))}
                                         className={fieldCls(addTouched.office, addErrs.office)}
-                                        placeholder="e.g. BAC Secretariat"
+                                        placeholder="Enter Department"
                                         disabled={submitting}
                                     />
                                     {addTouched.office && addErrs.office && (
@@ -580,7 +580,7 @@ const Personnel = ({ user }) => {
                             </div>
                             <div>
                                 <label htmlFor="edit-office" className="block text-sm font-medium text-[var(--text)] mb-1">Department</label>
-                                <input id="edit-office" type="text" value={editForm.office} onChange={(e) => setEditForm(f => ({ ...f, office: e.target.value }))} className="input-field w-full" placeholder="e.g. BAC Secretariat" disabled={submitting} />
+                                <input id="edit-office" type="text" value={editForm.office} onChange={(e) => setEditForm(f => ({ ...f, office: e.target.value }))} className="input-field w-full" placeholder="Enter Department" disabled={submitting} />
                             </div>
                             <div>
                                 <label htmlFor="edit-role" className="block text-sm font-medium text-[var(--text)] mb-1">Role</label>
