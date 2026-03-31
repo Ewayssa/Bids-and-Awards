@@ -394,13 +394,13 @@ const Encode = ({ user }) => {
         const sub = (doc?.subDoc || '').trim();
         return !(
             sub === 'Invitation to COA' ||
-            sub === 'List of Venue' ||
-            sub.endsWith(' - List of Venue') ||
+            sub === 'Lease of Venue' ||
+            sub.endsWith(' - Lease of Venue') ||
             sub === 'Lease of Venue: Table Rating Factor' ||
             sub === 'PHILGEPS - Small Value Procurement' ||
             sub === 'PHILGEPS - Public Bidding' ||
             sub === 'Certificate of DILG - Small Value Procurement' ||
-            sub === 'Certificate of DILG - List of Venue' ||
+            sub === 'Certificate of DILG - Lease of Venue' ||
             sub === 'Certificate of DILG - Public Bidding' ||
             sub === 'Small Value Procurement' ||
             sub === 'Public Bidding'
@@ -409,7 +409,7 @@ const Encode = ({ user }) => {
 
     const docRequiresDate = (doc) => {
         const sub = (doc?.subDoc || '').trim();
-        return !(sub === 'List of Venue' || sub.endsWith(' - List of Venue') || sub === 'Lease of Venue: Table Rating Factor');
+        return !(sub === 'Lease of Venue' || sub.endsWith(' - Lease of Venue') || sub === 'Lease of Venue: Table Rating Factor');
     };
 
     const isIncomplete = (doc) =>
@@ -554,7 +554,7 @@ const Encode = ({ user }) => {
         }
         const noFileRequired = (() => {
             const sub = (doc.subDoc || '').trim();
-            return sub === 'List of Venue' || sub.endsWith(' - List of Venue') || sub === 'Lease of Venue: Table Rating Factor' ||
+            return sub === 'Lease of Venue' || sub.endsWith(' - Lease of Venue') || sub === 'Lease of Venue: Table Rating Factor' ||
                 sub === 'Minutes of the Meeting' || sub === 'Notice of Award (Posted)' || sub === 'Abstract of Quotation (Posted)' || sub === 'BAC Resolution (Posted)';
         })();
         const hasFile = doc.file || (doc.file_url && String(doc.file_url).trim());
@@ -686,7 +686,7 @@ const Encode = ({ user }) => {
         if (sub === 'Public Bidding' || sub.endsWith(' - Public Bidding')) {
             return 'Public Bidding';
         }
-        if (sub === 'Lease of Venue: Table Rating Factor' || sub.includes('Lease of Venue') || sub === 'List of Venue' || sub.endsWith(' - List of Venue')) {
+        if (sub === 'Lease of Venue: Table Rating Factor' || sub.includes('Lease of Venue') || sub === 'Lease of Venue' || sub.endsWith(' - Lease of Venue')) {
             return 'Lease of Venue';
         }
 
@@ -1122,7 +1122,7 @@ const Encode = ({ user }) => {
                                     <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Start New Procurement</p>
                                     <p className="mt-1 text-[var(--text-muted)] text-sm">Use this section to submit new procurement documents for BAC processing. New documents should be filed here.</p>
                                 </div>
-                                <button type="button" onClick={openNew} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                <button type="button" onClick={openNew} className="btn-primary flex items-center justify-center gap-2 px-4 py-3 shrink-0">
                                     <MdUpload className="w-5 h-5" />
                                     Start New
                                 </button>
@@ -1132,7 +1132,7 @@ const Encode = ({ user }) => {
                                     <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Update Documents</p>
                                     <p className="mt-1 text-[var(--text-muted)] text-sm">Use this section to update existing documents, add missing details, or correct information. To complete a document, click its ongoing entry in the checklist.</p>
                                 </div>
-                                <button type="button" onClick={openUpdate} className="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold shrink-0 rounded-xl flex items-center justify-center gap-2 px-4 py-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                <button type="button" onClick={openUpdate} className="btn-primary flex items-center justify-center gap-2 px-4 py-3 shrink-0">
                                     <MdEdit className="w-5 h-5" />
                                     Update
                                 </button>
@@ -1364,7 +1364,7 @@ const Encode = ({ user }) => {
                                         type="button"
                                         onClick={() => setTablePage((p) => Math.max(1, p - 1))}
                                         disabled={tablePage <= 1}
-                                        className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                        className="p-2 border rounded-lg disabled:opacity-50"
                                         aria-label="Previous page"
                                     >
                                         <MdChevronLeft className="w-5 h-5" />
@@ -1376,7 +1376,7 @@ const Encode = ({ user }) => {
                                         type="button"
                                         onClick={() => setTablePage((p) => Math.min(viewMode === 'grouped' ? totalPagesGrouped : totalPagesList, p + 1))}
                                         disabled={tablePage >= (viewMode === 'grouped' ? totalPagesGrouped : totalPagesList)}
-                                        className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                        className="p-2 border rounded-lg disabled:opacity-50"
                                         aria-label="Next page"
                                     >
                                         <MdChevronRight className="w-5 h-5" />
@@ -1609,7 +1609,7 @@ const Encode = ({ user }) => {
                                 </div>
 
                                 {/* PHILGEPS & Certificate of DILG RFQ Concerns special handling */}
-                                {selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('PHILGEPS - List of Venue') ? (
+                                {selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('PHILGEPS - Lease of Venue') ? (
                                     <>
                                         <div className="text-sm text-[var(--text-muted)]">
                                             No additional details are required for this PHILGEPS - Lease of Venue entry. Click
@@ -1618,7 +1618,7 @@ const Encode = ({ user }) => {
                                     </>
                                 ) : selectedDocType?.name === 'RFQ Concerns' &&
                                   selectedSubDocType?.startsWith('PHILGEPS - ') &&
-                                  !selectedSubDocType.includes('List of Venue') ? (
+                                  !selectedSubDocType.includes('Lease of Venue') ? (
                                     <>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
@@ -1668,7 +1668,7 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                     </>
-                                ) : selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('Certificate of DILG - List of Venue') ? (
+                                ) : selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('Certificate of DILG - Lease of Venue') ? (
                                     <>
                                         <div className="text-sm text-[var(--text-muted)]">
                                             No additional details are required for this Certificate of DILG - Lease of Venue entry. Click

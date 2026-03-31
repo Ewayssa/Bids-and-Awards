@@ -120,7 +120,7 @@ const Settings = ({ user }) => {
                             type="button"
                             onClick={handleBackup}
                             disabled={backingUp}
-                            className="inline-flex items-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-2.5 px-5 shadow-sm hover:shadow-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
                         >
                             <MdBackup className="w-4 h-4" />
                             {backingUp ? 'Saving…' : 'Save Backup'}
@@ -157,7 +157,7 @@ const Settings = ({ user }) => {
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={restoring}
-                            className="inline-flex items-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold py-2.5 px-5 shadow-sm hover:shadow-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
                         >
                             <MdRestore className="w-4 h-4" />
                             {restoring ? 'Restoring…' : 'Restore from Backup'}
@@ -184,14 +184,14 @@ const Settings = ({ user }) => {
                                 Download a JSON backup of all events, users, and document/report records (metadata only; file contents stay on the server)?
                             </p>
                             <div className="flex gap-3 justify-end">
-                                <button type="button" onClick={() => setConfirmBackup(false)} className="btn-secondary rounded-xl">
+                                <button type="button" onClick={() => setConfirmBackup(false)} className="btn-secondary">
                                     Cancel
                                 </button>
                                 <button
                                     type="button"
                                     onClick={performBackup}
                                     disabled={backingUp}
-                                    className="btn-primary rounded-xl"
+                                    className="btn-primary"
                                 >
                                     {backingUp ? 'Saving…' : 'Yes, save all'}
                                 </button>
@@ -218,14 +218,14 @@ const Settings = ({ user }) => {
                                 Restore events, user status, and document/report metadata from &quot;{confirmRestore.file.name}&quot;? This may overwrite current data.
                             </p>
                             <div className="flex gap-3 justify-end">
-                                <button type="button" onClick={() => setConfirmRestore(null)} className="btn-secondary rounded-xl">
+                                <button type="button" onClick={() => setConfirmRestore(null)} className="btn-secondary">
                                     Cancel
                                 </button>
                                 <button
                                     type="button"
                                     onClick={performRestore}
                                     disabled={restoring}
-                                    className="btn-primary rounded-xl"
+                                    className="btn-primary"
                                 >
                                     {restoring ? 'Restoring…' : 'Yes, restore'}
                                 </button>

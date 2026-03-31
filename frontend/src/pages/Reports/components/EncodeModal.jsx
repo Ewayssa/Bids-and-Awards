@@ -37,7 +37,7 @@ const EncodeModal = ({
                                     type="button"
                                     onClick={addRow}
                                     disabled={isFinalized}
-                                    className="inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 bg-green-600 hover:bg-green-700 text-white font-semibold shadow disabled:opacity-50"
+                                    className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
                                 >
                                     <MdAdd className="w-5 h-5" /> Add row
                                 </button>
@@ -45,7 +45,7 @@ const EncodeModal = ({
                                     type="button"
                                     onClick={exportExcel}
                                     disabled={encodedRows.length === 0}
-                                    className="inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold shadow disabled:opacity-50"
+                                    className="btn-secondary inline-flex items-center gap-1.5 py-2.5 px-4"
                                 >
                                     <MdDownload className="w-5 h-5" /> Export
                                 </button>
@@ -53,7 +53,7 @@ const EncodeModal = ({
                                     type="button"
                                     onClick={() => setIsFinalized(!isFinalized)}
                                     disabled={encodedRows.length === 0}
-                                    className={`inline-flex h-10 items-center gap-1.5 rounded-lg text-sm px-4 text-white font-semibold shadow ${isFinalized ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    className="btn-primary inline-flex items-center justify-center gap-1.5 py-2.5 px-4 w-24"
                                 >
                                     {isFinalized ? 'Edit' : 'Save'}
                                 </button>
@@ -70,50 +70,49 @@ const EncodeModal = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-h-0 overflow-auto p-4 bg-gray-100">
-                    <div className="bg-white rounded-lg border-2 border-gray-300 shadow-inner" style={{ width: 'max-content', minWidth: '100%' }}>
+                <div className="flex-1 min-h-0 overflow-auto p-4 bg-[var(--background)]">
+                    <div className="bg-[var(--surface)] rounded-lg border border-[var(--border)] shadow-sm" style={{ width: 'max-content', minWidth: '100%' }}>
                         {/* Static Report Header */}
-                        <div className="border-b border-gray-400 px-3 py-2.5 flex items-center justify-between bg-white">
-                            <span className="text-sm font-semibold text-gray-800 flex-1">DEPARTMENT OF THE INTERIOR AND LOCAL GOVERNMENT - REGION 1</span>
-                            <span className="text-base font-bold text-gray-900 shrink-0 px-4">Procurement Monitoring Report</span>
+                        <div className="border-b border-[var(--border-light)] px-3 py-2.5 flex items-center justify-between bg-[var(--surface)]">
+                            <span className="text-sm font-semibold text-[var(--text)] flex-1">DEPARTMENT OF THE INTERIOR AND LOCAL GOVERNMENT - REGION 1</span>
+                            <span className="text-base font-bold text-[var(--text)] shrink-0 px-4">Procurement Monitoring Report</span>
                             <span className="flex-1" />
                         </div>
-                        <div className="border-b border-gray-400 px-3 py-2 bg-gray-50">
-                            <span className="text-sm font-bold text-gray-800">
+                        <div className="border-b border-[var(--border-light)] px-3 py-2 bg-[var(--background-subtle)]">
+                            <span className="text-sm font-bold text-[var(--text)]">
                                 Monitoring Report as of {new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
                             </span>
                         </div>
-                        <div className="bg-gray-300 border-b border-gray-400 px-3 py-2">
-                            <span className="text-sm font-semibold text-gray-800">COMPLETED PROCUREMENT ACTIVITIES</span>
+                        <div className="bg-[var(--primary)] border-b border-[var(--primary-dark)] px-3 py-2">
+                            <span className="text-sm font-semibold text-white">COMPLETED PROCUREMENT ACTIVITIES</span>
                         </div>
-                        <div className="bg-gray-200 border-b border-gray-400 h-8" />
-                        <div className="bg-amber-100 border-b border-gray-400 h-8" />
+                        <div className="bg-[var(--background-subtle)] border-b border-[var(--border-light)] h-4" />
 
                         {/* Excel-like Table */}
-                        <table className="border-collapse text-gray-900 bg-gray-300" style={{ minWidth: '2600px', width: '100%' }}>
+                        <table className="border-collapse text-[var(--text)] bg-[var(--surface)]" style={{ minWidth: '2600px', width: '100%' }}>
                             <thead>
-                                <tr className="bg-gray-300 border-b border-gray-500">
-                                    <th rowSpan={2} className="border-r border-gray-400 px-2 py-2 text-left text-xs font-bold w-10 text-gray-800 align-middle">#</th>
+                                <tr className="bg-[var(--primary)] border-b border-black/10">
+                                    <th rowSpan={2} className="border-r border-white/20 px-2 py-2 text-left text-xs font-bold w-10 text-white align-middle">#</th>
                                     {HEADER_GROUPS.map((grp) =>
                                         grp.colKeys.length === 1 ? (
-                                            <th key={grp.colKeys[0]} rowSpan={2} className="border-r border-gray-400 px-2 py-2 text-left text-xs font-bold text-gray-800 align-middle min-w-[120px]">
+                                            <th key={grp.colKeys[0]} rowSpan={2} className="border-r border-white/20 px-2 py-2 text-left text-xs font-bold text-white align-middle min-w-[120px]">
                                                 {grp.groupLabel}
                                             </th>
                                         ) : (
-                                            <th key={grp.colKeys.join('-')} colSpan={grp.colKeys.length} className="border-r border-gray-400 px-2 py-2 text-center text-xs font-bold text-gray-800 align-middle min-w-[100px]">
+                                            <th key={grp.colKeys.join('-')} colSpan={grp.colKeys.length} className="border-r border-white/20 px-2 py-2 text-center text-xs font-bold text-white align-middle min-w-[100px]">
                                                 {grp.groupLabel}
                                             </th>
                                         )
                                     )}
-                                    <th rowSpan={2} className="px-2 py-2 text-center text-xs font-bold w-16 text-gray-800 align-middle">Action</th>
+                                    <th rowSpan={2} className="px-2 py-2 text-center text-xs font-bold w-16 text-white align-middle">Action</th>
                                 </tr>
-                                <tr className="bg-gray-300 border-b-2 border-gray-500">
+                                <tr className="bg-[var(--primary)] border-b-2 border-black/20">
                                     {HEADER_GROUPS.map((grp) =>
                                         grp.colKeys.length > 1
                                             ? grp.colKeys.map((key) => {
                                                   const col = REPORT_COLUMNS.find((c) => c.key === key);
                                                   return (
-                                                      <th key={key} className="border-r border-gray-400 px-2 py-1.5 text-left text-xs font-bold text-gray-800 min-w-[90px]">
+                                                      <th key={key} className="border-r border-white/20 px-2 py-1.5 text-left text-xs font-bold text-white min-w-[90px]">
                                                           {col?.shortLabel ?? key}
                                                       </th>
                                                   );
@@ -126,8 +125,8 @@ const EncodeModal = ({
                                 {encodedRows.map((row, index) => {
                                     const isOwner = !row.__owner || row.__owner === currentEncoderId;
                                     return (
-                                        <tr key={index} className="border-b border-gray-300">
-                                            <td className="bg-pink-50 border-r border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 align-top">{index + 1}</td>
+                                        <tr key={index} className="border-b border-[var(--border-light)] hover:bg-[var(--background-subtle)] transition-colors">
+                                            <td className="bg-[var(--surface)] border-r border-[var(--border-light)] px-2 py-1 text-sm font-medium text-[var(--text)] align-top">{index + 1}</td>
                                             {REPORT_COLUMNS.map((col) => {
                                                 const val = row[col.key] ?? '';
                                                 if (isFinalized) {
@@ -138,20 +137,25 @@ const EncodeModal = ({
                                                         displayVal = isNaN(n) ? '' : '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2 });
                                                     }
                                                     return (
-                                                        <td key={col.key} className={`bg-pink-50 border-r border-gray-300 px-2 py-1.5 text-sm text-gray-800 align-top ${col.type === 'number' ? 'text-right' : ''}`}>
-                                                            {displayVal || '—'}
+                                                        <td key={col.key} className="bg-[var(--surface)] border-r border-[var(--border-light)] p-0 align-top">
+                                                            <input 
+                                                                type="text" 
+                                                                disabled 
+                                                                value={displayVal || '—'} 
+                                                                className={`w-full min-h-[32px] py-1.5 px-2 text-sm bg-transparent border-0 text-[var(--text)] ${col.type === 'number' ? 'text-right' : ''}`}
+                                                            />
                                                         </td>
                                                     );
                                                 }
 
                                                 return (
-                                                    <td key={col.key} className="bg-pink-50 border-r border-gray-300 p-0 align-top">
+                                                    <td key={col.key} className="bg-[var(--surface)] border-r border-[var(--border-light)] p-0 align-top">
                                                         {col.type === 'select' ? (
                                                             <select
                                                                 value={String(val)}
                                                                 onChange={(e) => updateRow(index, col.key, e.target.value)}
                                                                 disabled={!isOwner}
-                                                                className="w-full h-full py-1.5 px-2 text-sm bg-transparent border-0 focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                                                className="w-full h-full min-h-[32px] py-1.5 px-2 text-sm bg-transparent border-0 focus:ring-2 focus:ring-green-500 disabled:opacity-50"
                                                             >
                                                                 <option value="">—</option>
                                                                 {col.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -172,14 +176,14 @@ const EncodeModal = ({
                                                                 min={col.type === 'date' ? DATE_MIN : undefined}
                                                                 max={col.type === 'date' ? DATE_MAX : undefined}
                                                                 disabled={!isOwner}
-                                                                className={`w-full py-1.5 px-2 text-sm bg-transparent border-0 focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-500 ${col.type === 'number' ? 'text-right' : ''} ${col.type === 'date' && val && !validateDateRange(val) ? 'bg-red-200' : ''}`}
+                                                                className={`w-full min-h-[32px] py-1.5 px-2 text-sm bg-transparent border-0 focus:ring-2 focus:ring-[var(--primary)] disabled:opacity-50 ${col.type === 'number' ? 'text-right' : ''} ${col.type === 'date' && val && !validateDateRange(val) ? 'bg-red-200' : ''}`}
                                                                 placeholder={col.type === 'number' ? '₱0.00' : ''}
                                                             />
                                                         )}
                                                     </td>
                                                 );
                                             })}
-                                            <td className="bg-pink-50 border-gray-300 p-0 align-top text-center">
+                                            <td className="bg-[var(--surface)] border-[var(--border-light)] p-0 align-top text-center">
                                                 <button
                                                     type="button"
                                                     onClick={() => removeRow(index)}
@@ -196,7 +200,7 @@ const EncodeModal = ({
                             </tbody>
                         </table>
                         {encodedRows.length === 0 && (
-                            <div className="py-12 text-center text-gray-600 text-base border-t-2 border-gray-300 bg-gray-50">
+                            <div className="py-12 text-center text-[var(--text-muted)] text-base bg-[var(--surface)]">
                                 <p className="font-medium">No entries yet.</p>
                                 <p className="mt-1">Click "Add row" above to start encoding.</p>
                             </div>

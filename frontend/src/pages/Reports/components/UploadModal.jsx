@@ -22,7 +22,7 @@ const UploadModal = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-all duration-300 ease-out hover:scale-110 active:scale-95"
+                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
                         aria-label="Close"
                     >
                         <MdClose className="w-5 h-5" />
@@ -76,7 +76,7 @@ const UploadModal = ({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--background-subtle)] font-medium transition-all duration-300 ease-out hover:shadow-sm active:scale-[0.98]"
+                            className="btn-secondary"
                         >
                             Cancel
                         </button>

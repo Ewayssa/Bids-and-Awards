@@ -446,11 +446,11 @@ const Profile = ({ user, onUserUpdated }) => {
                                             setProfilePassword('');
                                             setProfileError('');
                                         }}
-                                        className="btn-secondary rounded-xl"
+                                        className="btn-secondary"
                                     >
                                         Cancel
                                     </button>
-                                    <button type="submit" disabled={profileLoading} className="btn-primary rounded-xl inline-flex items-center justify-center gap-2 min-w-[120px]">
+                                    <button type="submit" disabled={profileLoading} className="btn-primary inline-flex items-center justify-center gap-2 min-w-[120px]">
                                         {profileLoading && (
                                             <span className="w-4 h-4 border-2 border-[var(--primary-foreground)] border-t-transparent rounded-full animate-spin" aria-hidden />
                                         )}
@@ -572,7 +572,7 @@ const Profile = ({ user, onUserUpdated }) => {
                         </div>
                         {error && <div className="p-3 rounded-lg bg-red-500/10 text-red-600 text-sm" role="alert">{error}</div>}
                         <div className="pt-1">
-                            <button type="submit" disabled={loading || !passwordStrength.valid || newPassword !== confirmPassword} className="btn-primary rounded-xl inline-flex items-center justify-center gap-2 min-w-[140px]">
+                            <button type="submit" disabled={loading || !passwordStrength.valid || newPassword !== confirmPassword} className="btn-primary inline-flex items-center justify-center gap-2 min-w-[140px]">
                                 {loading && <span className="w-4 h-4 border-2 border-[var(--primary-foreground)] border-t-transparent rounded-full animate-spin" aria-hidden />}
                                 {loading ? 'Updating…' : 'Update password'}
                             </button>
@@ -598,10 +598,10 @@ const Profile = ({ user, onUserUpdated }) => {
                             Are you sure you want to save changes to your account details?
                         </p>
                         <div className="flex gap-3">
-                            <button type="button" onClick={() => setShowConfirmProfile(false)} className="btn-secondary flex-1 rounded-xl">
+                            <button type="button" onClick={() => setShowConfirmProfile(false)} className="btn-secondary">
                                 Cancel
                             </button>
-                            <button type="button" onClick={confirmProfileSubmit} className="btn-primary flex-1 rounded-xl" disabled={profileLoading}>
+                            <button type="button" onClick={confirmProfileSubmit} className="btn-primary" disabled={profileLoading}>
                                 {profileLoading ? 'Saving…' : 'Confirm'}
                             </button>
                         </div>
@@ -623,10 +623,10 @@ const Profile = ({ user, onUserUpdated }) => {
                             Are you sure you want to change your password? You will need to use the new password on your next login.
                         </p>
                         <div className="flex gap-3">
-                            <button type="button" onClick={() => setShowConfirmPassword(false)} className="btn-secondary flex-1 rounded-xl">
+                            <button type="button" onClick={() => setShowConfirmPassword(false)} className="btn-secondary">
                                 Cancel
                             </button>
-                            <button type="button" onClick={confirmPasswordSubmit} className="btn-primary flex-1 rounded-xl" disabled={loading}>
+                            <button type="button" onClick={confirmPasswordSubmit} className="btn-primary" disabled={loading}>
                                 {loading ? 'Updating…' : 'Confirm'}
                             </button>
                         </div>

@@ -148,7 +148,7 @@ const AuditTrail = () => {
                                 type="button"
                                 onClick={() => setTablePage((p) => Math.max(1, p - 1))}
                                 disabled={tablePage <= 1}
-                                className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                className="p-2 border rounded-lg disabled:opacity-50"
                                 aria-label="Previous page"
                             >
                                 <MdChevronLeft className="w-5 h-5" />
@@ -160,7 +160,7 @@ const AuditTrail = () => {
                                 type="button"
                                 onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
                                 disabled={tablePage >= totalPages}
-                                className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
+                                className="p-2 border rounded-lg disabled:opacity-50"
                                 aria-label="Next page"
                             >
                                 <MdChevronRight className="w-5 h-5" />

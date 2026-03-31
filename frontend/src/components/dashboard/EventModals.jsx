@@ -108,9 +108,9 @@ export const EventModals = ({
                                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Event title</label>
                                 <input type="text" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="input-field w-full" autoFocus />
                             </div>
-                            <div className="flex gap-3 pt-2">
-                                <button type="button" onClick={() => setEventModal(null)} className="btn-secondary flex-1 rounded-xl">Cancel</button>
-                                <button type="submit" disabled={eventSubmitting} className="btn-primary flex-1 rounded-xl inline-flex items-center justify-center gap-2">
+                            <div className="flex gap-3 justify-end pt-2">
+                                <button type="button" onClick={() => setEventModal(null)} className="btn-secondary">Cancel</button>
+                                <button type="submit" disabled={eventSubmitting} className="btn-primary inline-flex items-center justify-center gap-2">
                                     <MdAdd className="w-4 h-4" /> {eventSubmitting ? 'Adding…' : 'Add event'}
                                 </button>
                             </div>
@@ -147,7 +147,7 @@ export const EventModals = ({
                                 >
                                     Delete
                                 </button>
-                                <button onClick={handleUpdateEvent} disabled={editEventSubmitting} className="btn-primary flex-1 rounded-xl">
+                                <button onClick={handleUpdateEvent} disabled={editEventSubmitting} className="btn-primary">
                                     {editEventSubmitting ? 'Saving…' : 'Save changes'}
                                 </button>
                             </div>
@@ -163,8 +163,8 @@ export const EventModals = ({
                         <h2 className="text-lg font-semibold mb-2">Confirm</h2>
                         <p className="text-[var(--text-muted)] mb-6">Are you sure you want to add this event?</p>
                         <div className="flex gap-3 justify-end">
-                            <button onClick={() => setConfirmAddEvent(null)} className="btn-secondary rounded-xl">Cancel</button>
-                            <button onClick={handleAddEvent} className="btn-primary rounded-xl">Yes, add event</button>
+                            <button onClick={() => setConfirmAddEvent(null)} className="btn-secondary">Cancel</button>
+                            <button onClick={handleAddEvent} className="btn-primary">Yes, add event</button>
                         </div>
                     </div>
                  </div>
@@ -176,8 +176,8 @@ export const EventModals = ({
                         <h2 className="text-lg font-semibold mb-2 text-red-600">Delete Event</h2>
                         <p className="text-[var(--text-muted)] mb-6">Are you sure you want to delete this event?</p>
                         <div className="flex gap-3 justify-end">
-                            <button onClick={() => setConfirmDeleteEvent(null)} className="btn-secondary rounded-xl">Cancel</button>
-                            <button onClick={handleDeleteEvent} disabled={deleteSubmitting} className="rounded-xl px-4 py-2 bg-red-600 text-white hover:bg-red-700">
+                            <button onClick={() => setConfirmDeleteEvent(null)} className="btn-secondary">Cancel</button>
+                            <button onClick={handleDeleteEvent} disabled={deleteSubmitting} className="rounded-lg px-4 py-2 bg-red-600 text-white hover:bg-red-700">
                                 {deleteSubmitting ? 'Deleting...' : 'Delete'}
                             </button>
                         </div>

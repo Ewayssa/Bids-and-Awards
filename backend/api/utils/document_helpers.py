@@ -43,12 +43,12 @@ def get_document_missing_count(document):
     # Define document types that don't require a title
     no_title_required_types = (
         'Invitation to COA',
-        'List of Venue',
+        'Lease of Venue',
         'Lease of Venue: Table Rating Factor',
         'PHILGEPS - Small Value Procurement',
         'PHILGEPS - Public Bidding',
         'Certificate of DILG - Small Value Procurement',
-        'Certificate of DILG - List of Venue',
+        'Certificate of DILG - Lease of Venue',
         'Certificate of DILG - Public Bidding',
         'Small Value Procurement',
         'Public Bidding'
@@ -56,7 +56,7 @@ def get_document_missing_count(document):
     
     _no_title_required = (
         sub_doc_trim in no_title_required_types 
-        or sub_doc_trim.endswith(' - List of Venue')
+        or sub_doc_trim.endswith(' - Lease of Venue')
     )
     
     # Core identifying fields
@@ -230,16 +230,16 @@ def get_document_missing_count(document):
 
     # File requirement verification
     no_file_required_list = (
-        'List of Venue',
+        'Lease of Venue',
         'Lease of Venue: Table Rating Factor',
         'Minutes of the Meeting',
         'Notice of Award (Posted)',
         'Abstract of Quotation (Posted)',
         'BAC Resolution (Posted)'
     )
-    is_rfq_list_of_venue = sub_doc_trim.endswith(' - List of Venue')
+    is_rfq_lease_of_venue = sub_doc_trim.endswith(' - Lease of Venue')
     
-    if sub_doc_trim not in no_file_required_list and not is_rfq_list_of_venue:
+    if sub_doc_trim not in no_file_required_list and not is_rfq_lease_of_venue:
         has_file = bool(document.file)
         if has_file and hasattr(document.file, 'name'):
             has_file = bool(document.file.name and str(document.file.name).strip())

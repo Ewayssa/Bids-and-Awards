@@ -16,10 +16,10 @@ CHECKLIST_DOC_TYPES = [
         'Requisition and Issue Slip'
     ]),
     ('RFQ Concerns', [
-        'PHILGEPS - List of Venue',
+        'PHILGEPS - Lease of Venue',
         'PHILGEPS - Small Value Procurement',
         'PHILGEPS - Public Bidding',
-        'Certificate of DILG - List of Venue',
+        'Certificate of DILG - Lease of Venue',
         'Certificate of DILG - Small Value Procurement',
         'Certificate of DILG - Public Bidding',
     ]),

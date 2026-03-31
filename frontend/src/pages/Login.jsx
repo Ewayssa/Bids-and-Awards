@@ -251,11 +251,7 @@ const Login = ({ onLogin, infoMessage }) => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full mt-5 py-3 rounded-xl font-semibold text-white text-center text-sm tracking-wide transition-all duration-200 disabled:opacity-70 hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 active:scale-[0.99]"
-                            style={{
-                                background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)',
-                                boxShadow: '0 4px 14px rgba(22, 163, 74, 0.4)',
-                            }}
+                            className="btn-primary w-full mt-5 py-3"
                         >
                             {loading ? 'Signing in…' : 'Sign in'}
                         </button>
@@ -361,11 +357,11 @@ const Login = ({ onLogin, infoMessage }) => {
                                     disabled={forgotLoading}
                                 />
                                 <p className="text-xs text-gray-500">The admin will be notified after you reset.</p>
-                                <div className="flex gap-3 pt-2">
+                                <div className="flex gap-3 justify-end pt-2">
                                     <button
                                         type="button"
                                         onClick={closeForgotModal}
-                                        className="flex-1 py-2.5 rounded-lg font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                        className="btn-secondary"
                                         disabled={forgotLoading}
                                     >
                                         Cancel
@@ -373,11 +369,7 @@ const Login = ({ onLogin, infoMessage }) => {
                                     <button
                                         type="submit"
                                         disabled={forgotLoading}
-                                        className="flex-1 py-2.5 rounded-lg font-semibold text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-70"
-                                        style={{
-                                            background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)',
-                                            boxShadow: '0 2px 8px rgba(22, 163, 74, 0.35)',
-                                        }}
+                                        className="btn-primary"
                                     >
                                         {forgotLoading ? 'Resetting…' : 'Reset password'}
                                     </button>
@@ -485,11 +477,11 @@ const Login = ({ onLogin, infoMessage }) => {
                                     autoComplete="new-password"
                                 />
                                 <p className="text-xs text-gray-500">Your account must be activated by an administrator before you can log in.</p>
-                                <div className="flex gap-3 pt-2">
+                                <div className="flex gap-3 justify-end pt-2">
                                     <button
                                         type="button"
                                         onClick={closeRegisterModal}
-                                        className="flex-1 py-2.5 rounded-lg font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                        className="btn-secondary"
                                         disabled={registerLoading}
                                     >
                                         Cancel
@@ -497,11 +489,7 @@ const Login = ({ onLogin, infoMessage }) => {
                                     <button
                                         type="submit"
                                         disabled={registerLoading}
-                                        className="flex-1 py-2.5 rounded-lg font-semibold text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-70"
-                                        style={{
-                                            background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)',
-                                            boxShadow: '0 2px 8px rgba(22, 163, 74, 0.35)',
-                                        }}
+                                        className="btn-primary"
                                     >
                                         {registerLoading ? 'Creating…' : 'Create account'}
                                     </button>

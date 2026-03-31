@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { REPORT_COLUMNS } from './reportConstants';
+import { REPORT_COLUMNS, HEADER_GROUPS } from './reportConstants';
 import { formatNumberDisplay, toDDMMYYYY } from './reportHelpers';
 
 /**
@@ -20,7 +20,7 @@ export const exportToExcel = async (encodedRows, filteredReports) => {
     const totalCols = REPORT_COLUMNS.length;
 
     const workbook = new ExcelJS.Workbook();
-    const ws = workbook.addWorksheet('Monitoring Report', { views: [{ state: 'frozen', ySplit: 7 }] });
+    const ws = workbook.addWorksheet('Monitoring Report', { views: [{ state: 'frozen', ySplit: 6 }] });
 
     const makeFill = (argb) => ({
         type: 'pattern',
@@ -60,29 +60,68 @@ export const exportToExcel = async (encodedRows, filteredReports) => {
 
     // Section header
     ws.getCell(rowNum, 1).value = 'COMPLETED PROCUREMENT ACTIVITIES';
-    ws.getCell(rowNum, 1).font = { bold: true };
-    ws.getCell(rowNum, 1).fill = makeFill('FFD1D5DB');
+    ws.getCell(rowNum, 1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ws.getCell(rowNum, 1).fill = makeFill('FF16A34A');
     ws.getCell(rowNum, 1).border = borderAll;
     ws.mergeCells(rowNum, 1, rowNum, totalCols);
     rowNum += 1;
 
-    // Placeholder rows
-    for (let c = 1; c <= totalCols; c++) {
-        ws.getCell(rowNum, c).fill = makeFill('FFE5E7EB');
-        ws.getCell(rowNum, c).border = borderAll;
-        ws.getCell(rowNum + 1, c).fill = makeFill('FFFEF3C7');
-        ws.getCell(rowNum + 1, c).border = borderAll;
-    }
-    rowNum += 2;
-
-    // Table Header
-    REPORT_COLUMNS.forEach((col, c) => {
-        const cell = ws.getCell(rowNum, c + 1);
-        cell.value = col.label;
-        cell.font = { bold: true };
-        cell.fill = makeFill('FFD1D5DB');
-        cell.border = borderAll;
+    // 2-Tier Table Header
+    const groupStartCols = {};
+    let currentCol = 1;
+    
+    // Write Top Level (Groups)
+    HEADER_GROUPS.forEach(grp => {
+        const start = currentCol;
+        const width = grp.colKeys.length;
+        const end = start + width - 1;
+        
+        ws.getCell(rowNum, start).value = grp.groupLabel;
+        ws.getCell(rowNum, start).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        ws.getCell(rowNum, start).fill = makeFill('FF15803D'); // Darker green for top header
+        ws.getCell(rowNum, start).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        
+        // Merge if it spans multiple columns, else just format
+        if (width > 1) {
+            ws.mergeCells(rowNum, start, rowNum, end);
+        } else {
+             ws.mergeCells(rowNum, start, rowNum + 1, start); // Merge down
+        }
+        
+        for (let i = start; i <= end; i++) {
+            ws.getCell(rowNum, i).border = borderAll;
+        }
+        
+        groupStartCols[grp.groupLabel] = start;
+        currentCol += width;
     });
+    
+    rowNum += 1;
+
+    // Write Sub Level (Individual Columns)
+    currentCol = 1;
+    HEADER_GROUPS.forEach(grp => {
+        if (grp.colKeys.length > 1) {
+            grp.colKeys.forEach((key) => {
+                const colDef = REPORT_COLUMNS.find(c => c.key === key);
+                const cell = ws.getCell(rowNum, currentCol);
+                cell.value = colDef ? (colDef.shortLabel || colDef.label) : key;
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = makeFill('FF16A34A'); // Normal green for sub-header
+                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                cell.border = borderAll;
+                currentCol += 1;
+            });
+        } else {
+            // Already merged vertically, just advance col
+            currentCol += 1;
+        }
+        // Force borders on the second row for merged cells too
+        for(let i = groupStartCols[grp.groupLabel]; i < currentCol; i++) {
+             ws.getCell(rowNum, i).border = borderAll;
+        }
+    });
+
     rowNum += 1;
 
     // Data rows
@@ -90,21 +129,22 @@ export const exportToExcel = async (encodedRows, filteredReports) => {
         ? encodedRows.map((row) =>
             REPORT_COLUMNS.map((col) => {
                 const v = row[col.key] ?? '';
-                if (col.type === 'date') return v ? (toDDMMYYYY(v) || v) : 'N/A';
+                if (col.type === 'date') return v ? (toDDMMYYYY(v) || v) : '—';
                 if (col.type === 'number') return formatNumberDisplay(v) || '';
                 return v;
             })
         )
         : filteredReports.map((r) => Array(totalCols).fill('').map((_, i) => i === 1 ? r.title : i === 2 ? r.submitting_office : ''));
 
-    const pinkFill = makeFill('FFFDF2F8');
+    const whiteFill = makeFill('FFFFFFFF');
     dataRows.forEach((rowValues) => {
         rowValues.forEach((val, c) => {
             const cell = ws.getCell(rowNum, c + 1);
             cell.value = val;
-            cell.fill = pinkFill;
+            cell.fill = whiteFill;
             cell.border = borderAll;
-            if (REPORT_COLUMNS[c]?.type === 'number' && val !== '') cell.alignment = { horizontal: 'right' };
+            if (REPORT_COLUMNS[c]?.type === 'number' && val !== '') cell.alignment = { horizontal: 'right', vertical: 'middle' };
+            else cell.alignment = { vertical: 'middle', wrapText: true };
         });
         rowNum += 1;
     });

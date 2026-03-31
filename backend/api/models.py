@@ -17,7 +17,7 @@ CHECKLIST_DOC_TYPES = [
         'Market Scopping'
     ]),
     ('Procurement', ['Requisition and Issue Slip']),
-    ('Pre-Bidding', ['List of Venue', 'Invitation to COA']),
+    ('Pre-Bidding', ['Lease of Venue', 'Invitation to COA']),
     ('Bidding', ['Attendance Sheet', 'BAC Resolution', 'Abstract of Quotation']),
     ('Post Qualification', ['Lease of Venue: Table Rating Factor', 'Notice of Award']),
     ('Contract', ['Contract Services/Purchase Order', 'Notice to Proceed', 'OSS']),

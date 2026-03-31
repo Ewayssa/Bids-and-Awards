@@ -9,7 +9,7 @@ export const useDashboard = (user) => {
         totalDocumentsUploaded: 0, 
         calendarEvents: [], 
         procurementMethodCounts: { 
-            'List of Venue': 0, 
+            'Lease of Venue': 0,  
             'Small Value Procurement': 0, 
             'Public Bidding': 0 
         } 
@@ -35,7 +35,7 @@ export const useDashboard = (user) => {
                     : (data?.pieData ? Number(data.pieData[0]) : 0),
                 calendarEvents: data?.calendarEvents ?? [],
                 procurementMethodCounts: data?.procurementMethodCounts ?? { 
-                    'List of Venue': 0, 
+                    'Lease of Venue': 0,  
                     'Small Value Procurement': 0, 
                     'Public Bidding': 0 
                 },
@@ -47,7 +47,7 @@ export const useDashboard = (user) => {
                 totalDocumentsUploaded: 0, 
                 calendarEvents: [], 
                 procurementMethodCounts: { 
-                    'List of Venue': 0, 
+                    'Lease of Venue': 0,  
                     'Small Value Procurement': 0, 
                     'Public Bidding': 0 
                 } 

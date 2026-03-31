@@ -24,43 +24,82 @@ class DashboardService:
             'pending': pending_docs
         }
 
-    @staticmethod
-    def get_checklist_global_pending(docs_qs):
-        """Global checklist pending slots across all folders."""
+    # Flat list of all required sub-document types per checklist
+    # These must match the subDoc values stored in the database (from frontend DOC_TYPES)
+    REQUIRED_SUB_DOCS = [
+        'Purchase Request',
+        'Activity Design',
+        'Project Procurement Management Plan/Supplemental PPMP',
+        'Annual Procurement Plan',
+        'Market Scopping',
+        'Requisition and Issue Slip',
+        'Invitation to COA',
+        'Attendance Sheet',
+        'BAC Resolution',
+        'Abstract of Quotation',
+        'Lease of Venue: Table Rating Factor',
+        'Notice of Award',
+        'Contract Services/Purchase Order',
+        'Notice to Proceed',
+        'OSS',
+        "Applicable: Secretary's Certificate and Special Power of Attorney",
+        # RFQ Concerns — one of each type per procurement method
+        'PHILGEPS - Small Value Procurement',
+        'PHILGEPS - Public Bidding',
+        'Certificate of DILG - Small Value Procurement',
+        'Certificate of DILG - Public Bidding',
+        # Lease of Venue (pre-bidding)
+        'Lease of Venue',
+    ]
+
+    # Sub-docs that apply only to SVP folders
+    SVP_ONLY = {
+        'PHILGEPS - Small Value Procurement',
+        'Certificate of DILG - Small Value Procurement',
+    }
+    # Sub-docs that apply only to PB folders
+    PB_ONLY = {
+        'PHILGEPS - Public Bidding',
+        'Certificate of DILG - Public Bidding',
+    }
+
+    @classmethod
+    def get_checklist_global_pending(cls, docs_qs):
+        """Count checklist slots not yet submitted across all PR folders."""
         docs = list(docs_qs.filter(uploaded_at__isnull=False))
-        
+
         folders = {}
         for d in docs:
             pr = (d.prNo or '').strip()
             if pr:
-                if pr not in folders:
-                    folders[pr] = []
-                folders[pr].append(d)
-        
+                folders.setdefault(pr, []).append(d)
+
         pending_slot = 0
-        
+
         for pr, folder_docs in folders.items():
             is_svp = any('Small Value Procurement' in (d.subDoc or '') for d in folder_docs)
             is_pb = any('Public Bidding' in (d.subDoc or '') for d in folder_docs)
-            
-            for category, sub_docs in DocumentStatusCalculator.CHECKLIST_DOC_TYPES:
-                cat_trim = (category or '').strip()
-                for sub_doc in sub_docs:
-                    sub_trim = (sub_doc or '').strip()
-                    
-                    if is_svp and 'Public Bidding' in sub_trim:
+
+            submitted_sub_docs = {(d.subDoc or '').strip() for d in folder_docs}
+
+            for sub_trim in cls.REQUIRED_SUB_DOCS:
+                # Skip procurement-method-specific docs when method doesn't match
+                if sub_trim in cls.SVP_ONLY and not is_svp:
+                    continue
+                if sub_trim in cls.PB_ONLY and not is_pb:
+                    continue
+                # RFQ base types are superseded by variants
+                if sub_trim in ('PHILGEPS - Small Value Procurement', 'PHILGEPS - Public Bidding',
+                                'Certificate of DILG - Small Value Procurement', 'Certificate of DILG - Public Bidding'):
+                    # Only count if this folder has the relevant procurement method
+                    if sub_trim in cls.SVP_ONLY and not is_svp:
                         continue
-                    if is_pb and 'Small Value Procurement' in sub_trim:
+                    if sub_trim in cls.PB_ONLY and not is_pb:
                         continue
-                    
-                    matches = [
-                        d for d in folder_docs
-                        if (d.category or '').strip() == cat_trim and (d.subDoc or '').strip() == sub_trim
-                    ]
-                    
-                    if not matches:
-                        pending_slot += 1
-                            
+
+                if sub_trim not in submitted_sub_docs:
+                    pending_slot += 1
+
         return pending_slot
 
     @classmethod
@@ -70,7 +109,7 @@ class DashboardService:
             docs_qs = docs_qs.filter(uploadedBy=uploaded_by)
 
         doc_counts = cls.get_document_status_counts(docs_qs)
-        
+
         pie_data = [
             doc_counts['total'],
             doc_counts['completed'],
@@ -82,7 +121,7 @@ class DashboardService:
 
         docs_list = list(docs_qs.filter(uploaded_at__isnull=False))
         procurement_method_counts = {
-            'List of Venue': cls._count_subdoc(docs_list, 'List of Venue'),
+            'Lease of Venue': cls._count_subdoc(docs_list, 'Lease of Venue'),
             'Small Value Procurement': cls._count_subdoc(docs_list, 'Small Value Procurement'),
             'Public Bidding': cls._count_subdoc(docs_list, 'Public Bidding'),
         }
@@ -103,8 +142,8 @@ class DashboardService:
 
     @staticmethod
     def _count_subdoc(docs, pattern):
-        if pattern == 'List of Venue':
-            return sum(1 for d in docs if (d.subDoc or '').strip() == 'List of Venue' or ((d.subDoc or '').strip().endswith(' - List of Venue')))
+        if pattern == 'Lease of Venue':
+            return sum(1 for d in docs if (d.subDoc or '').strip() == 'Lease of Venue' or ((d.subDoc or '').strip().endswith(' - Lease of Venue')))
         if pattern == 'Small Value Procurement':
             return sum(1 for d in docs if (d.subDoc or '').strip() == 'Small Value Procurement' or ((d.subDoc or '').strip().endswith(' - Small Value Procurement')))
         if pattern == 'Public Bidding':

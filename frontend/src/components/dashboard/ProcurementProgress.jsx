@@ -48,7 +48,7 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
     ];
 
     const barSeries = [
-        { label: 'Lease of Venue', key: 'List of Venue', color: '#22c55e', gradient: 'linear-gradient(180deg, #4ade80 0%, #22c55e 50%, #16a34a 100%)' },
+        { label: 'Lease of Venue', key: 'Lease of Venue', color: '#22c55e', gradient: 'linear-gradient(180deg, #4ade80 0%, #22c55e 50%, #16a34a 100%)' },
         { label: 'Small Value Procurement', key: 'Small Value Procurement', color: '#3b82f6', gradient: 'linear-gradient(180deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%)' },
         { label: 'Public Bidding', key: 'Public Bidding', color: '#8b5cf6', gradient: 'linear-gradient(180deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%)' },
     ];

@@ -58,7 +58,10 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        password = validated_data.pop('password', None) or DEFAULT_USER_PASSWORD
+        import secrets, string
+        alphabet = string.ascii_letters + string.digits + '!@#$%'
+        random_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+        password = validated_data.pop('password', None) or random_password
         username = validated_data.pop('username')
         email = validated_data.pop('email', None) or ''
         # When username looks like an email, populate email field (used for password reset)

@@ -99,11 +99,7 @@ const ChangePassword = ({ user, onPasswordChanged }) => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full mt-2 py-3.5 rounded-xl font-semibold text-white text-center text-sm uppercase tracking-wide disabled:opacity-70 hover:opacity-95 transition-opacity"
-                        style={{
-                            background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)',
-                            boxShadow: '0 4px 14px rgba(22, 163, 74, 0.45)',
-                        }}
+                        className="btn-primary w-full mt-2 py-3.5"
                     >
                         {loading ? 'Updating…' : 'Set new password'}
                     </button>

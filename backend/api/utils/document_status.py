@@ -20,7 +20,7 @@ class DocumentStatusCalculator:
             "Requisition and Issue Slip"
         ]),
         ("Venue", [
-            "List of Venue",
+            "Lease of Venue",
             "Invitation to COA",
             "Attendance Sheet"
         ]),
@@ -53,12 +53,12 @@ class DocumentStatusCalculator:
     # Sub-docs that don't require a title
     NO_TITLE_REQUIRED = {
         'Invitation to COA',
-        'List of Venue',
+        'Lease of Venue',
         'Lease of Venue: Table Rating Factor',
         'PHILGEPS - Small Value Procurement',
         'PHILGEPS - Public Bidding',
         'Certificate of DILG - Small Value Procurement',
-        'Certificate of DILG - List of Venue',
+        'Certificate of DILG - Lease of Venue',
         'Certificate of DILG - Public Bidding',
         'Small Value Procurement',
         'Public Bidding',
@@ -66,7 +66,7 @@ class DocumentStatusCalculator:
 
     # Sub-docs that don't require a file upload
     NO_FILE_REQUIRED = {
-        'List of Venue',
+        'Lease of Venue',
         'Lease of Venue: Table Rating Factor',
         'Minutes of the Meeting',
         'Notice of Award (Posted)',
@@ -126,7 +126,7 @@ class DocumentStatusCalculator:
         """
         # Title check (with exceptions)
         sub_doc = (document.subDoc or '').strip()
-        no_title_required = any(sub_doc == item or sub_doc.endswith(f' - {item}') for item in ['List of Venue']) or sub_doc in cls.NO_TITLE_REQUIRED
+        no_title_required = any(sub_doc == item or sub_doc.endswith(f' - {item}') for item in ['Lease of Venue']) or sub_doc in cls.NO_TITLE_REQUIRED
         has_title = (bool(document.title and document.title.strip()) if not no_title_required else True)
 
         prno_ok = ignore_prno or bool(document.prNo and document.prNo.strip())
@@ -147,7 +147,7 @@ class DocumentStatusCalculator:
             'Project Procurement Management Plan/Supplemental PPMP': cls._check_ppmp,
             'Market Scopping': cls._check_market_scoping,
             'Requisition and Issue Slip': cls._check_requisition_slip,
-            'List of Venue': cls._check_list_of_venue,
+            'Lease of Venue': cls._check_lease_of_venue,
             'Invitation to COA': cls._check_invitation_coa,
             'Attendance Sheet': cls._check_attendance_sheet,
             'BAC Resolution': cls._check_bac_resolution,
@@ -173,7 +173,7 @@ class DocumentStatusCalculator:
     @classmethod
     def _has_required_file(cls, document, sub_doc: str) -> bool:
         """Check if file is required and present."""
-        if sub_doc in cls.NO_FILE_REQUIRED or sub_doc.endswith(' - List of Venue'):
+        if sub_doc in cls.NO_FILE_REQUIRED or sub_doc.endswith(' - Lease of Venue'):
             return True
 
         has_file = bool(document.file)
@@ -219,7 +219,7 @@ class DocumentStatusCalculator:
         )
 
     @staticmethod
-    def _check_list_of_venue(document) -> bool:
+    def _check_lease_of_venue(document) -> bool:
         return True  # No additional requirements
 
     @staticmethod
