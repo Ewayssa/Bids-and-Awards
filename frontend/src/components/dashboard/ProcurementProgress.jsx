@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatNumber } from '../../utils/formatNumber';
+import { formatNumber } from '../../utils/helpers';
 
 export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProgress, loading }) => {
     const [hoveredSlice, setHoveredSlice] = useState(null);

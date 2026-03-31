@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { userService } from '../services/api';
 import PasswordInput from '../components/PasswordInput';
-import { validatePassword, STRICT_PASSWORD_RULES } from '../utils/password';
+import { validatePassword, STRICT_PASSWORD_RULES } from '../utils/auth';
 
 const ChangePassword = ({ user, onPasswordChanged }) => {
     const [currentPassword, setCurrentPassword] = useState('');

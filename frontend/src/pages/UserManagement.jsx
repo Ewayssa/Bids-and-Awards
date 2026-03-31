@@ -3,7 +3,7 @@ import { userService } from '../services/api';
 import { MdPersonAdd, MdClose, MdCheckCircle, MdPeople, MdSearch, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { IoCreateOutline } from 'react-icons/io5';
 import PageHeader from '../components/PageHeader';
-import { ROLES, getRoleDisplayName, getAvailableRoles, hasPermission, PERMISSIONS } from '../utils/roles';
+import { ROLES, getRoleDisplayName, getAvailableRoles, hasPermission, PERMISSIONS } from '../utils/auth';
 
 const TABLE_PAGE_SIZE = 10;
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MdExpandMore, MdLogout } from 'react-icons/md';
-import { getRoleDisplayName } from '../utils/roles';
+import { getRoleDisplayName } from '../utils/auth';
 
 const UserAccountDropdown = ({ user, onLogout, className = '' }) => {
     const [open, setOpen] = useState(false);

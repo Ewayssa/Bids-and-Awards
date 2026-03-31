@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { documentService, reportService } from '../services/api';
-import { ROLES } from '../utils/roles';
+import { ROLES } from '../utils/auth';
 import {
     MdUpload,
     MdEdit,
@@ -34,19 +34,18 @@ import {
     SORT_DIRECTIONS
 } from '../utils/constants';
 import { toLettersOnly, toNumbersOnly, formatCurrencyValue } from '../utils/validation';
-import { computeRFQNoFromDate, formatInputDate as formatDate } from '../utils/formatters';
-import { parseApiError } from '../utils/api-errors';
-import {
+import { 
+    computeRFQNoFromDate, 
+    formatInputDate as formatDate,
     filterDocumentsByQuery,
     filterDocumentsByCategory,
     filterDocumentsByStatus,
     sortDocuments,
     groupDocumentsByCategory
-} from '../utils/documentHelpers';
+} from '../utils/helpers';
+import { parseApiError } from '../utils/errors';
 import { useDocumentForm } from '../hooks/useDocumentForm';
-import { useDocumentFilters } from '../hooks/useDocumentFilters';
-import { useDocumentPagination } from '../hooks/useDocumentPagination';
-import { useDocumentValidation } from '../hooks/useDocumentValidation';
+import { useDocumentTable } from '../hooks/useDocumentTable';
 import { useReportForm } from '../hooks/useReportForm';
 
 const Encode = ({ user }) => {
@@ -75,6 +74,11 @@ const Encode = ({ user }) => {
         submitNewDocument,
         setError: setNewError,
         submitting: newSubmitting,
+        newFormErrors: internalErrors,
+        isFormValid: isInternalValid,
+        checklistData: formChecklistData,
+        validateAttendanceMembers,
+        validateAbstractBidders
     } = useDocumentForm();
 
     const {
@@ -98,10 +102,7 @@ const Encode = ({ user }) => {
         setShowFilters,
         resetFilters,
         hasActiveFilters,
-        toggleSort
-    } = useDocumentFilters();
-
-    const {
+        toggleSort,
         tablePage,
         setTablePage,
         resetPage,
@@ -111,15 +112,7 @@ const Encode = ({ user }) => {
         nextPage,
         prevPage,
         goToPage
-    } = useDocumentPagination();
-
-    const {
-        newFormErrors: internalErrors,
-        isFormValid: isInternalValid,
-        checklistData: formChecklistData,
-        validateAttendanceMembers,
-        validateAbstractBidders
-    } = useDocumentValidation(form, selectedSubDocType);
+    } = useDocumentTable();
 
     // Combine validation errors from hook and manual checks
     const newFormErrors = useMemo(() => {
@@ -1266,7 +1259,6 @@ const Encode = ({ user }) => {
                                                                     <th className="table-th uppercase">Procurement Type</th>
                                                                     <th className="table-th uppercase">Date</th>
                                                                     <th className="table-th uppercase">Status</th>
-                                                                    {isAdmin && <th className="table-th">Actions</th>}
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
@@ -1292,26 +1284,6 @@ const Encode = ({ user }) => {
                                                                                 <span className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium border w-fit ${statusColor} capitalize`}>
                                                                                     {doc.status || 'pending'}
                                                                                 </span>
-                                                                            </td>
-                                                                            <td className="table-td">
-                                                                                <div className="flex items-center justify-center gap-2">
-                                                                                    {doc.file_url ? (
-<button
-                                                                                            type="button"
-                                                                                            onClick={() => {
-                                                                                                setPreviewSequence(null);
-                                                                                                openPreview(doc);
-                                                                                            }}
-                                                                                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--primary-muted)]/50 hover:bg-[var(--primary-muted)] text-[var(--primary)] hover:scale-105 transition-all duration-300 ease-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 rounded-full"
-                                                                                            title="View document"
-                                                                                        >
-                                                                                            <MdVisibility className="w-3.5 h-3.5 flex-shrink-0" />
-                                                                                            View
-                                                                                        </button>
-                                                                                    ) : null}
-
-                                                                                    {!doc.file_url && !isUserUploader(doc) && <span className="text-[var(--text-muted)]">—</span>}
-                                                                                </div>
                                                                             </td>
                                                                         </tr>
                                                                     );
@@ -1352,7 +1324,6 @@ const Encode = ({ user }) => {
                                                     Status {sortKey === 'status' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
-{isAdmin && <th className="table-th">Actions</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
@@ -1381,28 +1352,6 @@ const Encode = ({ user }) => {
                                                             {doc.status === 'complete' ? 'Completed' : doc.status === 'ongoing' ? 'Ongoing' : (doc.status || 'Pending')}
                                                         </span>
                                                     </td>
-                    {isAdmin && (
-                                                        <td className="table-td">
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                {doc.file_url ? (
-<button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            setPreviewSequence(null);
-                                                                            openPreview(doc);
-                                                                        }}
-className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--primary-muted)]/50 hover:bg-[var(--primary-muted)] text-[var(--primary)] hover:scale-105 transition-all duration-300 ease-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 rounded-full"
-                                                                        title="View document"
-                                                                    >
-                                                                        <MdVisibility className="w-3.5 h-3.5 flex-shrink-0" />
-                                                                        View
-                                                                    </button>
-                                                                ) : null}
-
-                                                                {!doc.file_url && !isUserUploader(doc) && <span className="text-[var(--text-muted)]">—</span>}
-                                                            </div>
-                                                        </td>
-                                                    )}
                                                 </tr>
                                             );
                                         })}
@@ -3260,147 +3209,181 @@ className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs f
                 const showNav = totalDocs > 1;
                 return (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" aria-modal="true" role="dialog">
-                        <div className="bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0">
-                                <h3 className="text-base font-semibold text-[var(--text)]">BAC Folder No. {manageFolderPopup.prNo}</h3>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-xl bg-green-600 text-white shadow-sm">
+                                        <MdFolder className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-bold text-[var(--text)]">BAC Folder No. {manageFolderPopup.prNo}</h3>
+                                        <p className="text-xs text-[var(--text-muted)]">Document {currentIndex + 1} of {totalDocs}</p>
+                                    </div>
+                                </div>
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
                                         onClick={() => {
                                             setManageFolderPopup(null);
                                         }}
-                                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg"
+                                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
                                         aria-label="Close"
                                     >
                                         <MdClose className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
                                 {totalDocs === 0 ? (
-                                    <div className="p-6 text-center text-[var(--text-muted)]">No documents in this folder.</div>
+                                    <div className="p-12 text-center text-[var(--text-muted)] w-full flex flex-col items-center justify-center">
+                                        <MdDescription className="w-16 h-16 opacity-20 mb-4" />
+                                        <p className="text-lg font-medium">No documents in this folder.</p>
+                                    </div>
                                 ) : (
                                     <>
-                                        <div className="flex-1 overflow-auto bg-gray-100 p-4 min-h-0 flex flex-col">
-                                            {!manageFolderPopupPreview ? (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
-                                                    <span>Loading…</span>
-                                                </div>
-                                            ) : manageFolderPopupPreview.previewBlobUrl === 'no-file' ? (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <p className="font-medium">No file</p>
-                                                    <p className="text-sm mt-1">This document has no file uploaded.</p>
-                                                </div>
-                                            ) : manageFolderPopupPreview.previewBlobUrl === 'failed' ? (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <p>Could not load file.</p>
-                                                </div>
-                                            ) : manageFolderPopupPreview.previewBlobUrl ? (
-                                                (() => {
-                                                    const ct = manageFolderPopupPreview.previewBlobType || '';
-                                                    const isPdf = ct.includes('pdf');
-                                                    const isImage = /^image\//.test(ct);
-                                                    const previewBoxClass = 'w-full min-h-[480px] flex-1 rounded-lg border border-[var(--border)] bg-white overflow-hidden flex flex-col';
-                                                    const docTitle = manageFolderPopupPreview.doc?.title || manageFolderPopupPreview.doc?.subDoc || 'Document';
-                                                    const previewActionBar = (
-                                                        <div className="w-full flex items-center justify-between gap-3 px-1">
-                                                            <div className="min-w-0">
-                                                                <p className="text-sm font-semibold text-[var(--text)] truncate">{docTitle}</p>
-                                                                <p className="text-xs text-[var(--text-muted)] truncate">Preview</p>
+                                        {/* Left Side: Procurement Details (Desktop) */}
+                                        <div className="hidden lg:block w-[320px] shrink-0 min-h-0">
+                                            <DocDetailsView doc={currentDoc} />
+                                        </div>
+
+                                        {/* Right Side: Preview & Meta */}
+                                        <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-gray-50/50">
+                                            {/* Details for mobile only */}
+                                            <div className="lg:hidden border-b border-[var(--border)] max-h-48 overflow-y-auto shrink-0 bg-white">
+                                                <DocDetailsView doc={currentDoc} />
+                                            </div>
+
+                                            <div className="flex-1 overflow-auto p-4 min-h-0 flex flex-col">
+                                                {!manageFolderPopupPreview ? (
+                                                    <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-2xl border-2 border-dashed border-[var(--border)] bg-white/50">
+                                                        <div className="w-12 h-12 rounded-full border-4 border-[var(--border)] border-t-green-600 animate-spin mb-4" aria-hidden />
+                                                        <span className="font-medium">Loading document metadata…</span>
+                                                    </div>
+                                                ) : manageFolderPopupPreview.previewBlobUrl === 'no-file' ? (
+                                                    <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-2xl border-2 border-dashed border-[var(--border)] bg-white/50">
+                                                        <MdError className="w-12 h-12 text-amber-500 mb-4" />
+                                                        <p className="text-lg font-bold text-[var(--text)]">No file available</p>
+                                                        <p className="text-sm mt-1 max-w-[240px] text-center">This document record exists but no digital file was uploaded.</p>
+                                                    </div>
+                                                ) : manageFolderPopupPreview.previewBlobUrl === 'failed' ? (
+                                                    <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-2xl border-2 border-dashed border-red-100 bg-red-50/30">
+                                                        <MdError className="w-12 h-12 text-red-500 mb-4" />
+                                                        <p className="text-lg font-bold text-red-700">Preview Failed</p>
+                                                        <p className="text-sm mt-1 text-red-600 text-center">Could not load the document preview.</p>
+                                                    </div>
+                                                ) : manageFolderPopupPreview.previewBlobUrl ? (
+                                                    (() => {
+                                                        const ct = manageFolderPopupPreview.previewBlobType || '';
+                                                        const isPdf = ct.includes('pdf');
+                                                        const isImage = /^image\//.test(ct);
+                                                        const previewBoxClass = 'w-full min-h-[480px] flex-1 rounded-2xl border border-[var(--border)] bg-white shadow-sm overflow-hidden flex flex-col';
+                                                        const docTitle = manageFolderPopupPreview.doc?.title || manageFolderPopupPreview.doc?.subDoc || 'Document';
+                                                        const previewActionBar = (
+                                                            <div className="w-full flex items-center justify-between gap-4 px-2 mb-3">
+                                                                <div className="min-w-0">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="px-2 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider">Preview</span>
+                                                                        <p className="text-sm font-bold text-[var(--text)] truncate">{docTitle}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                    {isAdmin && currentDoc?.file_url && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => triggerDownload(currentDoc)}
+                                                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-xs font-bold shadow-sm transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                                                                            aria-label="Download file"
+                                                                        >
+                                                                            <MdDownload className="w-4 h-4" />
+                                                                            Download File
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                {isAdmin && currentDoc?.file_url && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => triggerDownload(currentDoc)}
-                                                                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 active:bg-green-800 text-white text-sm font-semibold shadow-sm transition-colors whitespace-nowrap"
-                                                                        aria-label="Download file"
-                                                                    >
-                                                                        <MdDownload className="w-4 h-4" />
-                                                                        Download
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                    if (isPdf) {
+                                                        );
+                                                        if (isPdf) {
+                                                            return (
+                                                                <div className="h-full flex flex-col">
+                                                                    {previewActionBar}
+                                                                    <div className={previewBoxClass}>
+                                                                        <embed
+                                                                            src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
+                                                                            type="application/pdf"
+                                                                            className="w-full h-full flex-1 border-0"
+                                                                            title={docTitle}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        if (isImage) {
+                                                            return (
+                                                                <div className="h-full flex flex-col">
+                                                                    {previewActionBar}
+                                                                    <div className={previewBoxClass}>
+                                                                        <div className="flex-1 flex items-center justify-center p-6 bg-gray-200/50">
+                                                                            <img
+                                                                                src={manageFolderPopupPreview.previewBlobUrl}
+                                                                                alt={docTitle}
+                                                                                className="max-w-full max-h-[60vh] object-contain shadow-md rounded-lg"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
                                                         return (
-                                                            <div className="space-y-3">
+                                                            <div className="h-full flex flex-col">
                                                                 {previewActionBar}
                                                                 <div className={previewBoxClass}>
-                                                                    <embed
-                                                                        src={`${manageFolderPopupPreview.previewBlobUrl}#toolbar=0&navpanes=0`}
-                                                                        type="application/pdf"
-                                                                        className="w-full min-h-[440px] flex-1 border-0"
+                                                                    <iframe
+                                                                        src={manageFolderPopupPreview.previewBlobUrl}
                                                                         title={docTitle}
+                                                                        className="w-full h-full flex-1 border-0"
+                                                                        sandbox="allow-same-origin"
                                                                     />
                                                                 </div>
                                                             </div>
                                                         );
-                                                    }
-                                                    if (isImage) {
-                                                        return (
-                                                            <div className="space-y-3">
-                                                                {previewActionBar}
-                                                                <div className={previewBoxClass}>
-                                                                    <div className="flex-1 flex items-center justify-center p-4">
-                                                                        <img
-                                                                            src={manageFolderPopupPreview.previewBlobUrl}
-                                                                            alt={docTitle}
-                                                                            className="max-w-full max-h-[70vh] object-contain"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return (
-                                                        <div className="space-y-3">
-                                                            {previewActionBar}
-                                                            <div className={previewBoxClass}>
-                                                                <iframe
-                                                                    src={manageFolderPopupPreview.previewBlobUrl}
-                                                                    title={docTitle}
-                                                                    className="w-full min-h-[440px] flex-1 border-0"
-                                                                    sandbox="allow-same-origin"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-white">
-                                                    <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
-                                                    <span>Loading file…</span>
+                                                    })()
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center flex-1 min-h-[480px] text-[var(--text-muted)] rounded-2xl border-2 border-dashed border-[var(--border)] bg-white/50">
+                                                        <div className="w-12 h-12 rounded-full border-4 border-[var(--border)] border-t-green-600 animate-spin mb-4" aria-hidden />
+                                                        <span className="font-medium">Loading digital file…</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {showNav && (
+                                                <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between shrink-0 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setManageFolderPopupIndex((i) => Math.max(0, i - 1))}
+                                                        disabled={currentIndex === 0}
+                                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--border)] text-sm font-bold text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)] transition-all active:scale-95"
+                                                        aria-label="Previous"
+                                                    >
+                                                        <MdChevronLeft className="w-5 h-5 font-bold" />
+                                                        Prev
+                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-700 font-bold text-xs">
+                                                            {currentIndex + 1}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">of {totalDocs}</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setManageFolderPopupIndex((i) => Math.min(totalDocs - 1, i + 1))}
+                                                        disabled={currentIndex >= totalDocs - 1}
+                                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--border)] text-sm font-bold text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)] transition-all active:scale-95"
+                                                        aria-label="Next"
+                                                    >
+                                                        Next
+                                                        <MdChevronRight className="w-5 h-5 font-bold" />
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
-                                        {showNav && (
-                                            <div className="px-4 py-2 border-t border-[var(--border)] flex items-center justify-center gap-3 shrink-0 bg-[var(--surface)]">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setManageFolderPopupIndex((i) => Math.max(0, i - 1))}
-                                                    disabled={currentIndex === 0}
-                                                    className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
-                                                    aria-label="Previous"
-                                                >
-                                                    <MdChevronLeft className="w-5 h-5" />
-                                                </button>
-                                                <span className="text-sm text-[var(--text-muted)]">
-                                                    Page {currentIndex + 1} of {totalDocs}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setManageFolderPopupIndex((i) => Math.min(totalDocs - 1, i + 1))}
-                                                    disabled={currentIndex >= totalDocs - 1}
-                                                    className="p-2 rounded-lg border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--background-subtle)]"
-                                                    aria-label="Next"
-                                                >
-                                                    <MdChevronRight className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        )}
                                     </>
                                 )}
                             </div>
@@ -4770,7 +4753,173 @@ className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs f
     );
 };
 
+
+// Helper component for document metadata display
+const DocDetailItem = ({ label, value }) => {
+    if (!value && value !== 0 && value !== false) return null;
+    return (
+        <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{label}</span>
+            <span className="text-sm font-medium text-[var(--text)]">{String(value)}</span>
+        </div>
+    );
+};
+
+// Component to render detailed procurement info based on document type
+const DocDetailsView = ({ doc }) => {
+    if (!doc) return null;
+    
+    const renderSpecificFields = () => {
+        const sub = (doc.subDoc || '').trim();
+        
+        switch (sub) {
+            case 'Purchase Request':
+                return (
+                    <>
+                        <DocDetailItem label="Purpose" value={doc.title} />
+                        <DocDetailItem label="PR No." value={doc.user_pr_no} />
+                        <DocDetailItem label="Total Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
+                    </>
+                );
+            case 'Activity Design':
+                return (
+                    <>
+                        <DocDetailItem label="Title" value={doc.title} />
+                        <DocDetailItem label="PR No." value={doc.user_pr_no} />
+                        <DocDetailItem label="Source of Fund" value={doc.source_of_fund} />
+                        <DocDetailItem label="Total Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
+                    </>
+                );
+            case 'Project Procurement Management Plan/Supplemental PPMP':
+                return (
+                    <>
+                        <DocDetailItem label="Title" value={doc.title} />
+                        <DocDetailItem label="PPMP No." value={doc.ppmp_no} />
+                        <DocDetailItem label="Source of Fund" value={doc.source_of_fund} />
+                        <DocDetailItem label="Total Budget" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
+                    </>
+                );
+            case 'Annual Procurement Plan':
+                return (
+                    <>
+                        <DocDetailItem label="Title" value={doc.title} />
+                        <DocDetailItem label="APP Type" value={doc.app_type} />
+                        <DocDetailItem label="Certified True Copy" value={doc.certified_true_copy ? 'Yes' : 'No'} />
+                        <DocDetailItem label="Signed By" value={doc.certified_signed_by} />
+                    </>
+                );
+            case 'Market Scopping':
+                return (
+                    <>
+                        <DocDetailItem label="Title" value={doc.title} />
+                        <DocDetailItem label="Budget" value={doc.market_budget ? `₱${Number(doc.market_budget).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
+                        <DocDetailItem label="Period" value={`${doc.market_period_from || '—'} to ${doc.market_period_to || '—'}`} />
+                        <DocDetailItem label="Expected Delivery" value={doc.market_expected_delivery} />
+                        <DocDetailItem label="Service Providers" value={[doc.market_service_provider_1, doc.market_service_provider_2, doc.market_service_provider_3].filter(Boolean).join(', ')} />
+                    </>
+                );
+            case 'Requisition and Issue Slip':
+                return (
+                    <>
+                        <DocDetailItem label="Purpose" value={doc.title} />
+                        <DocDetailItem label="Office/Division" value={doc.office_division} />
+                        <DocDetailItem label="Received By" value={doc.received_by} />
+                    </>
+                );
+            case 'Notice of BAC Meeting':
+                return <DocDetailItem label="Agenda" value={doc.title} />;
+            case 'Invitation to COA':
+                return <DocDetailItem label="Date Received" value={doc.date_received} />;
+            case 'Attendance Sheet':
+                return <DocDetailItem label="Agenda" value={doc.title} />;
+            case 'BAC Resolution':
+                return (
+                    <>
+                        <DocDetailItem label="Resolution No." value={doc.resolution_no} />
+                        <DocDetailItem label="Title" value={doc.title} />
+                        <DocDetailItem label="Winning Bidder" value={doc.winning_bidder} />
+                        <DocDetailItem label="Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
+                        <DocDetailItem label="Office/Division" value={doc.office_division} />
+                        <DocDetailItem label="Venue" value={doc.venue} />
+                    </>
+                );
+            case 'Abstract of Quotation':
+                return <DocDetailItem label="AOQ No." value={doc.aoq_no} />;
+            case 'Contract Services/Purchase Order':
+                return (
+                    <>
+                        <DocDetailItem label="Contract Amount" value={doc.contract_amount ? `₱${Number(doc.contract_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
+                        <DocDetailItem label="Received by COA" value={doc.contract_received_by_coa ? 'Yes' : 'No'} />
+                        <DocDetailItem label="Notarized" value={`${doc.notarized_place || ''} ${doc.notarized_date || ''}`} />
+                    </>
+                );
+            case 'Notice to Proceed':
+                return (
+                    <>
+                        <DocDetailItem label="Service Provider" value={doc.ntp_service_provider} />
+                        <DocDetailItem label="Authorized Rep" value={doc.ntp_authorized_rep} />
+                        <DocDetailItem label="Received By" value={doc.ntp_received_by} />
+                    </>
+                );
+            case 'OSS':
+                return (
+                    <>
+                        <DocDetailItem label="Service Provider" value={doc.oss_service_provider} />
+                        <DocDetailItem label="Authorized Rep" value={doc.oss_authorized_rep} />
+                    </>
+                );
+            case "Applicable: Secretary's Certificate and Special Power of Attorney":
+                 return (
+                    <>
+                        <DocDetailItem label="Service Provider" value={doc.secretary_service_provider} />
+                        <DocDetailItem label="Owner/Rep" value={doc.secretary_owner_rep} />
+                    </>
+                );
+            default:
+                return doc.title ? <DocDetailItem label="Title" value={doc.title} /> : null;
+        }
+    };
+
+    return (
+        <div className="h-full flex flex-col bg-[var(--surface)] border-r border-[var(--border)] overflow-y-auto">
+            <div className="p-4 border-b border-[var(--border)] bg-[var(--background-subtle)]/30">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-green-50 text-green-600">
+                        <MdDescription className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-[var(--text)] tracking-tight">Procurement Details</h4>
+                        <p className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-widest">{doc.subDoc}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div className="p-4 space-y-5">
+                <div className="grid grid-cols-1 gap-5">
+                    <DocDetailItem label="BAC Folder No." value={doc.prNo} />
+                    <DocDetailItem label="Date Encoding" value={doc.date ? new Date(doc.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—'} />
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Status</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            doc.status === 'complete' ? 'bg-green-100 text-green-700' :
+                            doc.status === 'ongoing' ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-700'
+                        }`}>
+                            {doc.status || 'pending'}
+                        </span>
+                    </div>
+                    
+                    <div className="pt-4 border-t border-[var(--border-light)] space-y-5">
+                        {renderSpecificFields()}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Workflow Visualization Component
+
 const WorkflowVisualization = ({ prNo, documents }) => {
     const workflowDocs = documents.filter(doc => doc.prNo === prNo);
     

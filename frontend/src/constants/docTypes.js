@@ -1,6 +1,6 @@
 /** Document types and required sub-documents for checklist (matches Encode page Update modal). For RFQ Concerns, first choose PHILGEPS or Certificate of DILG, then choose a procurement method below. */
 export const RFQ_PROCUREMENT_METHODS = [
-    { value: 'List of Venue', label: 'Lease of Venue' },
+    { value: 'Lease of Venue', label: 'Lease of Venue' },
     { value: 'Small Value Procurement', label: 'Small Value Procurement' },
     { value: 'Public Bidding', label: 'Public Bidding' },
 ];

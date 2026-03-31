@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { MdClose } from 'react-icons/md';
-import { mapOldRoleToNew, ROLES } from '../utils/roles';
+import { mapOldRoleToNew, ROLES, validatePassword, STRICT_PASSWORD_RULES } from '../utils/auth';
 import PasswordInput from '../components/PasswordInput';
 import { userService } from '../services/api';
-import { validatePassword, STRICT_PASSWORD_RULES } from '../utils/password';
 
 const LEFT_PANEL_IMAGE = '/dilg-logo.png';
 

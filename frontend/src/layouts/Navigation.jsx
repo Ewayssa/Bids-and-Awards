@@ -10,8 +10,8 @@ import {
     MdClose,
     MdHistoryToggleOff,
 } from 'react-icons/md';
-import { canAccessRoute, ROLES } from '../utils/roles';
-import NotificationBell from './NotificationBell';
+import { canAccessRoute, ROLES } from '../utils/auth';
+import NotificationBell from '../components/NotificationBell';
 
 const NAV_ITEMS = [
     { path: '/', label: 'Dashboard', icon: MdSpaceDashboard },

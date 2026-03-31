@@ -5,11 +5,11 @@ import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
 import Encode from './pages/Encode';
 import Reports from './pages/Reports';
-import Personnel from './pages/User_management';
+import Personnel from './pages/UserManagement';
 import Settings from './pages/Settings';
 import AuditTrail from './pages/AuditTrail';
-import Navigation from './components/Navigation';
-import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/roles';
+import Navigation from './layouts/Navigation';
+import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/auth';
 
 const SESSION_TIMEOUT_MINUTES = 5;
 

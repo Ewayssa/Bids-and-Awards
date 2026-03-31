@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MdCheckCircle, MdSchedule, MdWarning } from 'react-icons/md';
-import { formatNumber } from '../../utils/formatNumber';
+import { formatNumber } from '../../utils/helpers';
 
 export const StatsGrid = ({ loading, stats }) => {
     const { pieData = [0, 0, 0, 0] } = stats;

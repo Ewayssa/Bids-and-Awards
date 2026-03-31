@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { reportService } from '../services/api';
-import { parseApiError } from '../utils/api-errors';
+import { parseApiError } from '../utils/errors';
 import { toNumbersOnly } from '../utils/validation';
 import { formatCurrencyValue } from '../utils/validation';
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ROLES, mapOldRoleToNew } from '../utils/roles';
+import { ROLES, mapOldRoleToNew } from '../utils/auth';
 import NotificationBell from '../components/NotificationBell';
 import PageHeader from '../components/PageHeader';
 import UserAccountDropdown from '../components/UserAccountDropdown';
