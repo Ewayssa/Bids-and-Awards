@@ -4,14 +4,12 @@
 
 export const ROLES = {
     ADMIN: 'admin',
-    EMPLOYEE: 'employee',
-    BAC_MEMBER: 'bac_member',
+    USER: 'user',
 };
 
 export const ROLE_DISPLAY_NAMES = {
     [ROLES.ADMIN]: 'Admin',
-    [ROLES.EMPLOYEE]: 'Employee',
-    [ROLES.BAC_MEMBER]: 'BAC Member',
+    [ROLES.USER]: 'User',
 };
 
 export const PERMISSIONS = {
@@ -31,7 +29,7 @@ export const PERMISSIONS = {
 
 const ROLE_PERMISSIONS = {
     [ROLES.ADMIN]: Object.values(PERMISSIONS),
-    [ROLES.EMPLOYEE]: [
+    [ROLES.USER]: [
         PERMISSIONS.UPLOAD_DOCUMENTS,
         PERMISSIONS.VIEW_OWN_DOCUMENTS,
         PERMISSIONS.VIEW_REPORTS,
@@ -41,9 +39,9 @@ const ROLE_PERMISSIONS = {
 };
 
 export const NAV_ACCESS_RULES = {
-    '/': [ROLES.ADMIN, ROLES.EMPLOYEE],
-    '/encode': [ROLES.ADMIN, ROLES.EMPLOYEE],
-    '/reports': [ROLES.ADMIN, ROLES.EMPLOYEE],
+    '/': [ROLES.ADMIN, ROLES.USER],
+    '/encode': [ROLES.ADMIN, ROLES.USER],
+    '/reports': [ROLES.ADMIN, ROLES.USER],
     '/personnel': [ROLES.ADMIN],
     '/settings': [ROLES.ADMIN],
     '/audit-trail': [ROLES.ADMIN],
@@ -73,20 +71,19 @@ export const hasPermission = (userRole, permission) => {
 };
 
 export const getRoleDisplayName = (role) => {
-    if (!role) return ROLE_DISPLAY_NAMES[ROLES.EMPLOYEE];
-    return ROLE_DISPLAY_NAMES[role] || role || 'Employee';
+    if (!role) return ROLE_DISPLAY_NAMES[ROLES.USER];
+    return ROLE_DISPLAY_NAMES[role] || role || 'User';
 };
 
 export const getAvailableRoles = () => [
     { value: ROLES.ADMIN, label: ROLE_DISPLAY_NAMES[ROLES.ADMIN] },
-    { value: ROLES.EMPLOYEE, label: ROLE_DISPLAY_NAMES[ROLES.EMPLOYEE] },
-    { value: ROLES.BAC_MEMBER, label: ROLE_DISPLAY_NAMES[ROLES.BAC_MEMBER] },
+    { value: ROLES.USER, label: ROLE_DISPLAY_NAMES[ROLES.USER] },
 ];
 
 /** Map backend role to frontend (normalize legacy values). */
 export const mapOldRoleToNew = (oldRole) => {
-    if (!oldRole) return ROLES.EMPLOYEE;
+    if (!oldRole) return ROLES.USER;
     const r = String(oldRole).toLowerCase().trim();
     if (r === 'admin' || r === 'administrator') return ROLES.ADMIN;
-    return ROLES.EMPLOYEE;
+    return ROLES.USER;
 };

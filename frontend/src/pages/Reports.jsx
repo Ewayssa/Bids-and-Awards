@@ -813,7 +813,6 @@ const Reports = ({ user }) => {
                                     value={form.title}
                                     onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                                     className="input-field w-full"
-                                    placeholder="e.g. Monthly BAC Report"
                                 />
                             </div>
                             <div>
@@ -825,7 +824,6 @@ const Reports = ({ user }) => {
                                     value={form.submitting_office}
                                     onChange={(e) => setForm((prev) => ({ ...prev, submitting_office: e.target.value }))}
                                     className="input-field w-full"
-                                    placeholder="e.g. BAC Secretariat"
                                 />
                             </div>
                             <div>

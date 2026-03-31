@@ -62,12 +62,21 @@ class UserManager(AuthUserManager):
 class User(AbstractUser):
     ROLE_CHOICES = (
         ('admin', 'Admin'),
-        ('employee', 'Employee'),
-        ('bac_member', 'BAC Member'),
+        ('user', 'User'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='employee')
+    POSITION_CHOICES = (
+        ('BAC Chairperson', 'BAC Chairperson'),
+        ('BAC Secretariat', 'BAC Secretariat'),
+        ('BAC Member', 'BAC Member'),
+    )
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
     fullName = models.CharField(max_length=255, blank=True)
-    position = models.CharField(max_length=255, blank=True, help_text='Position or designation')
+    position = models.CharField(
+        max_length=255, 
+        blank=True, 
+        choices=POSITION_CHOICES,
+        help_text='Position or designation'
+    )
     office = models.CharField(max_length=255, blank=True, help_text='Department')
     must_change_password = models.BooleanField(default=False, help_text='Require user to set a new password on next login')
 

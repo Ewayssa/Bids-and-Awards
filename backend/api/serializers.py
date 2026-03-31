@@ -40,7 +40,7 @@ class RegisterSerializer(serializers.Serializer):
             fullName=full_name or username,
             position=position,
             office=office,
-            role='employee',
+            role='user',
             is_active=False,
         )
         user.must_change_password = False

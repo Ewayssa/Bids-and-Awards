@@ -251,8 +251,13 @@ const Encode = ({ user }) => {
             }));
         }
 
-        // Direct submit, avoid optional modal-block and make the action immediate.
-        await performNewSubmit();
+        setConfirmDialog({
+            message: 'Are you sure you want to submit this document?',
+            onConfirm: async () => {
+                setConfirmDialog(null);
+                await performNewSubmit();
+            },
+        });
     };
 
     const performUpdateSubmit = async () => {
@@ -418,8 +423,8 @@ const Encode = ({ user }) => {
         (docRequiresTitle(doc) && !doc.title) || !doc.prNo || !doc.category || (docRequiresDate(doc) && !doc.date);
 
     const isAdmin = user?.role === ROLES.ADMIN;
-    const canViewAllDocuments = isAdmin; // Only admin can view/download documents; employees cannot view files
-    const canUploadDocuments = true; // Both admin and employee see New Procurement and Update buttons
+    const canViewAllDocuments = isAdmin; // Only admin can view/download documents; regular users cannot view files
+    const canUploadDocuments = true; // Both admin and regular users see New Procurement and Update buttons
     
     const updateListDocs = documents; // Everyone sees all documents
 
@@ -2465,7 +2470,7 @@ className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs f
                                                     </label>
                                                 </div>
                                             ))}
-                                            {attendanceMembers.length === 0 && <p className="text-sm text-[var(--text-muted)] italic">No BAC members found. Assign users 'BAC Member' role in User Management.</p>}
+                                            {attendanceMembers.length === 0 && <p className="text-sm text-[var(--text-muted)] italic">No BAC members found. Assign users 'BAC Member' position in User Management.</p>}
                                         </div>
                                         <div>
                                             <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
@@ -3504,7 +3509,7 @@ className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs f
             )}
 
             {/* Update documents modal */}
-            {activeModal === 'update' && selectedDoc && !confirmDialog && (
+            {activeModal === 'update' && selectedDoc && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                     aria-modal="true"

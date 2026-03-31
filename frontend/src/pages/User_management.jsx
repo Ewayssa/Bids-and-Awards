@@ -15,6 +15,7 @@ const Personnel = ({ user }) => {
     const [addError, setAddError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showConfirmAdd, setShowConfirmAdd] = useState(false);
+    const [showConfirmEdit, setShowConfirmEdit] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [editingUser, setEditingUser] = useState(null);
     const [editForm, setEditForm] = useState({ fullName: '', position: '', office: '', role: '', is_active: true });
@@ -44,20 +45,21 @@ const Personnel = ({ user }) => {
 
     const openEditModal = (u) => {
         setEditingUser(u);
-        setEditForm({ fullName: u.fullName || '', position: u.position || '', office: u.office || '', role: u.role || ROLES.EMPLOYEE, is_active: u.is_active !== false });
+        setEditForm({ fullName: u.fullName || '', position: u.position || '', office: u.office || '', role: u.role || ROLES.USER, is_active: u.is_active !== false });
         setAddError('');
-    };
-
-    const closeEditModal = () => {
-        setEditingUser(null);
-        setEditForm({ fullName: '', position: '', office: '', role: '', is_active: true });
-        setAddError('');
-        setSubmitting(false);
     };
 
     const closeAddModal = () => {
         setShowAddModal(false);
         setShowConfirmAdd(false);
+        setAddError('');
+        setSubmitting(false);
+    };
+
+    const closeEditModal = () => {
+        setEditingUser(null);
+        setShowConfirmEdit(false);
+        setEditForm({ fullName: '', position: '', office: '', role: '', is_active: true });
         setAddError('');
         setSubmitting(false);
     };
@@ -162,7 +164,13 @@ const Personnel = ({ user }) => {
         setAddError('');
         if (!editingUser) return;
         
+        setShowConfirmEdit(true);
+    };
+
+    const confirmEditUser = async () => {
+        if (!editingUser) return;
         setSubmitting(true);
+        setShowConfirmEdit(false);
         try {
             await userService.patch(editingUser.id, {
                 fullName: editForm.fullName.trim() || undefined,
@@ -378,16 +386,19 @@ const Personnel = ({ user }) => {
                             </div>
                             <div>
                                 <label htmlFor="add-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation *</label>
-                                <input
+                                <select
                                     id="add-position"
-                                    type="text"
                                     value={addForm.position}
                                     onChange={(e) => setAddForm((f) => ({ ...f, position: e.target.value }))}
                                     className="input-field w-full"
-                                    placeholder="e.g. BAC Member, Procurement Officer"
                                     disabled={submitting}
                                     required
-                                />
+                                >
+                                    <option value="">Select Position</option>
+                                    <option value="BAC Chairperson">BAC Chairperson</option>
+                                    <option value="BAC Secretariat">BAC Secretariat</option>
+                                    <option value="BAC Member">BAC Member</option>
+                                </select>
                             </div>
                             <div>
                                 <label htmlFor="add-office" className="block text-sm font-medium text-[var(--text)] mb-1">Department *</label>
@@ -457,8 +468,33 @@ const Personnel = ({ user }) => {
                 </div>
             )}
 
+            {/* Confirm Edit User dialog */}
+            {showConfirmEdit && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    aria-modal="true"
+                    role="alertdialog"
+                    aria-labelledby="confirm-edit-title"
+                >
+                    <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl">
+                        <h2 id="confirm-edit-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Update User</h2>
+                        <p className="text-sm text-[var(--text-muted)] mb-6">
+                            Are you sure you want to save changes to user <strong className="text-[var(--text)]">{editingUser.username}</strong>?
+                        </p>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => setShowConfirmEdit(false)} className="btn-secondary flex-1 rounded-xl">
+                                Cancel
+                            </button>
+                            <button type="button" onClick={confirmEditUser} className="btn-primary flex-1 rounded-xl" disabled={submitting}>
+                                {submitting ? 'Updating…' : 'Confirm'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Edit User modal */}
-            {editingUser && (
+            {editingUser && !showConfirmEdit && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                     aria-modal="true"
@@ -507,15 +543,18 @@ const Personnel = ({ user }) => {
                             </div>
                             <div>
                                 <label htmlFor="edit-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation</label>
-                                <input
+                                <select
                                     id="edit-position"
-                                    type="text"
                                     value={editForm.position}
                                     onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))}
                                     className="input-field w-full"
-                                    placeholder="e.g. BAC Member, Procurement Officer"
                                     disabled={submitting}
-                                />
+                                >
+                                    <option value="">Select Position</option>
+                                    <option value="BAC Chairperson">BAC Chairperson</option>
+                                    <option value="BAC Secretariat">BAC Secretariat</option>
+                                    <option value="BAC Member">BAC Member</option>
+                                </select>
                             </div>
                             <div>
                                 <label htmlFor="edit-office" className="block text-sm font-medium text-[var(--text)] mb-1">Department</label>

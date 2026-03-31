@@ -204,7 +204,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def bac_members(self, request):
-        bac_members = User.objects.filter(role='bac_member').values('id', 'fullName', 'username')
+        bac_members = User.objects.filter(position='BAC Member').values('id', 'fullName', 'username')
         return Response(list(bac_members))
 
     def create(self, request, *args, **kwargs):

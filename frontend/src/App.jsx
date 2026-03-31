@@ -20,7 +20,7 @@ function AppContent() {
     const navigate = useNavigate();
 
     const handleLogin = (userData) => {
-        const role = mapOldRoleToNew(userData?.role) || ROLES.EMPLOYEE;
+        const role = mapOldRoleToNew(userData?.role) || ROLES.USER;
         setUser({ ...userData, role, must_change_password: userData?.must_change_password === true });
         setLoginInfoMessage('');
         navigate('/');
@@ -59,7 +59,7 @@ function AppContent() {
         };
     }, [user, navigate]);
 
-    const userRole = user?.role || ROLES.EMPLOYEE;
+    const userRole = user?.role || ROLES.USER;
     const defaultRoute = getDefaultRouteForRole(userRole);
 
     return (
@@ -74,13 +74,13 @@ function AppContent() {
                     <main className="flex-1 min-w-0 pt-14 md:pt-0 bg-[var(--background)] md:border-l border-[var(--border-light)] min-h-screen overflow-x-hidden" role="main">
                         <div className="page-container h-full w-full min-w-0 overflow-x-hidden">
                             <Routes>
-                            <Route path="/" element={canAccessRoute(userRole, '/') ? <Dashboard user={user} sidebarOpen={true} onLogout={handleLogout} /> : <Navigate to={defaultRoute} replace />} />
-                            <Route path="/encode" element={canAccessRoute(userRole, '/encode') ? <Encode user={user} /> : <Navigate to={defaultRoute} replace />} />
-                            <Route path="/reports" element={canAccessRoute(userRole, '/reports') ? <Reports user={user} /> : <Navigate to={defaultRoute} replace />} />
-                            <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
-                            <Route path="/audit-trail" element={canAccessRoute(userRole, '/audit-trail') ? <AuditTrail user={user} /> : <Navigate to={defaultRoute} replace />} />
-                            <Route path="/settings" element={canAccessRoute(userRole, '/settings') ? <Settings user={user} /> : <Navigate to={defaultRoute} replace />} />
-                            <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+                                <Route path="/" element={canAccessRoute(userRole, '/') ? <Dashboard user={user} sidebarOpen={true} onLogout={handleLogout} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/encode" element={canAccessRoute(userRole, '/encode') ? <Encode user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/reports" element={canAccessRoute(userRole, '/reports') ? <Reports user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/audit-trail" element={canAccessRoute(userRole, '/audit-trail') ? <AuditTrail user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/settings" element={canAccessRoute(userRole, '/settings') ? <Settings user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="*" element={<Navigate to={defaultRoute} replace />} />
                             </Routes>
                         </div>
                     </main>

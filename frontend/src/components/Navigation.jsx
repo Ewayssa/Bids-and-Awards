@@ -62,7 +62,7 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                 <nav className="flex-1 px-2 md:px-3 py-4 overflow-y-auto overflow-x-hidden" aria-label="Main">
                     <p className="px-3 mb-3 text-[11px] font-semibold text-[var(--text-subtle)] uppercase tracking-wider sidebar-menu-label">MENU</p>
                     <div className="space-y-1">
-                        {NAV_ITEMS.filter((item) => canAccessNavItem(item, user?.role || ROLES.EMPLOYEE)).map(({ path, label, icon: Icon }) => {
+                        {NAV_ITEMS.filter((item) => canAccessNavItem(item, user?.role || ROLES.USER)).map(({ path, label, icon: Icon }) => {
                             const active = location.pathname === path;
                             return (
                                 <Link
