@@ -43,8 +43,8 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
 
     const sliceMeta = [
         { label: 'Completed', value: completed, pct: completedPct, color: '#10b981', fill: 'url(#pie-completed)', start: 0, end: completedEnd },
-        { label: 'On-going', value: ongoing, pct: ongoingPct, color: '#f59e0b', fill: 'url(#pie-ongoing)', start: completedEnd, end: ongoingEnd },
-        { label: 'Pending', value: pending, pct: pendingPct, color: '#ef4444', fill: 'url(#pie-pending)', start: ongoingEnd, end: pendingEnd },
+        { label: 'On-going', value: ongoing, pct: ongoingPct, color: '#3b82f6', fill: 'url(#pie-ongoing)', start: completedEnd, end: ongoingEnd },
+        { label: 'Pending', value: pending, pct: pendingPct, color: '#f59e0b', fill: 'url(#pie-pending)', start: ongoingEnd, end: pendingEnd },
     ];
 
     const barSeries = [
@@ -76,12 +76,12 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                                     <stop offset="100%" stopColor="#22c55e" />
                                 </linearGradient>
                                 <linearGradient id="pie-ongoing" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#fde047" />
-                                    <stop offset="100%" stopColor="#eab308" />
+                                    <stop offset="0%" stopColor="#60a5fa" />
+                                    <stop offset="100%" stopColor="#3b82f6" />
                                 </linearGradient>
                                 <linearGradient id="pie-pending" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#f87171" />
-                                    <stop offset="100%" stopColor="#ef4444" />
+                                    <stop offset="0%" stopColor="#fde047" />
+                                    <stop offset="100%" stopColor="#eab308" />
                                 </linearGradient>
                             </defs>
                             {(completed + ongoing + pending) === 0 ? (

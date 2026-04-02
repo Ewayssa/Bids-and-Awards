@@ -41,7 +41,8 @@ import {
     filterDocumentsByCategory,
     filterDocumentsByStatus,
     sortDocuments,
-    groupDocumentsByCategory
+    groupDocumentsByCategory,
+    getStatusColor
 } from '../utils/helpers';
 import { parseApiError } from '../utils/errors';
 import { useDocumentForm } from '../hooks/useDocumentForm';
@@ -208,10 +209,11 @@ const Encode = ({ user }) => {
     const validateNewForm = () => {
         const err = {};
 
-        // require Title only when this subDoc needs it
-        const requiresTitle = docRequiresTitle({ subDoc: selectedSubDocType });
-        if (requiresTitle && !(form.title && form.title.trim())) {
+        if (!(form.title && form.title.trim())) {
             err.title = 'Title/Purpose is required';
+        }
+        if (!form.date) {
+            err.date = 'Date is required';
         }
 
         setManualErrors(err);
@@ -390,30 +392,20 @@ const Encode = ({ user }) => {
     const formatDate = (d) => (!d ? '—' : typeof d === 'string' ? d.split('T')[0] : d);
 
     // Sub-doc types that have no Title field in fill-out details (same as backend) — completion = date + file + other required fields
-    const docRequiresTitle = (doc) => {
-        const sub = (doc?.subDoc || '').trim();
-        return !(
-            sub === 'Invitation to COA' ||
-            sub === 'Lease of Venue' ||
-            sub.endsWith(' - Lease of Venue') ||
-            sub === 'Lease of Venue: Table Rating Factor' ||
-            sub === 'PHILGEPS - Small Value Procurement' ||
-            sub === 'PHILGEPS - Public Bidding' ||
-            sub === 'Certificate of DILG - Small Value Procurement' ||
-            sub === 'Certificate of DILG - Lease of Venue' ||
-            sub === 'Certificate of DILG - Public Bidding' ||
-            sub === 'Small Value Procurement' ||
-            sub === 'Public Bidding'
-        );
+    const docRequiresTitle = (doc) => true; // All documents now require a Title/Purpose
+
+    const docRequiresDate = (doc) => true; // All documents now require a Date
+
+    const isIncomplete = (doc) => {
+        if (!doc) return true;
+        const missing = getMissingFields(doc);
+        return missing.length > 0;
     };
 
-    const docRequiresDate = (doc) => {
-        const sub = (doc?.subDoc || '').trim();
-        return !(sub === 'Lease of Venue' || sub.endsWith(' - Lease of Venue') || sub === 'Lease of Venue: Table Rating Factor');
+    const handleView = (doc) => {
+        setSelectedDoc(doc);
+        setActiveModal('view');
     };
-
-    const isIncomplete = (doc) =>
-        (docRequiresTitle(doc) && !doc.title) || !doc.prNo || !doc.category || (docRequiresDate(doc) && !doc.date);
 
     const isAdmin = user?.role === ROLES.ADMIN;
     const canViewAllDocuments = isAdmin; // Only admin can view/download documents; regular users cannot view files
@@ -521,45 +513,83 @@ const Encode = ({ user }) => {
     const getMissingFields = (doc) => {
         if (!doc) return [];
         const missing = [];
-        if (docRequiresTitle(doc) && !(doc.title && String(doc.title).trim())) missing.push('Title');
+        const sub = (doc.subDoc || '').trim();
+        const titleRequired = !sub.startsWith('PHILGEPS - ');
+        const dateRequired = sub !== 'PHILGEPS - Lease of Venue';
+        
+        // Basic identification fields
+        if (titleRequired && !(doc.title && String(doc.title).trim())) missing.push('Title/Purpose');
+        if (dateRequired && !doc.date) missing.push('Date');
+        
         if (!(doc.prNo && String(doc.prNo).trim())) missing.push('BAC Folder No.');
         if (!(doc.category && String(doc.category).trim())) missing.push('Category');
         if (!(doc.subDoc && String(doc.subDoc).trim())) missing.push('Sub-document');
-        const isActivityDesign = (doc.subDoc || '').trim() === 'Activity Design';
-        const isPPMP = (doc.subDoc || '').trim() === 'Project Procurement Management Plan/Supplemental PPMP';
-        const isAPP = (doc.subDoc || '').trim() === 'Annual Procurement Plan';
-        if (isActivityDesign) {
-            if (!(doc.source_of_fund && String(doc.source_of_fund).trim())) missing.push('Source of Fund');
-        } else if (isPPMP) {
-            if (!(doc.source_of_fund && String(doc.source_of_fund).trim())) missing.push('Source of Fund');
-            if (!(doc.ppmp_no && String(doc.ppmp_no).trim())) missing.push('PPMP No.');
-        } else if (isAPP) {
-            if (!(doc.app_type && String(doc.app_type).trim())) missing.push('Type (Final/Updated)');
-            if ((doc.app_type || '').trim() === 'Updated' && !(doc.app_no && String(doc.app_no).trim())) missing.push('APP No.');
-            if (doc.certified_true_copy && !(doc.certified_signed_by && String(doc.certified_signed_by).trim())) missing.push('Signed by');
-        } else if ((doc.subDoc || '').trim() === 'Market Scopping') {
-            if (doc.market_budget == null || doc.market_budget === '') missing.push('Budget');
-            if (!(doc.market_period_from && String(doc.market_period_from).trim())) missing.push('Period from');
-            if (!(doc.market_period_to && String(doc.market_period_to).trim())) missing.push('Period to');
-            if (!(doc.market_expected_delivery && String(doc.market_expected_delivery).trim())) missing.push('Expected Delivery');
-            if (!(doc.market_service_provider_1 && String(doc.market_service_provider_1).trim())) missing.push('Service Provider 1');
-            if (!(doc.market_service_provider_2 && String(doc.market_service_provider_2).trim())) missing.push('Service Provider 2');
-            if (!(doc.market_service_provider_3 && String(doc.market_service_provider_3).trim())) missing.push('Service Provider 3');
-        } else if ((doc.subDoc || '').trim() === 'Requisition and Issue Slip') {
-            if (!doc.date) missing.push('Date');
-            if (!(doc.office_division && String(doc.office_division).trim())) missing.push('Office/Division');
-            if (!(doc.received_by && String(doc.received_by).trim())) missing.push('Received By');
-        } else if (docRequiresDate(doc) && !doc.date) {
-            missing.push('Date');
+
+        // Sub-doc specific detail checks
+        if (sub === 'Annual Procurement Plan') {
+            if (!doc.app_type) missing.push('APP Type');
+            if (doc.certified_true_copy && !doc.certified_signed_by) missing.push('Signatory');
+        } else if (sub === 'Market Scopping') {
+            if (!doc.market_budget) missing.push('Budget');
+            if (!doc.market_service_provider_1) missing.push('Service Provider 1');
+            if (!doc.market_service_provider_2) missing.push('Service Provider 2');
+            if (!doc.market_service_provider_3) missing.push('Service Provider 3');
+        } else if (sub === 'Requisition and Issue Slip') {
+            if (!doc.office_division) missing.push('Office/Division');
+            if (!doc.received_by) missing.push('Received By');
+        } else if (sub === 'Invitation to COA') {
+            if (!doc.date_received) missing.push('Date Received');
+        } else if (sub === 'Attendance Sheet') {
+            const members = Array.isArray(doc.attendance_members) ? doc.attendance_members : [];
+            if (members.length === 0) missing.push('BAC Members List');
+            else if (!members.some(m => m.present)) missing.push('At least one member Present');
+        } else if (sub === 'BAC Resolution') {
+            if (!doc.resolution_no) missing.push('Resolution No.');
+            if (!doc.winning_bidder) missing.push('Winning Bidder');
+            if (!doc.resolution_option) missing.push('Option (LCB/LCRB etc)');
+            if (!doc.office_division) missing.push('Office/Division');
+            if (!doc.venue) missing.push('Venue');
+        } else if (sub === 'Abstract of Quotation') {
+            if (!doc.aoq_no) missing.push('AOQ No.');
+            const bidders = Array.isArray(doc.abstract_bidders) ? doc.abstract_bidders : [];
+            if (bidders.filter(b => b.name && b.amount).length < 3) missing.push('At least 3 Bidders');
+        } else if (sub === 'Lease of Venue: Table Rating Factor') {
+            if (!doc.table_rating_service_provider) missing.push('Service Provider');
+            if (!doc.table_rating_address) missing.push('Address');
+            if (!doc.table_rating_factor_value) missing.push('Factor Value');
+        } else if (sub === 'Notice of Award') {
+            if (!doc.notice_award_service_provider) missing.push('Service Provider');
+            if (!doc.notice_award_authorized_rep) missing.push('Authorized Rep');
+            if (!doc.notice_award_conforme) missing.push('Conforme');
+        } else if (sub === 'Contract Services/Purchase Order') {
+            if (!doc.contract_amount) missing.push('Contract Amount');
+            if (!doc.notarized_place) missing.push('Notarized Place');
+            if (!doc.notarized_date) missing.push('Notarized Date');
+        } else if (sub === 'Notice to Proceed') {
+            if (!doc.ntp_service_provider) missing.push('Service Provider');
+            if (!doc.ntp_authorized_rep) missing.push('Authorized Rep');
+            if (!doc.ntp_received_by) missing.push('Received By');
+        } else if (sub === 'OSS') {
+            if (!doc.oss_service_provider) missing.push('Service Provider');
+            if (!doc.oss_authorized_rep) missing.push('Authorized Rep');
+        } else if (sub === "Applicable: Secretary's Certificate and Special Power of Attorney") {
+            if (!doc.secretary_service_provider) missing.push('Service Provider');
+            if (!doc.secretary_owner_rep) missing.push('Owner/Rep');
         }
+
+        // File requirement check (includes expanded exemptions for Lease of Venue, Small Value Procurement, Public Bidding)
         const noFileRequired = (() => {
-            const sub = (doc.subDoc || '').trim();
-            return sub === 'Lease of Venue' || sub.endsWith(' - Lease of Venue') || sub === 'Lease of Venue: Table Rating Factor' ||
-                sub === 'Minutes of the Meeting' || sub === 'Notice of Award (Posted)' || sub === 'Abstract of Quotation (Posted)' || sub === 'BAC Resolution (Posted)';
+            if (sub === 'PHILGEPS - Small Value Procurement' || sub === 'PHILGEPS - Public Bidding') return false;
+            const kw = ['Lease of Venue', 'Small Value Procurement', 'Public Bidding', 'Minutes of the Meeting'];
+            const exact = ['Notice of Award (Posted)', 'Abstract of Quotation (Posted)', 'BAC Resolution (Posted)'];
+            return kw.some(k => sub.includes(k)) || exact.includes(sub);
         })();
+        
         const hasFile = doc.file || (doc.file_url && String(doc.file_url).trim());
         if (!noFileRequired && !hasFile) missing.push('File');
+
         if (!(doc.uploadedBy && String(doc.uploadedBy).trim())) missing.push('Uploaded By');
+        
         return missing;
     };
 
@@ -1259,16 +1289,12 @@ const Encode = ({ user }) => {
                                                                     <th className="table-th uppercase">Procurement Type</th>
                                                                     <th className="table-th uppercase">Date</th>
                                                                     <th className="table-th uppercase">Status</th>
+                                                                    {isAdmin && <th className="table-th uppercase text-center">Action</th>}
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                                                                 {docs.map((doc) => {
-                                                                    const statusColors = {
-                                                                        complete: 'bg-green-100 text-green-800 border-green-200',
-                                                                        ongoing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                                                                        pending: 'bg-red-100 text-red-800 border-red-200',
-                                                                    };
-                                                                    const statusColor = statusColors[doc.status] || statusColors.pending;
+                                                                    const statusColor = getStatusColor(doc.status);
                                                                     const procurementType = getProcurementType(doc);
 
                                                                     return (
@@ -1285,6 +1311,18 @@ const Encode = ({ user }) => {
                                                                                     {doc.status || 'pending'}
                                                                                 </span>
                                                                             </td>
+                                                                            {isAdmin && (
+                                                                                <td className="table-td text-center">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => handleView(doc)}
+                                                                                        className="p-1.5 text-[var(--primary)] hover:bg-[var(--primary-muted)] rounded-lg transition-all"
+                                                                                        title="View details"
+                                                                                    >
+                                                                                        <MdVisibility className="w-5 h-5" />
+                                                                                    </button>
+                                                                                </td>
+                                                                            )}
                                                                         </tr>
                                                                     );
                                                                 })}
@@ -1324,16 +1362,12 @@ const Encode = ({ user }) => {
                                                     Status {sortKey === 'status' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                                 </button>
                                             </th>
+                                            {isAdmin && <th className="table-th uppercase text-center">Action</th>}
                                         </tr>
                                     </thead>
                                     <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                                         {paginatedDocuments.map((doc) => {
-                                            const statusColors = {
-                                                complete: 'bg-green-100 text-green-800 border-green-200',
-                                                ongoing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                                                pending: 'bg-red-100 text-red-800 border-red-200',
-                                            };
-                                            const statusColor = statusColors[doc.status] || statusColors.pending;
+                                            const statusColor = getStatusColor(doc.status);
                                             
                                             return (
                                                 <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
@@ -1352,6 +1386,18 @@ const Encode = ({ user }) => {
                                                             {doc.status === 'complete' ? 'Completed' : doc.status === 'ongoing' ? 'Ongoing' : (doc.status || 'Pending')}
                                                         </span>
                                                     </td>
+                                                    {isAdmin && (
+                                                        <td className="table-td text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleView(doc)}
+                                                                className="p-1.5 text-[var(--primary)] hover:bg-[var(--primary-muted)] rounded-lg transition-all"
+                                                                title="View details"
+                                                            >
+                                                                <MdVisibility className="w-5 h-5" />
+                                                            </button>
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             );
                                         })}
@@ -1611,14 +1657,62 @@ const Encode = ({ user }) => {
                                 {/* PHILGEPS & Certificate of DILG RFQ Concerns special handling */}
                                 {selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('PHILGEPS - Lease of Venue') ? (
                                     <>
-                                        <div className="text-sm text-[var(--text-muted)]">
-                                            No additional details are required for this PHILGEPS - Lease of Venue entry. Click
-                                            &nbsp;<span className="font-semibold text-[var(--text)]">Submit</span> below to save it.
+                                        <div>
+                                            <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Purpose of the PHILGEPS posting"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    const newDate = e.target.value;
+                                                    setForm((f) => ({
+                                                        ...f,
+                                                        date: newDate,
+                                                        user_pr_no: computeRFQNoFromDate(newDate),
+                                                    }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
                                         </div>
                                     </>
-                                ) : selectedDocType?.name === 'RFQ Concerns' &&
-                                  selectedSubDocType?.startsWith('PHILGEPS - ') &&
-                                  !selectedSubDocType.includes('Lease of Venue') ? (
+                                ) : selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType === 'PHILGEPS - Lease of Venue' ? (
+                                    <>
+                                        <div className="text-sm text-[var(--text-muted)] mt-2 p-4 bg-green-50 rounded-xl border border-green-100 flex items-start gap-3">
+                                            <MdInfo className="w-5 h-5 text-green-600 mt-0.5" aria-hidden />
+                                            <span>
+                                                No file or data is required for <strong>{selectedSubDocType}</strong>. Click <span className="font-semibold text-green-700">Submit</span> below to save; the document will automatically be marked complete.
+                                            </span>
+                                        </div>
+                                    </>
+                                ) : selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('PHILGEPS - ') ? (
                                     <>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
@@ -1670,14 +1764,71 @@ const Encode = ({ user }) => {
                                     </>
                                 ) : selectedDocType?.name === 'RFQ Concerns' && selectedSubDocType?.startsWith('Certificate of DILG - Lease of Venue') ? (
                                     <>
-                                        <div className="text-sm text-[var(--text-muted)]">
-                                            No additional details are required for this Certificate of DILG - Lease of Venue entry. Click
-                                            &nbsp;<span className="font-semibold text-[var(--text)]">Submit</span> below to save it.
+                                        <div>
+                                            <label className="label">Title/Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Purpose of the DILG Certificate"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
                                         </div>
                                     </>
                                 ) : selectedDocType?.name === 'RFQ Concerns' &&
                                   selectedSubDocType?.startsWith('Certificate of DILG - Small Value Procurement') ? (
                                     <>
+                                        <div>
+                                            <label className="label">Title/Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Purpose of the DILG Certificate"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
                                         <div>
                                             <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
                                             <input
@@ -1757,27 +1908,11 @@ const Encode = ({ user }) => {
                                                 </button>
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <input
-                                                    type="file"
-                                                    onChange={(e) => {
-                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
-                                                    }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                                                    aria-invalid={!!newFormErrors.file}
-                                                    aria-describedby={newFormErrors.file ? 'err-file' : undefined}
-                                                />
-                                            </div>
-                                            {newFormErrors.file && (
-                                                <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
-                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
-                                                    {newFormErrors.file}
-                                                </p>
-                                            )}
+                                        <div className="text-sm text-[var(--text-muted)] mt-2 p-4 bg-green-50 rounded-xl border border-green-100 flex items-start gap-3">
+                                            <MdInfo className="w-5 h-5 text-green-600 mt-0.5" aria-hidden />
+                                            <span>
+                                                No file is required for <strong>{selectedSubDocType}</strong>. Click <span className="font-semibold text-green-700">Submit</span> below to save; the document will be marked complete as long as the deadline details and providers are complete.
+                                            </span>
                                         </div>
                                     </>
                                 ) : selectedSubDocType === 'Purchase Request' || selectedSubDocType === 'Activity Design' || selectedSubDocType === 'Project Procurement Management Plan/Supplemental PPMP' ? (
@@ -1926,6 +2061,25 @@ const Encode = ({ user }) => {
                                             )}
                                         </div>
                                         <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p id="err-date" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
                                             <label className="label">APP No.</label>
                                             <select
                                                 value={form.app_type}
@@ -2027,6 +2181,25 @@ const Encode = ({ user }) => {
                                                 <p id="err-title" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
                                                     <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
                                                     {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="date"
+                                                value={form.date}
+                                                onChange={(e) => {
+                                                    setForm((f) => ({ ...f, date: e.target.value }));
+                                                    if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                aria-invalid={!!newFormErrors.date}
+                                            />
+                                            {newFormErrors.date && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.date}
                                                 </p>
                                             )}
                                         </div>
@@ -2302,6 +2475,27 @@ const Encode = ({ user }) => {
                                     </>
                                 ) : selectedSubDocType === 'Invitation to COA' ? (
                                     <>
+                                        <div>
+                                            <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Purpose of the invitation"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
                                         <div>
                                             <label className="label">BAC Folder No.</label>
                                             <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
@@ -2757,6 +2951,27 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'Contract Services/Purchase Order' ? (
                                     <>
                                         <div>
+                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Contract title"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
                                             <label className="label">BAC Folder No.</label>
                                             <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
                                         </div>
@@ -2857,6 +3072,27 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'OSS' ? (
                                     <>
                                         <div>
+                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Document title"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
                                             <label className="label">BAC Folder No.</label>
                                             <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
                                         </div>
@@ -2885,6 +3121,27 @@ const Encode = ({ user }) => {
                                     </>
                                 ) : selectedSubDocType === "Applicable: Secretary's Certificate and Special Power of Attorney" ? (
                                     <>
+                                        <div>
+                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Document title"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
                                         <div>
                                             <label className="label">BAC Folder No.</label>
                                             <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
@@ -2915,6 +3172,27 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'PhilGEPS Posting of Award' ? (
                                     <>
                                         <div>
+                                            <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Purpose of posting"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
                                             <label className="label">BAC Folder No.</label>
                                             <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
                                         </div>
@@ -2933,6 +3211,27 @@ const Encode = ({ user }) => {
                                     </>
                                 ) : selectedSubDocType === 'Certificate of DILG R1 Website Posting of Award' ? (
                                     <>
+                                        <div>
+                                            <label className="label">Purpose <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Purpose of certificate"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
                                         <div>
                                             <label className="label">BAC Folder No.</label>
                                             <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
@@ -2953,6 +3252,27 @@ const Encode = ({ user }) => {
                                 ) : selectedSubDocType === 'Notice of Award (Posted)' || selectedSubDocType === 'Abstract of Quotation (Posted)' || selectedSubDocType === 'BAC Resolution (Posted)' ? (
                                     <>
                                         <div>
+                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Document title"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
                                             <label className="label">BAC Folder No.</label>
                                             <input type="text" readOnly value={nextTransactionNumber ?? '…'} className="input-field bg-[var(--background-subtle)] cursor-default" aria-readonly="true" />
                                         </div>
@@ -2964,8 +3284,53 @@ const Encode = ({ user }) => {
                                     </>
                                 ) : selectedSubDocType === 'Lease of Venue: Table Rating Factor' ? (
                                     <>
-                                        <div className="text-sm text-[var(--text-muted)]">
+                                        <div>
+                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input
+                                                type="text"
+                                                value={form.title}
+                                                onChange={(e) => {
+                                                    const value = toLettersOnly(e.target.value);
+                                                    setForm((f) => ({ ...f, title: value }));
+                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                }}
+                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                placeholder="Document title"
+                                                aria-invalid={!!newFormErrors.title}
+                                            />
+                                            {newFormErrors.title && (
+                                                <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                    {newFormErrors.title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="label">Date <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                            <input type="date" value={form.date} onChange={(e) => { setForm((f) => ({ ...f, date: e.target.value })); if (newFormErrors.date) setManualErrors((e2) => ({ ...e2, date: '' })); }} className={`input-field ${newFormErrors.date ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`} aria-invalid={!!newFormErrors.date} />
+                                            {newFormErrors.date && <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert"><MdError className="w-4 h-4 flex-shrink-0" aria-hidden />{newFormErrors.date}</p>}
+                                        </div>
+                                        <div className="text-sm text-[var(--text-muted)] mt-2">
                                             No file is required for Lease of Venue. Click <span className="font-semibold text-[var(--text)]">Submit</span> below to save; the document will be marked complete.
+                                        </div>
+                                    </>
+                                ) : selectedSubDocType === 'PHILGEPS - Lease of Venue' ? (
+                                    <>
+                                        <div>
+                                            <label className="label">BAC Folder No.</label>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={nextTransactionNumber ?? '…'}
+                                                className="input-field bg-[var(--background-subtle)] cursor-default"
+                                                aria-readonly="true"
+                                            />
+                                        </div>
+                                        <div className="text-sm text-[var(--text-muted)] mt-2 p-4 bg-green-50 rounded-xl border border-green-100 flex items-start gap-3">
+                                            <MdInfo className="w-5 h-5 text-green-600 mt-0.5" aria-hidden />
+                                            <span>
+                                                No file or data is required for <strong>{selectedSubDocType}</strong>. Click <span className="font-semibold text-green-700">Submit / Save Updates</span> below to save; the document will automatically be marked complete.
+                                            </span>
                                         </div>
                                     </>
                                 ) : (
@@ -2980,28 +3345,30 @@ const Encode = ({ user }) => {
                                                 aria-readonly="true"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
-                                            <input
-                                                type="text"
-                                                value={form.title}
-                                                onChange={(e) => {
-                                                    const value = toLettersOnly(e.target.value);
-                                                    setForm((f) => ({ ...f, title: value }));
-                                                    if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
-                                                }}
-                                                className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                placeholder="Document title"
-                                                aria-invalid={!!newFormErrors.title}
-                                                aria-describedby={newFormErrors.title ? 'err-title' : undefined}
-                                            />
-                                            {newFormErrors.title && (
-                                                <p id="err-title" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
-                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
-                                                    {newFormErrors.title}
-                                                </p>
-                                            )}
-                                        </div>
+                                        {!selectedSubDocType?.startsWith('PHILGEPS - ') && (
+                                            <div>
+                                                <label className="label">Title <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    value={form.title}
+                                                    onChange={(e) => {
+                                                        const value = toLettersOnly(e.target.value);
+                                                        setForm((f) => ({ ...f, title: value }));
+                                                        if (newFormErrors.title) setManualErrors((e2) => ({ ...e2, title: '' }));
+                                                    }}
+                                                    className={`input-field ${newFormErrors.title ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                    placeholder="Document title"
+                                                    aria-invalid={!!newFormErrors.title}
+                                                    aria-describedby={newFormErrors.title ? 'err-title' : undefined}
+                                                />
+                                                {newFormErrors.title && (
+                                                    <p id="err-title" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                        <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                        {newFormErrors.title}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                         <div>
                                             <label className="label">Date</label>
                                             <input
@@ -3022,28 +3389,41 @@ const Encode = ({ user }) => {
                                                 </p>
                                             )}
                                         </div>
-                                        <div>
-                                            <label className="label">File</label>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <input
-                                                    type="file"
-                                                    onChange={(e) => {
-                                                        setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
-                                                        if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
-                                                    }}
-                                                    className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
-                                                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                                                    aria-invalid={!!newFormErrors.file}
-                                                    aria-describedby={newFormErrors.file ? 'err-file' : undefined}
-                                                />
+                                        {(() => {
+                                            if (selectedSubDocType === 'PHILGEPS - Small Value Procurement' || selectedSubDocType === 'PHILGEPS - Public Bidding') return false;
+                                            const kw = ['Lease of Venue', 'Small Value Procurement', 'Public Bidding', 'Minutes of the Meeting'];
+                                            return kw.some(k => selectedSubDocType === k || selectedSubDocType?.includes(k));
+                                        })() ? (
+                                            <div className="text-sm text-[var(--text-muted)] mt-4 p-4 bg-green-50 rounded-xl border border-green-100 flex items-start gap-3">
+                                                <MdInfo className="w-5 h-5 text-green-600 mt-0.5" aria-hidden />
+                                                <span>
+                                                    No file is required for <strong>{selectedSubDocType}</strong>. Click <span className="font-semibold text-green-700">Submit</span> below to save; the document will be marked complete as long as the date is provided.
+                                                </span>
                                             </div>
-                                            {newFormErrors.file && (
-                                                <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
-                                                    <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
-                                                    {newFormErrors.file}
-                                                </p>
-                                            )}
-                                        </div>
+                                        ) : (
+                                            <div>
+                                                <label className="label">Upload <span className="text-red-600 font-semibold" aria-label="required">*</span></label>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <input
+                                                        type="file"
+                                                        onChange={(e) => {
+                                                            setForm((f) => ({ ...f, file: e.target.files?.[0] ?? null }));
+                                                            if (newFormErrors.file) setManualErrors((e2) => ({ ...e2, file: '' }));
+                                                        }}
+                                                        className={`input-field py-1.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-semibold file:cursor-pointer file:transition-colors file:duration-200 flex-1 min-w-0 ${newFormErrors.file ? 'border-2 border-red-500 bg-red-50/50 ring-2 ring-red-200' : ''}`}
+                                                        accept=".pdf,.doc,.docx,.xls,.xlsx"
+                                                        aria-invalid={!!newFormErrors.file}
+                                                        aria-describedby={newFormErrors.file ? 'err-file' : undefined}
+                                                    />
+                                                </div>
+                                                {newFormErrors.file && (
+                                                    <p id="err-file" className="mt-1.5 flex items-center gap-2 text-sm font-medium text-red-700" role="alert">
+                                                        <MdError className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                                        {newFormErrors.file}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                     </>
                                 )}
                                 {newError && (
@@ -4488,6 +4868,194 @@ const Encode = ({ user }) => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* View Details Modal for Admin */}
+            {activeModal === 'view' && selectedDoc && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    aria-modal="true"
+                    role="dialog"
+                >
+                    <div className="card-elevated max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0">
+                        <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
+                            <div>
+                                <h2 className="text-lg font-bold text-[var(--text)] flex items-center gap-2">
+                                    <MdDescription className="text-[var(--primary)]" />
+                                    Document Details
+                                </h2>
+                                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                                    {selectedDoc.subDoc} • Folder {selectedDoc.prNo}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveModal(null);
+                                    setSelectedDoc(null);
+                                }}
+                                className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-lg transition-all"
+                                aria-label="Close"
+                            >
+                                <MdClose className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Header Info Section */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Title / Purpose</label>
+                                    <p className="text-sm font-semibold text-[var(--text)]">{selectedDoc.title || '—'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Status</label>
+                                    <div className="flex">
+                                        <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold border ${getStatusColor(selectedDoc.status)} capitalize`}>
+                                            {selectedDoc.status || 'pending'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Procurement Type</label>
+                                    <p className="text-sm font-medium text-[var(--text)]">{selectedDoc.category || '—'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Date Submitted</label>
+                                    <p className="text-sm font-medium text-[var(--text)]">{formatDate(selectedDoc.uploaded_at)}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Submitted By</label>
+                                    <p className="text-sm font-medium text-[var(--text)] break-all">{selectedDoc.uploadedBy || '—'}</p>
+                                </div>
+                                {selectedDoc.date && (
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Document Date</label>
+                                        <p className="text-sm font-medium text-[var(--text)]">{formatDate(selectedDoc.date)}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <hr className="border-[var(--border-light)]" />
+
+                            {/* Specific Fields Section */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+                                    <MdPostAdd className="text-[var(--primary)]" />
+                                    Specific Details
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 bg-[var(--background-subtle)]/30 p-4 rounded-xl border border-[var(--border-light)]/50">
+                                    {[
+                                        { label: 'PR No. / Ref No.', value: selectedDoc.user_pr_no },
+                                        { label: 'PPMP No.', value: selectedDoc.ppmp_no },
+                                        { label: 'Amount', value: selectedDoc.total_amount ? `₱${formatCurrencyValue(selectedDoc.total_amount)}` : null },
+                                        { label: 'Source of Fund', value: selectedDoc.source_of_fund },
+                                        { label: 'Office/Division', value: selectedDoc.office_division },
+                                        { label: 'Received By', value: selectedDoc.received_by },
+                                        { label: 'Venue', value: selectedDoc.venue },
+                                        { label: 'Resolution No.', value: selectedDoc.resolution_no },
+                                        { label: 'Winning Bidder', value: selectedDoc.winning_bidder },
+                                        { label: 'AOQ No.', value: selectedDoc.aoq_no },
+                                        { label: 'Market Budget', value: selectedDoc.market_budget ? `₱${formatCurrencyValue(selectedDoc.market_budget)}` : null },
+                                        { label: 'Market Period', value: selectedDoc.market_period_from ? `${selectedDoc.market_period_from} to ${selectedDoc.market_period_to || '—'}` : null },
+                                    ].filter(item => item.value && String(item.value).trim()).map((item, idx) => (
+                                        <div key={idx} className="space-y-1">
+                                            <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{item.label}</label>
+                                            <p className="text-sm font-medium text-[var(--text)]">{item.value}</p>
+                                        </div>
+                                    ))}
+                                    {(!selectedDoc.attendance_members && !selectedDoc.winning_bidder && !selectedDoc.user_pr_no) && (
+                                        <p className="text-xs text-[var(--text-muted)] italic col-span-2">No additional specific details recorded.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Attendance / Bidders Special Sections */}
+                            {selectedDoc.subDoc === 'Attendance Sheet' && selectedDoc.attendance_members && (
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-[var(--text)]">Members Attendance</h3>
+                                    <div className="border border-[var(--border-light)] rounded-xl overflow-hidden shadow-sm">
+                                        <table className="min-w-full divide-y divide-[var(--border-light)]">
+                                            <thead className="bg-[var(--background-subtle)]">
+                                                <tr>
+                                                    <th className="px-4 py-2 text-left text-[10px] font-bold text-[var(--text-muted)] uppercase">Name</th>
+                                                    <th className="px-4 py-2 text-center text-[10px] font-bold text-[var(--text-muted)] uppercase">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[var(--border-light)] bg-white/50">
+                                                {(() => {
+                                                    try {
+                                                        const members = typeof selectedDoc.attendance_members === 'string' 
+                                                            ? JSON.parse(selectedDoc.attendance_members) 
+                                                            : selectedDoc.attendance_members;
+                                                        return Array.isArray(members) ? members.map((m, i) => (
+                                                            <tr key={i}>
+                                                                <td className="px-4 py-2 text-sm text-[var(--text)]">{m.name}</td>
+                                                                <td className="px-4 py-2 text-center">
+                                                                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${m.present ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                                                                        {m.present ? 'PRESENT' : 'ABSENT'}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        )) : <tr><td colSpan="2" className="px-4 py-2 text-sm">No valid data</td></tr>;
+                                                    } catch (e) { return null; }
+                                                })()}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* File Section */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+                                    <MdFolder className="text-[var(--primary)]" />
+                                    Attached Document
+                                </h3>
+                                {selectedDoc.file_url ? (
+                                    <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-blue-100 rounded-lg">
+                                                <MdDescription className="w-6 h-6 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-blue-900 break-all">{selectedDoc.title || 'Document File'}</p>
+                                                <p className="text-xs text-blue-700">Available for view/download</p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={selectedDoc.file_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn-primary py-2 px-4 text-xs flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+                                        >
+                                            <MdDownload className="w-4 h-4" />
+                                            View File
+                                        </a>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                                        <MdWarning className="w-5 h-5 text-amber-600" />
+                                        <p className="text-sm font-medium text-amber-800">No file has been uploaded for this document yet.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-[var(--background-subtle)]/50 border-t border-[var(--border-light)] flex justify-end rounded-b-2xl">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveModal(null);
+                                    setSelectedDoc(null);
+                                }}
+                                className="px-6 py-2 bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] text-sm font-bold rounded-xl hover:bg-[var(--background-subtle)] transition-all active:scale-95 shadow-sm"
+                            >
+                                Close View
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

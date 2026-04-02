@@ -25,6 +25,7 @@ const Login = ({ onLogin, infoMessage }) => {
     const [registerLoading, setRegisterLoading] = useState(false);
     const [registerSuccess, setRegisterSuccess] = useState(false);
     const [hasTriedLogin, setHasTriedLogin] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -179,33 +180,28 @@ const Login = ({ onLogin, infoMessage }) => {
 
     return (
         <div
-            className="min-h-screen flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+            className="min-h-screen flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-professional"
             style={{
-                background: 'linear-gradient(165deg, #0f172a 0%, #1e293b 40%, #0f172a 100%)',
-                backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(22, 163, 74, 0.12) 0%, transparent 50%), linear-gradient(165deg, #0f172a 0%, #1e293b 40%, #0f172a 100%)',
                 scrollbarGutter: 'stable',
             }}
         >
             <div
-                className="w-full max-w-md min-w-[min(100%,20rem)] rounded-2xl shrink-0 bg-white font-sans antialiased"
-                style={{
-                    boxShadow: '0 32px 64px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
-                }}
+                className={`w-full max-w-md min-w-[min(100%,20rem)] rounded-2xl shrink-0 glass-card font-sans antialiased animate-entry ${isFocused ? 'glass-card-glow' : ''}`}
             >
                 <div className="flex flex-col items-center p-4 sm:p-6 pt-4 sm:pt-6">
                     <div className="flex flex-col items-center gap-3 mb-1 w-full">
                         <img
                             src={LEFT_PANEL_IMAGE}
                             alt=""
-                            className="w-16 h-16 sm:w-20 sm:h-20 object-contain flex-shrink-0"
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-contain flex-shrink-0 animate-entry logo-glow"
                         />
-                        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight text-center leading-snug" style={{ letterSpacing: '-0.02em' }}>
-                            BAC Documents Tracking System
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight text-center leading-snug animate-entry delay-100" style={{ letterSpacing: '-0.02em' }}>
+                            Bids and Awards Document Tracking System
                         </h1>
                     </div>
 
                     {/* Fixed Height Error Container - never changes size or causes the card to shrink */}
-                    <div className="w-full max-w-xs relative h-[4.5rem] flex items-end justify-center pb-2">
+                    <div className="w-full max-w-xs relative h-[4.5rem] flex items-end justify-center pb-2 animate-entry delay-200">
                         <div
                             aria-live="polite"
                             className="w-full absolute bottom-2 left-0 transition-all duration-300 pointer-events-none"
@@ -227,58 +223,62 @@ const Login = ({ onLogin, infoMessage }) => {
                         </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="mt-1 flex flex-col w-full max-w-xs">
+                    <form 
+                        onSubmit={handleSubmit} 
+                        className="mt-1 flex flex-col w-full max-w-xs"
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                    >
                         <div className="space-y-5">
-                            <div>
-                                <label htmlFor="login-email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                            <div className="animate-entry delay-300 floating-label-group rounded-xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+                                <input
+                                    id="login-email"
+                                    type="text"
+                                    className="w-full px-4 py-3 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-xl floating-input"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    autoComplete="username"
+                                    required
+                                    placeholder=" "
+                                />
+                                <label htmlFor="login-email" className="floating-label">
                                     Username or email
                                 </label>
-                                <div className="relative rounded-xl border border-slate-200 bg-slate-50/50 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
-                                    <input
-                                        id="login-email"
-                                        type="text"
-                                        className="w-full px-4 py-3 bg-transparent text-slate-900 placeholder-slate-400 outline-none border-0 focus:ring-0 text-[15px] rounded-xl"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        autoComplete="username"
-                                        required
-                                        placeholder="Enter username or email"
-                                    />
-                                </div>
                             </div>
                             <PasswordInput
                                 id="login-password"
                                 label="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Enter password"
                                 autoComplete="current-password"
                                 required
                                 variant="rounded"
+                                floating={true}
+                                className="animate-entry delay-400"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full mt-5 py-3"
+                            className="btn-primary w-full mt-5 py-3 animate-entry delay-500 btn-magnetic"
                         >
                             {loading ? 'Signing in…' : 'Sign in'}
                         </button>
 
-                        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-5 text-sm">
+                        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-5 text-sm animate-entry delay-600">
                             <button
                                 type="button"
                                 onClick={openRegisterModal}
-                                className="text-emerald-600 hover:text-emerald-700 hover:underline focus:outline-none font-medium transition-colors"
+                                className="text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 hover:underline focus:outline-none font-medium transition-colors"
                             >
                                 Create account
                             </button>
-                            <span className="text-slate-300" aria-hidden>·</span>
+                            <span className="text-slate-300 dark:text-slate-600" aria-hidden>·</span>
                             <button
                                 type="button"
                                 onClick={openForgotModal}
-                                className="text-slate-600 hover:text-slate-900 hover:underline focus:outline-none transition-colors"
+                                className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:underline focus:outline-none transition-colors"
                             >
                                 Forgot password?
                             </button>

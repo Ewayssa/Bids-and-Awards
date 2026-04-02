@@ -20,8 +20,8 @@ export const StatsGrid = ({ loading, stats }) => {
             value: ongoing, 
             label: 'On-going', 
             icon: MdSchedule,
-            iconBg: 'bg-amber-50', 
-            iconColor: 'text-amber-600', 
+            iconBg: 'bg-blue-50', 
+            iconColor: 'text-blue-600', 
             link: '/encode?status=ongoing',
             accentClass: 'stat-card--ongoing'
         },
@@ -29,8 +29,8 @@ export const StatsGrid = ({ loading, stats }) => {
             value: pending, 
             label: 'Pending', 
             icon: MdWarning,
-            iconBg: 'bg-rose-50', 
-            iconColor: 'text-rose-600', 
+            iconBg: 'bg-amber-50', 
+            iconColor: 'text-amber-600', 
             link: '/encode?status=pending',
             accentClass: 'stat-card--pending'
         },

@@ -296,10 +296,12 @@ textarea {
     /* Hide number input spinner (for currency/total amount) */
     .input-currency {
         -moz-appearance: textfield;
+        appearance: textfield;
     }
     .input-currency::-webkit-outer-spin-button,
     .input-currency::-webkit-inner-spin-button {
         -webkit-appearance: none;
+        appearance: none;
         margin: 0;
     }
     .label {
@@ -536,7 +538,7 @@ input[type="password"]::-ms-clear {
     min-height: 100vh !important;
     width: 100% !important;
     max-width: 100% !important;
-    background: var(--background) !important;
+    background: var(--background);
     overflow-x: hidden !important;
     box-sizing: border-box !important;
 }
@@ -836,4 +838,141 @@ input[type="password"]::-ms-clear {
 }
 .animate-fade-in {
     animation: fade-in 0.25s ease-out;
+}
+
+/* Minimalist White Card */
+.glass-card {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(229, 231, 235, 0.5); /* thin slate-200 border */
+    box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.05),
+        0 10px 15px -3px rgba(0, 0, 0, 0.03),
+        0 0 0 1px rgba(0, 0, 0, 0.01);
+}
+
+.dark .glass-card {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.glass-card-glow {
+    box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.05),
+        0 10px 15px -3px rgba(0, 0, 0, 0.03),
+        0 0 0 1px rgba(0, 0, 0, 0.01),
+        0 0 20px 2px rgba(22, 163, 74, 0.08);
+    border-color: rgba(22, 163, 74, 0.2);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* God Tier Dynamic Mesh Animation */
+@keyframes mesh-breathing {
+    0%, 100% { background-position: 0% 0%, 100% 100%, 0% 100%, 100% 0%; }
+    25% { background-position: 5% 5%, 95% 95%, 5% 95%, 95% 5%; }
+    50% { background-position: 10% 0%, 90% 100%, 0% 90%, 100% 10%; }
+    75% { background-position: 5% 10%, 95% 90%, 10% 95%, 90% 5%; }
+}
+
+/* Professional Minimalist Background with Dynamic Mesh Depth */
+.bg-professional {
+    background-color: #ffffff !important;
+    background-image: 
+        radial-gradient(at 0% 0%, hsla(142, 70%, 45%, 0.04) 0px, transparent 55%),
+        radial-gradient(at 100% 0%, hsla(160, 68%, 21%, 0.03) 0px, transparent 55%),
+        radial-gradient(at 100% 100%, hsla(142, 70%, 45%, 0.03) 0px, transparent 55%),
+        radial-gradient(at 0% 100%, hsla(160, 68%, 21%, 0.03) 0px, transparent 55%),
+        radial-gradient(circle at 2px 2px, rgba(0,0,0,0.015) 1px, transparent 0);
+    background-size: 140% 140%, 140% 140%, 140% 140%, 140% 140%, 32px 32px;
+    animation: mesh-breathing 20s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-professional::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(22, 163, 74, 0.05) 0%, transparent 80%);
+}
+
+/* Entry Animations */
+@keyframes entry-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.animate-entry {
+    animation: entry-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+
+/* God Tier Floating Label Logic */
+.floating-label-group {
+    position: relative;
+}
+
+.floating-input {
+    padding-top: 1.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.floating-label {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    pointer-events: none;
+    transition: all 0.2s ease-out;
+    color: #64748b; /* slate-500 */
+    font-size: 0.9375rem;
+}
+
+/* Input Focused or Has Value */
+.floating-input:focus ~ .floating-label,
+.floating-input:not(:placeholder-shown) ~ .floating-label {
+    top: 0.45rem;
+    left: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #10b981; /* emerald-500 */
+}
+
+/* Logo Pulse Animation */
+@keyframes logo-ambient-pulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.05)); }
+    50% { filter: drop-shadow(0 0 25px rgba(16, 185, 129, 0.2)); }
+}
+
+.logo-glow {
+    animation: logo-ambient-pulse 4s ease-in-out infinite;
+}
+
+/* Magnetic Button Lift */
+.btn-magnetic {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.btn-magnetic:hover {
+    transform: scale(1.02) translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.3);
+}
+
+.btn-magnetic:active {
+    transform: scale(0.98) translateY(0);
 }

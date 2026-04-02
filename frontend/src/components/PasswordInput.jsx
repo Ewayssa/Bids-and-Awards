@@ -21,6 +21,7 @@ const PasswordInput = ({
     rules = DEFAULT_PASSWORD_RULES,
     showRequirementsChecklist = false,
     variant = 'underline',
+    floating = false,
     className = '',
     inputClassName = '',
     showToggle = true,
@@ -31,36 +32,36 @@ const PasswordInput = ({
     const showChecklist = showRequirementsChecklist && rules && rules.length > 0;
 
     const containerClass = variant === 'rounded'
-        ? 'rounded-xl border border-[var(--border)] bg-white/50 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20 transition-all'
-        : 'border-b border-gray-300 focus-within:border-gray-700 transition-colors';
+        ? 'rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all'
+        : 'border-b border-gray-300 dark:border-gray-600 focus-within:border-emerald-500 transition-colors';
     const inputBaseClass = variant === 'rounded'
         ? 'px-4 py-3 rounded-xl'
         : 'pl-0 py-2.5';
 
     return (
         <div className={className}>
-            {label && (
+            {!floating && label && (
                 <label
                     htmlFor={id}
-                    className="block text-sm font-medium text-gray-700 mb-1.5"
+                    className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5"
                 >
                     {label}
                 </label>
             )}
             <div
-                className={`relative ${containerClass} ${
+                className={`relative ${containerClass} ${floating ? 'floating-label-group' : ''} ${
                     error ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/20' : ''
                 }`}
             >
                 <input
                     id={id}
                     type={visible ? 'text' : 'password'}
-                    className={`w-full ${inputBaseClass} bg-transparent text-gray-900 placeholder-gray-400 outline-none border-0 focus:ring-0 disabled:opacity-60 disabled:cursor-not-allowed text-[15px] ${
+                    className={`w-full ${inputBaseClass} ${floating ? 'floating-input' : ''} bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none border-0 focus:ring-0 disabled:opacity-60 disabled:cursor-not-allowed text-[15px] ${
                         showToggle ? 'pr-11' : 'pr-4'
                     } ${inputClassName}`}
                     value={value}
                     onChange={onChange}
-                    placeholder={placeholder}
+                    placeholder={floating ? ' ' : placeholder}
                     autoComplete={autoComplete}
                     required={required}
                     disabled={disabled}
@@ -72,6 +73,11 @@ const PasswordInput = ({
                     }
                     {...rest}
                 />
+                {floating && label && (
+                    <label htmlFor={id} className="floating-label">
+                        {label}
+                    </label>
+                )}
                 {showToggle && (
                     <button
                         type="button"
@@ -81,7 +87,7 @@ const PasswordInput = ({
                             e.preventDefault();
                             setVisible((v) => !v);
                         }}
-                        className={`absolute top-1/2 -translate-y-1/2 p-2 z-[20] flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200/50 rounded-lg transition-all cursor-pointer ${
+                        className={`absolute top-1/2 -translate-y-1/2 p-2 z-[20] flex items-center justify-center text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all cursor-pointer ${
                             variant === 'rounded' ? 'right-1.5' : 'right-0'
                         }`}
                         aria-label={visible ? 'Hide password' : 'Show password'}
