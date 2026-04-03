@@ -9,51 +9,55 @@ export const StatsGrid = ({ loading, stats }) => {
     const statCards = [
         { 
             value: completed, 
-            label: 'Completed', 
+            label: 'Completed Documents', 
             icon: MdCheckCircle,
-            iconBg: 'bg-green-50', 
+            iconBg: 'bg-green-500/10', 
             iconColor: 'text-green-600', 
             link: '/encode?status=complete',
             accentClass: 'stat-card--complete'
         },
         { 
             value: ongoing, 
-            label: 'On-going', 
+            label: 'On-going Projects', 
             icon: MdSchedule,
-            iconBg: 'bg-blue-50', 
-            iconColor: 'text-blue-600', 
+            iconBg: 'bg-orange-500/10', 
+            iconColor: 'text-orange-600', 
             link: '/encode?status=ongoing',
             accentClass: 'stat-card--ongoing'
         },
         { 
             value: pending, 
-            label: 'Pending', 
+            label: 'Pending Reviews', 
             icon: MdWarning,
-            iconBg: 'bg-amber-50', 
-            iconColor: 'text-amber-600', 
+            iconBg: 'bg-rose-500/10', 
+            iconColor: 'text-rose-600', 
             link: '/encode?status=pending',
             accentClass: 'stat-card--pending'
         },
     ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 dashboard-stat-cards">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 dashboard-stat-cards">
             {statCards.map((card, i) => (
                 <Link 
                     key={card.label} 
                     to={card.link} 
-                    className={`card stat-card ${card.accentClass} overflow-visible p-5 sm:p-6 transition-all duration-300 ease-out hover:scale-[1.02] hover:shadow-[var(--shadow-lg)] group block min-w-0 dashboard-stat-card`} 
+                    className={`card stat-card ${card.accentClass} group relative p-5 sm:p-6 bg-white overflow-hidden`} 
                     style={{ animationDelay: `${i * 0.08}s` }}
                 >
-                    <div className="mb-3">
-                        <span className={`inline-flex w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 shadow-sm ${card.iconBg} ${card.iconColor} transition-transform duration-300 group-hover:scale-110`}>
-                            <card.icon className="w-5 h-5" />
-                        </span>
+                    <div className="flex items-center gap-4">
+                        <div className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${card.iconBg} ${card.iconColor} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-inner`}>
+                            <card.icon className="w-6 h-6" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-0.5">{card.label}</p>
+                            <div className="flex items-baseline gap-2">
+                                <h3 className="text-2xl sm:text-3xl font-extrabold text-[var(--text)] tabular-nums tracking-tight">
+                                    {loading ? '—' : formatNumber(card.value)}
+                                </h3>
+                            </div>
+                        </div>
                     </div>
-                    <p className="text-sm font-medium text-[var(--text-muted)]">{card.label}</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-[var(--text)] tabular-nums mt-0.5">
-                        {loading ? '—' : formatNumber(card.value)}
-                    </p>
                 </Link>
             ))}
         </div>

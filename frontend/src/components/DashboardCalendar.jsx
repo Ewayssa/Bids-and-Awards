@@ -51,44 +51,47 @@ export const DashboardCalendar = ({ events, isAdmin, onOpenAddEvent, onOpenEditE
     const hasEvent = (dateStr) => sortedEvents.some((e) => e.date === dateStr);
 
     return (
-        <section className="overflow-visible min-w-0 dashboard-section border-b-2 lg:border-b-0 lg:border-r-2 border-[var(--border)]" style={{ animationDelay: '0.15s' }}>
-            <div className="section-header section-header--nested">
-                <h2 className="text-base font-bold text-[var(--text)]">Calendar</h2>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">BAC events and deadlines</p>
+        <section className="overflow-visible min-w-0 dashboard-section border-b lg:border-b-0 lg:border-r border-[var(--border-light)]" style={{ animationDelay: '0.15s' }}>
+            <div className="px-6 py-5 border-b border-[var(--border-light)] bg-white/50">
+                <h2 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
+                    <MdTimeline className="w-4 h-4 text-[var(--primary)]" />
+                    Event Calendar
+                </h2>
+                <p className="text-[11px] text-[var(--text-subtle)] mt-1 font-medium">Bids and Awards Committee Schedule</p>
             </div>
-            <div className="p-4 sm:p-5 flex flex-col lg:flex-row gap-4 lg:gap-5 min-w-0 overflow-visible">
-                <div className="flex-1 min-w-0 flex flex-col gap-3">
-                    <div className="flex items-center justify-center gap-2">
+            <div className="p-6 flex flex-col xl:flex-row gap-8 min-w-0 overflow-visible bg-white">
+                <div className="flex-1 min-w-0 flex flex-col gap-5">
+                    <div className="flex items-center justify-between gap-4 px-2">
                         <button
                             type="button"
                             onClick={goPrevMonth}
-                            className="p-2 rounded-lg hover:bg-[var(--background-subtle)] text-[var(--text-muted)] transition-all duration-300 ease-out hover:shadow-sm active:scale-95"
+                            className="p-2 rounded-xl hover:bg-[var(--background-subtle)] text-[var(--text-muted)] transition-all duration-300 ease-out hover:shadow-sm active:scale-90 border border-transparent hover:border-[var(--border)]"
                             aria-label="Previous month"
                         >
-                            <MdChevronLeft className="w-5 h-5 transition-transform duration-300 hover:scale-110" />
+                            <MdChevronLeft className="w-5 h-5" />
                         </button>
-                        <span className="text-sm font-semibold text-[var(--text)] min-w-[140px] text-center">
+                        <span className="text-base font-bold text-[var(--text)] tracking-tight">
                             {MONTHS[month]} {year}
                         </span>
                         <button
                             type="button"
                             onClick={goNextMonth}
-                            className="p-2 rounded-lg hover:bg-[var(--background-subtle)] text-[var(--text-muted)] transition-all duration-300 ease-out hover:shadow-sm active:scale-95"
+                            className="p-2 rounded-xl hover:bg-[var(--background-subtle)] text-[var(--text-muted)] transition-all duration-300 ease-out hover:shadow-sm active:scale-90 border border-transparent hover:border-[var(--border)]"
                             aria-label="Next month"
                         >
-                            <MdChevronRight className="w-5 h-5 transition-transform duration-300 hover:scale-110" />
+                            <MdChevronRight className="w-5 h-5" />
                         </button>
                     </div>
-                    <div className="grid grid-cols-7 gap-1 text-center">
+                    <div className="grid grid-cols-7 gap-2 text-center">
                         {DAYS.map((d) => (
-                            <div key={d} className="text-[11px] font-semibold text-[var(--text-subtle)] py-1">{d}</div>
+                            <div key={d} className="text-[10px] font-bold text-[var(--text-subtle)] uppercase tracking-widest py-1">{d}</div>
                         ))}
                         {calendarCells.map((cell, i) => (
                             <button
                                 key={i}
                                 type="button"
                                 onClick={() => cell.current && isAdmin && onOpenAddEvent(cell.date)}
-                                className={`aspect-square max-h-[52px] flex flex-col items-center justify-center rounded-lg text-sm font-medium transition-all duration-300 ease-out ${
+                                className={`aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-semibold transition-all duration-300 ease-out relative group ${
                                     !cell.current
                                         ? 'text-[var(--border)] cursor-default'
                                         : isAdmin
@@ -98,47 +101,49 @@ export const DashboardCalendar = ({ events, isAdmin, onOpenAddEvent, onOpenEditE
                                     !cell.current
                                         ? ''
                                         : cell.isToday
-                                        ? 'ring-2 ring-[var(--primary)] text-[var(--text)] shadow-sm'
+                                        ? 'bg-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/30 z-10'
                                         : cell.current && hasEvent(cell.date)
-                                        ? 'bg-red-100 text-red-800 font-semibold ring-2 ring-red-300 ring-inset hover:ring-red-400 hover:shadow-sm'
-                                        : 'text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:shadow-sm'
+                                        ? 'bg-red-50 text-red-600 ring-1 ring-red-100 hover:bg-red-100 hover:ring-red-200'
+                                        : 'text-[var(--text-muted)] hover:bg-[var(--background-subtle)] border border-transparent hover:border-[var(--border)]'
                                 }`}
                                 aria-label={cell.current && isAdmin ? `Add event on ${cell.date}` : undefined}
                             >
-                                <span>{cell.day}</span>
-                                {cell.current && hasEvent(cell.date) && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-0.5 flex-shrink-0 transition-transform duration-300 group-hover:scale-125" aria-hidden />
+                                <span className={cell.isToday ? 'scale-110' : ''}>{cell.day}</span>
+                                {cell.current && hasEvent(cell.date) && !cell.isToday && (
+                                    <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500 group-hover:scale-150 transition-transform duration-300" aria-hidden />
                                 )}
                             </button>
                         ))}
                     </div>
                 </div>
-                <div className="flex-shrink-0 min-w-0 w-full lg:w-36 lg:min-w-[9rem] border-t lg:border-t-0 lg:border-l border-[var(--border-light)] pt-4 lg:pt-0 lg:pl-4 overflow-visible space-y-4">
-                    <EventList title="Today's events" events={todaysEvents} isAdmin={isAdmin} onEdit={onOpenEditEvent} />
-                    <EventList title="Upcoming events" events={upcomingEvents} isAdmin={isAdmin} onEdit={onOpenEditEvent} />
+                <div className="flex-shrink-0 min-w-0 w-full xl:w-48 xl:min-w-[12rem] border-t xl:border-t-0 xl:border-l border-[var(--border-light)] pt-6 xl:pt-0 xl:pl-6 overflow-visible space-y-6">
+                    <EventList title="TODAY" events={todaysEvents} isAdmin={isAdmin} onEdit={onOpenEditEvent} iconColor="var(--primary)" />
+                    <EventList title="UPCOMING" events={upcomingEvents} isAdmin={isAdmin} onEdit={onOpenEditEvent} iconColor="orange" />
                 </div>
             </div>
         </section>
     );
 };
 
-const EventList = ({ title, events, isAdmin, onEdit }) => (
-    <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] mb-3">{title}</p>
+const EventList = ({ title, events, isAdmin, onEdit, iconColor = 'var(--primary)' }) => (
+    <div className="space-y-4">
+        <p className="text-[10px] font-bold text-[var(--text-subtle)] uppercase tracking-widest flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: iconColor }}></span>
+            {title}
+        </p>
         {events.length === 0 ? (
-            <p className="text-xs text-[var(--text-subtle)]">None scheduled.</p>
+            <p className="text-[11px] text-[var(--text-subtle)] font-medium bg-[var(--background-subtle)]/50 px-3 py-2 rounded-lg border border-[var(--border-light)]">No events scheduled.</p>
         ) : (
-            <ol className="space-y-2.5 text-xs text-[var(--text-muted)] overflow-visible">
+            <ol className="space-y-3">
                 {events.map((ev) => (
-                    <li key={ev.id} className="flex gap-2.5 items-start min-w-0 group">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--primary)] flex-shrink-0 transition-transform duration-300 group-hover:scale-125" />
+                    <li key={ev.id} className="group list-none">
                         <button
                             type="button"
                             onClick={() => isAdmin && onEdit(ev)}
-                            className={`min-w-0 flex-1 overflow-visible text-left ${isAdmin ? 'cursor-pointer rounded-lg hover:bg-[var(--background-subtle)] px-2 py-1 -mx-2 -my-1 transition-colors' : 'cursor-default'}`}
+                            className={`w-full text-left p-3 rounded-xl border border-transparent transition-all duration-300 ${isAdmin ? 'hover:border-[var(--border)] hover:bg-[var(--background-subtle)] hover:shadow-sm' : 'cursor-default'}`}
                         >
-                            <p className="font-medium text-[var(--text)] break-words">{ev.title}</p>
-                            <p className="text-[var(--text-subtle)] mt-1">{ev.date}</p>
+                            <p className="text-xs font-bold text-[var(--text)] leading-snug group-hover:text-[var(--primary)] transition-colors">{ev.title}</p>
+                            <p className="text-[10px] font-semibold text-[var(--text-subtle)] mt-1 uppercase tracking-wider">{ev.date}</p>
                         </button>
                     </li>
                 ))}

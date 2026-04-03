@@ -240,12 +240,24 @@ const Reports = ({ user }) => {
                                     <td className="table-td-muted">{r.uploadedBy || '—'}</td>
                                     <td className="table-td-muted">{formatDate(r.uploaded_at) || '—'}</td>
                                     {isAdmin && (
-                                        <td className="table-td">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => openPreview(r)} className="px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all">View</button>
-                                                <button onClick={() => triggerDownload(r)} className="px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--background-subtle)] transition-all">Download</button>
-                                            </div>
-                                        </td>
+                                    <td className="table-td">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={() => openPreview(r)} 
+                                                className="btn-action-primary px-4 py-1.5 rounded-lg border border-transparent hover:border-[var(--primary)]/30"
+                                                title="Preview report"
+                                            >
+                                                Preview
+                                            </button>
+                                            <button 
+                                                onClick={() => triggerDownload(r)} 
+                                                className="btn-secondary px-3 py-1.5 rounded-lg text-xs"
+                                                title="Download PDF"
+                                            >
+                                                Download
+                                            </button>
+                                        </div>
+                                    </td>
                                     )}
                                 </tr>
                             ))}

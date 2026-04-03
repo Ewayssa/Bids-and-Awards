@@ -1,8 +1,9 @@
 # BAC Document Tracking - Start Django Backend (opens in new window)
 $ErrorActionPreference = "Stop"
-$backendPath = Join-Path $PSScriptRoot "backend"
-$parentVenv = Join-Path (Split-Path $PSScriptRoot -Parent) ".venv\Scripts\Activate.ps1"
-$activate = if (Test-Path $parentVenv) { "& '$($parentVenv -replace "'", "''")'; " } else { "" }
+$root = Split-Path $PSScriptRoot -Parent
+$backendPath = Join-Path $root "backend"
+$backendVenv = Join-Path $backendPath "venv\Scripts\Activate.ps1"
+$activate = if (Test-Path $backendVenv) { "& '$($backendVenv -replace "'", "''")'; " } else { "" }
 
 # Run migrations and create superuser before starting server (ensures backend is ready)
 $migrateCmd = "${activate}Set-Location '$backendPath'; python manage.py migrate --noinput"

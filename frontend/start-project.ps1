@@ -1,11 +1,11 @@
 # BAC Document Tracking - Start Backend + Frontend (run this once)
 $ErrorActionPreference = "Stop"
-$root = $PSScriptRoot
-$backendPath = Join-Path $root "backend"
+$projectRoot = Split-Path $PSScriptRoot -Parent
+$backendPath = Join-Path $projectRoot "backend"
 
-# Optional: use parent .venv if present
-$parentVenv = Join-Path (Split-Path $root -Parent) ".venv\Scripts\Activate.ps1"
-$activate = if (Test-Path $parentVenv) { "& '$($parentVenv -replace "'", "''")'; " } else { "" }
+# Use backend venv if present
+$backendVenv = Join-Path $backendPath "venv\Scripts\Activate.ps1"
+$activate = if (Test-Path $backendVenv) { "& '$($backendVenv -replace "'", "''")'; " } else { "" }
 
 Write-Host "Applying backend migrations..." -ForegroundColor Yellow
 Invoke-Expression "${activate}Set-Location '$backendPath'; python manage.py migrate --noinput"
@@ -29,7 +29,7 @@ try {
 }
 
 Write-Host "Starting frontend in this window..." -ForegroundColor Green
-Set-Location $root
+Set-Location $PSScriptRoot
 if (-not (Test-Path "node_modules")) {
     Write-Host "Installing npm dependencies (first run)..." -ForegroundColor Yellow
     npm install

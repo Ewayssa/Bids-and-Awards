@@ -58,36 +58,36 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
     const barMax = Math.max(1, ...barValues);
 
     return (
-        <section className="overflow-visible flex flex-col min-w-0 dashboard-section border-b-2 lg:border-b-0 border-[var(--border)] dashboard-section-progress" style={{ animationDelay: '0.25s' }}>
-            <div className="section-header section-header--nested">
-                <h2 className="text-base font-bold text-[var(--text)]">Procurement Progress</h2>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">Overview by completion</p>
+        <section className="overflow-visible flex flex-col min-w-0 dashboard-section border-b lg:border-b-0 border-[var(--border-light)] dashboard-section-progress" style={{ animationDelay: '0.25s' }}>
+            <div className="px-6 py-5 border-b border-[var(--border-light)] bg-white/50">
+                <h2 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
+                    <MdPostAdd className="w-4 h-4 text-[var(--primary)]" />
+                    Procurement Insights
+                </h2>
+                <p className="text-[11px] text-[var(--text-subtle)] mt-1 font-medium">Real-time status overview</p>
             </div>
-            <div className="p-4 sm:p-5 flex flex-col sm:flex-row gap-6 min-w-0 overflow-visible items-center sm:items-stretch">
-                <div className="flex flex-col items-center py-4 sm:py-0 flex-shrink-0">
-                    <div className="relative w-56 h-56 sm:w-72 sm:h-72 flex-shrink-0 dashboard-pie-container">
-                        <svg viewBox="0 0 100 100" className="w-full h-full dashboard-pie-svg" aria-hidden>
+            <div className="p-6 flex flex-col xl:flex-row gap-8 min-w-0 overflow-visible items-center sm:items-stretch bg-white">
+                <div className="flex flex-col items-center py-6 sm:py-0 flex-shrink-0 xl:border-r border-[var(--border-light)] xl:pr-8">
+                    <div className="relative w-56 h-56 flex-shrink-0 dashboard-pie-container">
+                        <svg viewBox="0 0 100 100" className="w-full h-full dashboard-pie-svg filter drop-shadow-xl" aria-hidden>
                             <defs>
-                                <filter id="dashboard-pie-shadow" x="-30%" y="-30%" width="160%" height="160%">
-                                    <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodOpacity="0.15" />
-                                </filter>
                                 <linearGradient id="pie-completed" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#16a34a" />
-                                    <stop offset="100%" stopColor="#22c55e" />
+                                    <stop offset="0%" stopColor="#10b981" />
+                                    <stop offset="100%" stopColor="#059669" />
                                 </linearGradient>
                                 <linearGradient id="pie-ongoing" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#60a5fa" />
-                                    <stop offset="100%" stopColor="#3b82f6" />
+                                    <stop offset="0%" stopColor="#3b82f6" />
+                                    <stop offset="100%" stopColor="#2563eb" />
                                 </linearGradient>
                                 <linearGradient id="pie-pending" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#fde047" />
-                                    <stop offset="100%" stopColor="#eab308" />
+                                    <stop offset="0%" stopColor="#f59e0b" />
+                                    <stop offset="100%" stopColor="#d97706" />
                                 </linearGradient>
                             </defs>
                             {(completed + ongoing + pending) === 0 ? (
-                                <circle cx={cx} cy={cy} r={r} fill="var(--border-light)" stroke="var(--border)" strokeWidth="2" className="dashboard-pie-empty" />
+                                <circle cx={cx} cy={cy} r={r} fill="var(--background-subtle)" stroke="var(--border-light)" strokeWidth="1" className="dashboard-pie-empty" />
                             ) : (
-                                <g filter="url(#dashboard-pie-shadow)">
+                                <g>
                                     {sliceMeta.map((slice, idx) => {
                                         const path = wedgePath(slice.start, slice.end);
                                         if (!path) return null;
@@ -100,9 +100,9 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                                                 key={slice.label}
                                                 d={path}
                                                 fill={slice.fill}
-                                                className="dashboard-pie-wedge"
-                                                stroke="rgba(255,255,255,0.4)"
-                                                strokeWidth="1.5"
+                                                className="dashboard-pie-wedge transition-transform duration-500 cursor-pointer"
+                                                stroke="#fff"
+                                                strokeWidth="2"
                                                 transform={hoveredSlice === slice.label ? `translate(${explodeDx}, ${explodeDy})` : undefined}
                                                 style={{ animationDelay: `${0.35 + idx * 0.1}s` }}
                                                 onMouseEnter={() => setHoveredSlice(slice.label)}
@@ -113,61 +113,71 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                                 </g>
                             )}
                         </svg>
-                        {hoveredSlice && (completed + ongoing + pending) > 0 && (() => {
-                            const slice = sliceMeta.find((s) => s.label === hoveredSlice);
-                            return slice ? (
-                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-2 flex flex-nowrap items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border-light)] shadow-lg whitespace-nowrap z-10 pointer-events-none dashboard-pie-tooltip">
-                                    <span className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: slice.color }} />
-                                    <span className="text-sm font-medium text-[var(--text)]">{slice.label}</span>
-                                    <span className="text-xs text-[var(--text-muted)] tabular-nums">{formatNumber(slice.value)} ({formatNumber(slice.pct, 0)}%)</span>
-                                </div>
-                            ) : null;
-                        })()}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-3xl font-black text-[var(--text)] leading-none tracking-tighter">
+                                {completed + ongoing + pending}
+                            </span>
+                            <span className="text-[10px] font-bold text-[var(--text-subtle)] uppercase tracking-widest mt-1">
+                                TOTAL
+                            </span>
+                        </div>
                     </div>
                     {(completed + ongoing + pending) > 0 && (
-                        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-3 pt-3">
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-6">
                             {sliceMeta.map((slice) => (
-                                <div key={slice.label} className="flex items-center gap-2 dashboard-pie-legend-item">
-                                    <span className="w-3 h-3 rounded-full flex-shrink-0 border border-white shadow-sm" style={{ backgroundColor: slice.color }} />
-                                    <span className="text-xs font-medium text-[var(--text)]">{slice.label}</span>
+                                <div key={slice.label} className="flex items-center gap-2 group cursor-default" onMouseEnter={() => setHoveredSlice(slice.label)} onMouseLeave={() => setHoveredSlice(null)}>
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }} />
+                                    <div className="flex flex-col">
+                                        <span className="text-[11px] font-bold text-[var(--text)] leading-none group-hover:text-[var(--primary)] transition-colors">{slice.label}</span>
+                                        <span className="text-[10px] font-semibold text-[var(--text-subtle)] tabular-nums mt-0.5">{formatNumber(slice.value)} records</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
-                <div className="w-full min-w-0 flex-1 sm:min-w-[200px] pt-6 sm:pt-0 sm:pl-6">
-                    <div className="mb-4">
-                        <h3 className="text-base font-bold text-[var(--text)]">Procurement Types</h3>
+                <div className="w-full min-w-0 flex-1 pt-6 sm:pt-0 sm:pl-6">
+                    <div className="mb-6 flex items-center justify-between">
+                        <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-widest">Procurement Methods</h3>
+                        <span className="text-[10px] font-bold text-[var(--text-subtle)] bg-[var(--background-subtle)] px-2.5 py-1 rounded-full border border-[var(--border-light)] uppercase tracking-wider">Top Types</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-5">
                         {(completed + ongoing + pending) === 0 ? (
-                                    <div className="py-8 px-4 rounded-xl bg-[var(--background-subtle)] border border-dashed border-[var(--border-light)] text-center">
-                                <p className="text-sm font-medium text-[var(--text-muted)]">No documents yet</p>
-                                <p className="text-xs text-[var(--text-subtle)] mt-1">Counts will appear here once documents are uploaded.</p>
+                                    <div className="py-12 px-6 rounded-2xl bg-[var(--background-subtle)]/30 border-2 border-dashed border-[var(--border-light)] text-center">
+                                <p className="text-sm font-bold text-[var(--text-muted)]">No data available yet</p>
+                                <p className="text-xs text-[var(--text-subtle)] mt-2 font-medium">Once documents are submitted, their classification will appear here.</p>
                             </div>
                         ) : barTotal === 0 ? (
-                            <div className="py-8 px-4 rounded-xl bg-[var(--background-subtle)] border border-dashed border-[var(--border-light)] text-center">
-                                <p className="text-sm font-medium text-[var(--text-muted)]">No procurement method data</p>
-                                <p className="text-xs text-[var(--text-subtle)] mt-1">Upload documents with Lease of Venue / Small Value Procurement / Public Bidding</p>
+                            <div className="py-12 px-6 rounded-2xl bg-[var(--background-subtle)]/30 border-2 border-dashed border-[var(--border-light)] text-center">
+                                <p className="text-sm font-bold text-[var(--text-muted)]">No classified data</p>
+                                <p className="text-xs text-[var(--text-subtle)] mt-2 font-medium">Sub-documents like SVP or Public Bidding are required for metrics.</p>
                             </div>
                         ) : (
                             barSeries.map((series, i) => {
                                 const value = Number(procurementMethodCounts?.[series.key]) || 0;
                                 const pctOfTotal = barTotal > 0 ? (value / barTotal) * 100 : 0;
                                 const pctOfMax = barMax > 0 ? (value / barMax) * 100 : 0;
-                                const barWidthPct = value > 0 ? Math.max(pctOfMax, 8) : 0;
+                                const barWidthPct = value > 0 ? Math.max(pctOfMax, 4) : 0;
                                 return (
-                                    <div key={series.key} className="flex flex-col gap-2 min-w-0 dashboard-bar-row rounded-xl px-3 py-2.5 -mx-1 transition-colors duration-200" style={{ animationDelay: `${0.25 + i * 0.08}s` }}>
-                                        <div className="flex justify-between items-baseline gap-2 min-w-0">
-                                            <span className="text-sm font-medium text-[var(--text)] truncate">{series.label}</span>
-                                            <span className="text-sm font-semibold text-[var(--text)] tabular-nums flex-shrink-0">
-                                                {loading ? '—' : (barTotal > 0 && value >= 0 ? `${formatNumber(pctOfTotal, 0)}%` : '—')}
-                                            </span>
+                                    <div key={series.key} className="group min-w-0" style={{ animationDelay: `${0.25 + i * 0.08}s` }}>
+                                        <div className="flex justify-between items-end mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: series.color }} />
+                                                <span className="text-[11px] font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors tracking-tight">{series.label}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-xs font-black text-[var(--text)] tabular-nums">{value}</span>
+                                                <span className="text-[10px] font-bold text-[var(--text-subtle)] ml-1">({formatNumber(pctOfTotal, 0)}%)</span>
+                                            </div>
                                         </div>
-                                        <div className="h-12 w-full rounded-xl bg-gradient-to-b from-[var(--background-subtle)] to-[var(--border-light)] overflow-hidden border border-[var(--border-light)] relative shadow-inner">
+                                        <div className="h-1.5 w-full rounded-full bg-[var(--background-subtle)] overflow-hidden border border-[var(--border-light)] relative">
                                             <div
-                                                className={`h-full transition-all duration-700 ease-out dashboard-bar-fill ${barWidthPct >= 99 ? 'rounded-xl' : 'rounded-l-xl'}`}
-                                                style={{ width: `${barWidthPct}%`, background: value > 0 ? series.gradient : 'transparent', boxShadow: value > 0 ? 'inset 0 1px 0 rgba(255,255,255,0.3), 0 3px 8px rgba(0,0,0,0.15)' : undefined }}
+                                                className="h-full rounded-full transition-all duration-1000 ease-out relative"
+                                                style={{ 
+                                                    width: `${barWidthPct}%`, 
+                                                    backgroundColor: series.color,
+                                                    boxShadow: `0 0 12px ${series.color}40`
+                                                }}
                                             />
                                         </div>
                                     </div>

@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-    /* Green/white theme */
+    /* Professional Minimalist — Mint & Slate */
     --card: #ffffff;
     --ring: #16a34a;
-    --input: #f0f0f0;
-    --muted: #f5f7f5;
-    --accent: #86efac;
-    --border: #e5e8e5;
-    --radius: 0.5rem;
+    --input: #f3f4f6;
+    --muted: #f8fafb;
+    --accent: #6ee7b7;
+    --border: #e4e7eb;
+    --radius: 0.625rem;
     --chart-1: #22c55e;
     --chart-2: #16a34a;
     --chart-3: #15803d;
@@ -18,53 +18,58 @@
     --chart-5: #14532d;
     --popover: #ffffff;
     --primary: #16a34a;
-    --sidebar: #fafafa;
-    --font-mono: Source Code Pro, monospace;
-    --font-sans: Montserrat, sans-serif;
-    --secondary: #dcfce7;
+    --sidebar: #ffffff;
+    --font-mono: 'JetBrains Mono', 'Source Code Pro', monospace;
+    --font-sans: 'Inter', 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --secondary: #f0fdf4;
     --background: #ffffff;
     --font-serif: Merriweather, serif;
-    --foreground: #1a1a1a;
-    --destructive: #c62828;
+    --foreground: #111827;
+    --destructive: #dc2626;
     --sidebar-ring: #16a34a;
-    --sidebar-accent: #86efac;
-    --sidebar-border: #e5e8e5;
-    --card-foreground: #1a1a1a;
+    --sidebar-accent: #6ee7b7;
+    --sidebar-border: #e4e7eb;
+    --card-foreground: #111827;
     --sidebar-primary: #16a34a;
-    --muted-foreground: #525252;
-    --accent-foreground: #166534;
-    --popover-foreground: #1a1a1a;
+    --muted-foreground: #6b7280;
+    --accent-foreground: #064e3b;
+    --popover-foreground: #111827;
     --primary-foreground: #ffffff;
-    --sidebar-foreground: #1a1a1a;
-    --secondary-foreground: #166534;
+    --sidebar-foreground: #111827;
+    --secondary-foreground: #065f46;
     --destructive-foreground: #ffffff;
-    --sidebar-accent-foreground: #166534;
+    --sidebar-accent-foreground: #064e3b;
     --sidebar-primary-foreground: #ffffff;
-    /* App compatibility (map to theme) */
+    /* App compatibility */
     --primary-hover: #15803d;
     --primary-dark: #166534;
-    --primary-light: #86efac;
-    --primary-muted: #dcfce7;
+    --primary-light: #6ee7b7;
+    --primary-muted: #f0fdf4;
     --surface: var(--card);
     --surface-elevated: var(--card);
     --background-subtle: var(--muted);
-    --border-light: #f0f0f0;
+    --border-light: #f1f3f5;
     --text: var(--foreground);
     --text-muted: var(--muted-foreground);
-    --text-subtle: #737373;
+    --text-subtle: #9ca3af;
     --radius-sm: var(--radius);
     --radius-lg: 1rem;
-    --radius-xl: 1.25rem;
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-    --shadow-md: 0 6px 12px -2px rgb(0 0 0 / 0.08), 0 3px 6px -3px rgb(0 0 0 / 0.06);
-    --shadow-lg: 0 14px 28px -4px rgb(0 0 0 / 0.12), 0 6px 14px -6px rgb(0 0 0 / 0.08);
-    --shadow-xl: 0 20px 40px -8px rgb(0 0 0 / 0.15);
-    --focus-ring: 0 0 0 3px rgb(22 163 74 / 0.35);
-    --page-bg: #e8efe8;
-    --page-bg-gradient: linear-gradient(165deg, #f0f7f0 0%, #e5efe5 40%, #dceadc 100%);
+    --radius-xl: 1.5rem;
+    /* Refined, elegant shadow system */
+    --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 24px -4px rgb(0 0 0 / 0.10), 0 4px 12px -4px rgb(0 0 0 / 0.06);
+    --shadow-xl: 0 20px 40px -8px rgb(0 0 0 / 0.14), 0 8px 16px -6px rgb(0 0 0 / 0.08);
+    --focus-ring: 0 0 0 3px rgb(22 163 74 / 0.2);
+    /* Clean off-white page background */
+    --page-bg: #f6f8f9;
+    --page-bg-gradient: linear-gradient(160deg, #f8fafb 0%, #f3f6f4 50%, #f0f4f2 100%);
     --header-bg: #ffffff;
-    --header-border: #dde5dd;
-    --page-dot: rgba(0,0,0,0.06);
+    --header-border: #e8edf0;
+    --page-dot: rgba(0,0,0,0.04);
+    /* Sidebar accent line */
+    --sidebar-active-indicator: #16a34a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -258,40 +263,45 @@ textarea {
 
 @layer components {
     .card {
-        @apply bg-[var(--surface)] rounded-xl border border-[var(--border)] shadow-[var(--shadow-md)];
-        @apply transition-all duration-200 ease-out;
-        @apply hover:shadow-[var(--shadow-lg)] hover:border-[var(--border)];
+        @apply bg-[var(--surface)] rounded-[var(--radius-lg)] border border-[var(--border)] shadow-[var(--shadow-sm)];
+        @apply transition-all duration-300 ease-out;
+        @apply hover:shadow-[var(--shadow-md)] hover:border-[var(--text-subtle)]/30;
     }
     .card-elevated {
-        @apply bg-[var(--surface-elevated)] rounded-xl border border-[var(--border)] shadow-[var(--shadow-lg)];
-        @apply transition-all duration-200 ease-out;
-        @apply hover:shadow-[var(--shadow-xl)];
+        @apply bg-[var(--surface-elevated)] rounded-[var(--radius-lg)] border border-[var(--border)] shadow-[var(--shadow-md)];
+        @apply transition-all duration-300 ease-out;
+        @apply hover:shadow-[var(--shadow-lg)];
     }
     .btn-primary {
-        background: linear-gradient(180deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
-        @apply text-[var(--primary-foreground)] font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 ease-out shadow-md hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-md disabled:active:scale-100;
-        border: 1px solid rgba(0,0,0,0.08);
+        background: linear-gradient(160deg, #22c55e 0%, #16a34a 60%, #15803d 100%);
+        @apply text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 ease-out shadow-sm hover:shadow-md active:scale-[0.98] active:brightness-95 focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:active:scale-100;
+        border: none;
+        letter-spacing: 0.01em;
     }
     .btn-primary:hover:not(:disabled) {
-        background: linear-gradient(180deg, #2dd168 0%, #16a34a 50%, #166534 100%);
+        background: linear-gradient(160deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+        transform: translateY(-1px);
+    }
+    .btn-primary:active:not(:disabled) {
+        transform: translateY(0);
     }
     .btn-secondary {
-        @apply bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--text-subtle)] active:bg-[var(--border-light)] text-[var(--text)] font-semibold py-2.5 px-5 rounded-[var(--radius-sm)] transition-all duration-300 ease-out hover:shadow-sm active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--border)] focus:ring-offset-2;
+        @apply bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--border)] active:bg-[var(--border-light)] text-[var(--text)] font-medium py-2.5 px-5 rounded-xl transition-all duration-200 ease-out hover:shadow-sm active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[var(--border)] focus:ring-offset-2;
     }
     .btn-action {
-        @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-offset-1 active:scale-[0.97];
+        @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-1 active:scale-[0.97];
     }
     .btn-action-primary {
-        @apply btn-action text-[var(--primary)] hover:text-[var(--primary-hover)] hover:bg-[var(--primary-muted)] active:bg-[var(--primary-light)];
+        @apply btn-action text-[var(--primary)] hover:text-[var(--primary-hover)] hover:bg-[var(--primary-muted)] active:bg-[var(--primary-light)]/30;
     }
     .btn-action-secondary {
-        @apply btn-action text-[var(--text)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--text-subtle)] hover:shadow-sm active:bg-[var(--border-light)];
+        @apply btn-action text-[var(--text-muted)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--border)] hover:text-[var(--text)] hover:shadow-sm active:bg-[var(--border-light)];
     }
     .input-field {
-        @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius-sm)] outline-none text-[var(--text)] placeholder-[var(--text-subtle)];
-        @apply bg-[var(--surface)] transition-all duration-300 ease-out;
-        @apply focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-sm;
-        @apply hover:border-[var(--text-subtle)];
+        @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius-sm)] outline-none text-[var(--text)] placeholder-[var(--text-subtle)] bg-white;
+        @apply transition-all duration-200 ease-out;
+        @apply focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 focus:bg-white;
+        @apply hover:border-[var(--text-subtle)]/60;
     }
     /* Hide number input spinner (for currency/total amount) */
     .input-currency {
@@ -305,15 +315,15 @@ textarea {
         margin: 0;
     }
     .label {
-        @apply block text-sm font-medium text-[var(--text)] mb-1.5;
+        @apply block text-xs font-semibold text-[var(--text-muted)] mb-1.5 uppercase tracking-wide;
     }
-    /* ----- Page header: larger, fills space ----- */
+    /* ----- Page header ----- */
     .page-header {
         display: flex;
         align-items: stretch;
         min-width: 0;
-        margin-bottom: 1.25rem;
-        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+        border-radius: var(--radius-lg);
         border: 1px solid var(--header-border);
         background: var(--surface);
         box-shadow: var(--shadow-sm);
@@ -334,7 +344,7 @@ textarea {
             align-items: center;
             justify-content: space-between;
             gap: 1.5rem;
-            padding: 1.5rem 1.75rem 1.5rem 2rem;
+            padding: 1.25rem 1.75rem 1.25rem 2rem;
         }
     }
     .page-header__main {
@@ -347,10 +357,10 @@ textarea {
         line-height: 1.25;
     }
     .page-header__subtitle {
-        margin: 0.375rem 0 0;
-        font-size: 0.9375rem;
-        line-height: 1.45;
-        color: var(--text-muted);
+        margin: 0.25rem 0 0;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--text-subtle);
         max-width: 60ch;
     }
     .page-header__actions {
@@ -368,127 +378,131 @@ textarea {
         }
     }
     .page-title {
-        font-size: 1.5rem;
+        font-size: 1.375rem;
         font-weight: 700;
         color: var(--text);
-        letter-spacing: -0.02em;
+        letter-spacing: -0.025em;
         word-break: break-word;
     }
     @media (min-width: 640px) {
-        .page-title { font-size: 1.75rem; }
+        .page-title { font-size: 1.625rem; }
     }
     .page-title-lg {
-        font-size: 1.75rem;
+        font-size: 1.625rem;
         font-weight: 700;
         color: var(--text);
-        letter-spacing: -0.02em;
+        letter-spacing: -0.025em;
         word-break: break-word;
     }
     @media (min-width: 640px) {
-        .page-title-lg { font-size: 2rem; }
+        .page-title-lg { font-size: 1.875rem; }
     }
     .page-subtitle {
-        @apply text-[var(--text-muted)] mt-0.5 text-sm leading-relaxed break-words;
+        @apply text-[var(--text-subtle)] mt-0.5 text-sm leading-relaxed break-words;
     }
     .page-header--minimal {
         border-color: var(--border-light);
         box-shadow: none;
-        background: var(--background-subtle);
+        background: transparent;
     }
+    /* ----- Tables ----- */
     .table-header {
-        background: var(--primary-muted);
-        @apply border-b-2 border-[var(--border)] font-semibold;
+        background: var(--background-subtle);
+        @apply border-b border-[var(--border)] font-semibold;
     }
     .table-header .table-th {
-        @apply text-[var(--text)];
+        @apply text-[var(--text-muted)];
     }
     tbody tr:nth-child(even) {
-        background-color: color-mix(in srgb, var(--background-subtle) 50%, transparent);
+        background-color: color-mix(in srgb, var(--muted) 40%, transparent);
     }
     tbody tr:hover {
-        background-color: color-mix(in srgb, var(--primary) 5%, transparent);
+        background-color: color-mix(in srgb, var(--primary) 4%, transparent);
     }
     .table-th {
-        padding: 0.875rem 1rem 0.875rem 1.25rem;
+        padding: 0.75rem 1rem 0.75rem 1.25rem;
         text-align: center;
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
         font-weight: 600;
-        color: var(--text-muted);
+        color: var(--text-subtle);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
     }
     @media (min-width: 640px) {
-        .table-th { padding: 1rem 1.25rem 1rem 1.5rem; font-size: 0.875rem; }
+        .table-th { padding: 0.875rem 1.25rem 0.875rem 1.5rem; font-size: 0.8125rem; }
     }
     .table-td {
-        padding: 1rem 1rem 1rem 1.25rem;
+        padding: 0.875rem 1rem 0.875rem 1.25rem;
         text-align: center;
         font-size: 0.875rem;
         color: var(--text);
-        transition: color 0.2s;
+        transition: color 0.15s;
     }
     @media (min-width: 640px) {
-        .table-td { padding: 1.125rem 1.25rem 1.125rem 1.5rem; font-size: 0.9375rem; }
+        .table-td { padding: 1rem 1.25rem 1rem 1.5rem; font-size: 0.9375rem; }
     }
     .table-td-muted {
-        padding: 1rem 1rem 1rem 1.25rem;
+        padding: 0.875rem 1rem 0.875rem 1.25rem;
         text-align: center;
         font-size: 0.875rem;
         color: var(--text-muted);
-        transition: color 0.2s;
+        transition: color 0.15s;
     }
     @media (min-width: 640px) {
-        .table-td-muted { padding: 1.125rem 1.25rem 1.125rem 1.5rem; font-size: 0.9375rem; }
+        .table-td-muted { padding: 1rem 1.25rem 1rem 1.5rem; font-size: 0.9375rem; }
     }
     .empty-state {
-        @apply py-12 text-center text-[var(--text-muted)] text-sm;
+        @apply py-14 text-center text-[var(--text-subtle)] text-sm;
     }
     .loading-state {
-        @apply py-12 text-center text-[var(--text-muted)] text-sm;
+        @apply py-14 text-center text-[var(--text-subtle)] text-sm;
     }
     .section-header {
-        padding: 1rem 1.25rem 1rem 1.5rem;
+        padding: 1rem 1.25rem;
         border-bottom: 1px solid var(--border-light);
         background: var(--surface);
     }
     @media (min-width: 640px) {
-        .section-header { padding: 1.25rem 1.5rem 1.25rem 1.75rem; }
+        .section-header { padding: 1.125rem 1.5rem; }
     }
     .section-header h2 {
-        font-size: 1.125rem;
-        font-weight: 700;
+        font-size: 1rem;
+        font-weight: 600;
         color: var(--text);
+        letter-spacing: -0.01em;
     }
     @media (min-width: 640px) {
-        .section-header h2 { font-size: 1.25rem; }
+        .section-header h2 { font-size: 1.125rem; }
     }
     .section-header p {
         font-size: 0.8125rem;
-        color: var(--text-muted);
-        margin-top: 0.25rem;
+        color: var(--text-subtle);
+        margin-top: 0.2rem;
     }
     @media (min-width: 640px) {
         .section-header p { font-size: 0.875rem; }
     }
     .content-section {
-        @apply overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-md)];
+        @apply overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)];
     }
     .content-section .section-header {
-        @apply rounded-t-xl rounded-b-none;
+        @apply rounded-t-[var(--radius-lg)] rounded-b-none;
     }
     .content-section .section-header--nested {
         @apply rounded-t-none;
         border-top: 1px solid var(--border-light);
     }
     .page-content-card {
-        @apply card overflow-hidden rounded-xl;
+        @apply card overflow-hidden rounded-[var(--radius-lg)];
     }
+    /* Refined stat cards — no harsh colored left border */
     .stat-card {
-        @apply border-l-4 rounded-xl overflow-hidden;
+        @apply rounded-[var(--radius-lg)] overflow-hidden;
+        border-top: 3px solid transparent;
     }
-    .stat-card--complete { border-left-color: #16a34a; }
-    .stat-card--ongoing { border-left-color: #d97706; }
-    .stat-card--pending { border-left-color: #e11d48; }
+    .stat-card--complete { border-top-color: #16a34a; }
+    .stat-card--ongoing { border-top-color: #d97706; }
+    .stat-card--pending { border-top-color: #e11d48; }
 }
 
 button:focus-visible,
@@ -662,23 +676,13 @@ input[type="password"]::-ms-clear {
     }
 }
 
-/* Sidebar glass / gradient shell (21st.dev-style effect) */
+/* Sidebar — clean white with subtle right border */
 .sidebar-shell {
     position: relative;
     background: var(--sidebar);
     border-right: 1px solid var(--sidebar-border);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-sm);
     overflow: hidden;
-}
-.sidebar-shell::before {
-    content: "";
-    position: absolute;
-    inset: -40%;
-    background:
-        radial-gradient(circle at 0% 0%, rgba(34, 197, 94, 0.2), transparent 55%),
-        radial-gradient(circle at 100% 0%, rgba(22, 163, 74, 0.15), transparent 55%);
-    opacity: 0.9;
-    pointer-events: none;
 }
 .sidebar-shell-inner {
     position: relative;

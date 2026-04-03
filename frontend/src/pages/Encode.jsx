@@ -1145,26 +1145,32 @@ const Encode = ({ user }) => {
 
             <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0">
                 {canUploadDocuments && (
-                    <div className="p-5 sm:p-6 border-b border-[var(--border-light)]">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="card overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
+                    <div className="p-6 sm:p-8 bg-[var(--page-bg)]/50 border-b border-[var(--border-light)]">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-white">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-[var(--primary)] rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Start New Procurement</p>
-                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Use this section to submit new procurement documents for BAC processing. New documents should be filed here.</p>
+                                    <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Start New Procurement</h3>
+                                    <p className="mt-2 text-[var(--text-muted)] text-sm leading-relaxed">
+                                        Initiate a new procurement process by submitting the first set of documents.
+                                    </p>
                                 </div>
-                                <button type="button" onClick={openNew} className="btn-primary flex items-center justify-center gap-2 px-4 py-3 shrink-0">
+                                <button type="button" onClick={openNew} className="btn-primary flex items-center justify-center gap-2.5 px-6 py-3.5 w-full sm:w-auto shadow-md">
                                     <MdUpload className="w-5 h-5" />
-                                    Start New
+                                    <span>Start New Entry</span>
                                 </button>
                             </div>
-                            <div className="card overflow-hidden flex items-center gap-4 sm:gap-6 px-4 py-6 sm:px-6 sm:py-8 hover:shadow-[var(--shadow-lg)] transition-shadow duration-300 group">
+                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-white">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500 rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-base sm:text-lg font-semibold text-[var(--text)]">Update Documents</p>
-                                    <p className="mt-1 text-[var(--text-muted)] text-sm">Use this section to update existing documents, add missing details, or correct information. To complete a document, click its ongoing entry in the checklist.</p>
+                                    <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Update Records</h3>
+                                    <p className="mt-2 text-[var(--text-muted)] text-sm leading-relaxed">
+                                        Keep procurement folders complete by adding missing documents or updating details.
+                                    </p>
                                 </div>
-                                <button type="button" onClick={openUpdate} className="btn-primary flex items-center justify-center gap-2 px-4 py-3 shrink-0">
-                                    <MdEdit className="w-5 h-5" />
-                                    Update
+                                <button type="button" onClick={openUpdate} className="btn-secondary flex items-center justify-center gap-2.5 px-6 py-3.5 w-full sm:w-auto border-[var(--border)] font-semibold shadow-sm">
+                                    <MdEdit className="w-5 h-5 text-orange-500" />
+                                    <span>Edit Existing</span>
                                 </button>
                             </div>
                         </div>
@@ -1391,10 +1397,11 @@ const Encode = ({ user }) => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleView(doc)}
-                                                                className="p-1.5 text-[var(--primary)] hover:bg-[var(--primary-muted)] rounded-lg transition-all"
+                                                                className="btn-action-primary bg-[var(--primary-muted)]/50"
                                                                 title="View details"
                                                             >
-                                                                <MdVisibility className="w-5 h-5" />
+                                                                <MdVisibility className="w-4.5 h-4.5" />
+                                                                <span>View</span>
                                                             </button>
                                                         </td>
                                                     )}
