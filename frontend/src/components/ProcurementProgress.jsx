@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { formatNumber } from '../utils/helpers';
+import { MdPostAdd } from 'react-icons/md';
 
 export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProgress, loading }) => {
     const [hoveredSlice, setHoveredSlice] = useState(null);
@@ -68,7 +69,7 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
             </div>
             <div className="p-6 flex flex-col xl:flex-row gap-8 min-w-0 overflow-visible items-center sm:items-stretch bg-white">
                 <div className="flex flex-col items-center py-6 sm:py-0 flex-shrink-0 xl:border-r border-[var(--border-light)] xl:pr-8">
-                    <div className="relative w-56 h-56 flex-shrink-0 dashboard-pie-container">
+                    <div className="relative w-64 h-64 flex-shrink-0 dashboard-pie-container">
                         <svg viewBox="0 0 100 100" className="w-full h-full dashboard-pie-svg filter drop-shadow-xl" aria-hidden>
                             <defs>
                                 <linearGradient id="pie-completed" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -114,7 +115,7 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                             )}
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-black text-[var(--text)] leading-none tracking-tighter">
+                            <span className="text-4xl font-black text-[var(--text)] leading-none tracking-tighter">
                                 {completed + ongoing + pending}
                             </span>
                             <span className="text-[10px] font-bold text-[var(--text-subtle)] uppercase tracking-widest mt-1">
@@ -136,12 +137,12 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                         </div>
                     )}
                 </div>
-                <div className="w-full min-w-0 flex-1 pt-6 sm:pt-0 sm:pl-6">
+                <div className="w-full min-w-0 flex-1 pt-10 xl:pt-0 xl:pl-8">
                     <div className="mb-6 flex items-center justify-between">
                         <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-widest">Procurement Methods</h3>
                         <span className="text-[10px] font-bold text-[var(--text-subtle)] bg-[var(--background-subtle)] px-2.5 py-1 rounded-full border border-[var(--border-light)] uppercase tracking-wider">Top Types</span>
                     </div>
-                    <div className="space-y-5">
+                    <div className="space-y-7">
                         {(completed + ongoing + pending) === 0 ? (
                                     <div className="py-12 px-6 rounded-2xl bg-[var(--background-subtle)]/30 border-2 border-dashed border-[var(--border-light)] text-center">
                                 <p className="text-sm font-bold text-[var(--text-muted)]">No data available yet</p>
@@ -163,14 +164,14 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                                         <div className="flex justify-between items-end mb-2">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: series.color }} />
-                                                <span className="text-[11px] font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors tracking-tight">{series.label}</span>
+                                                <span className="text-xs font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors tracking-tight">{series.label}</span>
                                             </div>
                                             <div className="text-right">
-                                                <span className="text-xs font-black text-[var(--text)] tabular-nums">{value}</span>
+                                                <span className="text-sm font-black text-[var(--text)] tabular-nums">{value}</span>
                                                 <span className="text-[10px] font-bold text-[var(--text-subtle)] ml-1">({formatNumber(pctOfTotal, 0)}%)</span>
                                             </div>
                                         </div>
-                                        <div className="h-1.5 w-full rounded-full bg-[var(--background-subtle)] overflow-hidden border border-[var(--border-light)] relative">
+                                        <div className="h-2.5 w-full rounded-full bg-[var(--background-subtle)] overflow-hidden border border-[var(--border-light)] relative">
                                             <div
                                                 className="h-full rounded-full transition-all duration-1000 ease-out relative"
                                                 style={{ 

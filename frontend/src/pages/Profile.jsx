@@ -12,7 +12,7 @@ import {
     MdLock,
     MdCameraAlt,
 } from 'react-icons/md';
-import { getRoleDisplayName, ROLES } from '../utils/roles';
+import { getRoleDisplayName, ROLES } from '../utils/auth';
 
 const STORAGE_KEY_PHOTO = (username) => `bac_profile_photo_${username}`;
 const MAX_PHOTO_SIZE = 150 * 1024; // 150KB for localStorage

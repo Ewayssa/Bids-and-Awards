@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { MdChevronLeft, MdChevronRight, MdTimeline } from 'react-icons/md';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -101,7 +101,7 @@ export const DashboardCalendar = ({ events, isAdmin, onOpenAddEvent, onOpenEditE
                                     !cell.current
                                         ? ''
                                         : cell.isToday
-                                        ? 'bg-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/30 z-10'
+                                        ? 'bg-[var(--primary)] text-white shadow-lg shadow-[color-mix(in_srgb,var(--primary)_30%,transparent)] z-10'
                                         : cell.current && hasEvent(cell.date)
                                         ? 'bg-red-50 text-red-600 ring-1 ring-red-100 hover:bg-red-100 hover:ring-red-200'
                                         : 'text-[var(--text-muted)] hover:bg-[var(--background-subtle)] border border-transparent hover:border-[var(--border)]'
@@ -132,7 +132,7 @@ const EventList = ({ title, events, isAdmin, onEdit, iconColor = 'var(--primary)
             {title}
         </p>
         {events.length === 0 ? (
-            <p className="text-[11px] text-[var(--text-subtle)] font-medium bg-[var(--background-subtle)]/50 px-3 py-2 rounded-lg border border-[var(--border-light)]">No events scheduled.</p>
+            <p className="text-[11px] text-[var(--text-subtle)] font-medium bg-[color-mix(in_srgb,var(--background-subtle)_50%,transparent)] px-3 py-2 rounded-lg border border-[var(--border-light)]">No events scheduled.</p>
         ) : (
             <ol className="space-y-3">
                 {events.map((ev) => (

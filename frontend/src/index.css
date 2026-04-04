@@ -179,44 +179,6 @@
     --page-dot: rgba(255,255,255,0.03);
 }
 
-@theme inline {
-    --color-card: var(--card);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-muted: var(--muted);
-    --color-accent: var(--accent);
-    --color-border: var(--border);
-    --color-radius: var(--radius);
-    --color-chart-1: var(--chart-1);
-    --color-chart-2: var(--chart-2);
-    --color-chart-3: var(--chart-3);
-    --color-chart-4: var(--chart-4);
-    --color-chart-5: var(--chart-5);
-    --color-popover: var(--popover);
-    --color-primary: var(--primary);
-    --color-sidebar: var(--sidebar);
-    --color-font-mono: var(--font-mono);
-    --color-font-sans: var(--font-sans);
-    --color-secondary: var(--secondary);
-    --color-background: var(--background);
-    --color-font-serif: var(--font-serif);
-    --color-foreground: var(--foreground);
-    --color-destructive: var(--destructive);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-card-foreground: var(--card-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-destructive-foreground: var(--destructive-foreground);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-}
 
 * {
     box-sizing: border-box;
@@ -265,7 +227,7 @@ textarea {
     .card {
         @apply bg-[var(--surface)] rounded-[var(--radius-lg)] border border-[var(--border)] shadow-[var(--shadow-sm)];
         @apply transition-all duration-300 ease-out;
-        @apply hover:shadow-[var(--shadow-md)] hover:border-[var(--text-subtle)]/30;
+        @apply hover:shadow-[var(--shadow-md)] hover:border-[color-mix(in_srgb,var(--text-subtle)_30%,transparent)];
     }
     .card-elevated {
         @apply bg-[var(--surface-elevated)] rounded-[var(--radius-lg)] border border-[var(--border)] shadow-[var(--shadow-md)];
@@ -292,7 +254,7 @@ textarea {
         @apply inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-1 active:scale-[0.97];
     }
     .btn-action-primary {
-        @apply btn-action text-[var(--primary)] hover:text-[var(--primary-hover)] hover:bg-[var(--primary-muted)] active:bg-[var(--primary-light)]/30;
+        @apply btn-action text-[var(--primary)] hover:text-[var(--primary-hover)] hover:bg-[var(--primary-muted)] active:bg-[color-mix(in_srgb,var(--primary-light)_30%,transparent)];
     }
     .btn-action-secondary {
         @apply btn-action text-[var(--text-muted)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--border)] hover:text-[var(--text)] hover:shadow-sm active:bg-[var(--border-light)];
@@ -300,8 +262,8 @@ textarea {
     .input-field {
         @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius-sm)] outline-none text-[var(--text)] placeholder-[var(--text-subtle)] bg-white;
         @apply transition-all duration-200 ease-out;
-        @apply focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 focus:bg-white;
-        @apply hover:border-[var(--text-subtle)]/60;
+        @apply focus:border-[var(--primary)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_15%,transparent)] focus:bg-white;
+        @apply hover:border-[color-mix(in_srgb,var(--text-subtle)_60%,transparent)];
     }
     /* Hide number input spinner (for currency/total amount) */
     .input-currency {
@@ -666,6 +628,7 @@ input[type="password"]::-ms-clear {
         padding-bottom: 2.5rem;
     }
 }
+ 
 @media (min-width: 1280px) {
     .page-container {
         max-width: 96rem;

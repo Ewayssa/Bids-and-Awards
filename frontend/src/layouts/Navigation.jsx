@@ -46,7 +46,7 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                             className={`hidden md:flex flex-shrink-0 items-center justify-center w-8 h-8 rounded-lg text-[var(--text-subtle)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95 sidebar-toggle-btn order-first`}
                             aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
                         >
-                            <MdMenu className="w-4.5 h-4.5 shrink-0" />
+                            <MdMenu className="w-5 h-5 shrink-0" />
                         </button>
                         <img src="/dilg-logo.png" alt="DILG Logo" className="flex-shrink-0 max-h-12 w-auto select-none sidebar-logo-full" />
                         <img src="/dilg-logo.png" alt="DILG" className="hidden flex-shrink-0 h-8 w-8 object-contain select-none sidebar-logo-collapsed" />
@@ -87,7 +87,7 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                                                 : 'text-[var(--text-subtle)] group-hover:text-[var(--primary)] group-hover:bg-[var(--primary-muted)]',
                                         ].join(' ')}
                                     >
-                                        <Icon className="w-4.5 h-4.5" />
+                                        <Icon className="w-5 h-5" />
                                     </span>
                                     <span className="truncate sidebar-link-text">{label}</span>
                                 </Link>

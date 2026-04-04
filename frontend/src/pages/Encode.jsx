@@ -1400,7 +1400,7 @@ const Encode = ({ user }) => {
                                                                 className="btn-action-primary bg-[var(--primary-muted)]/50"
                                                                 title="View details"
                                                             >
-                                                                <MdVisibility className="w-4.5 h-4.5" />
+                                                                <MdVisibility className="w-5 h-5" />
                                                                 <span>View</span>
                                                             </button>
                                                         </td>

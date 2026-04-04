@@ -32,7 +32,7 @@ const UserAccountDropdown = ({ user, onLogout, className = '' }) => {
                 <img
                     src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&size=32&background=16a34a&color=fff&bold=true`}
                     alt=""
-                    className="w-8 h-8 rounded-lg object-cover flex-shrink-0 ring-2 ring-[var(--primary)]/20"
+                    className="w-8 h-8 rounded-lg object-cover flex-shrink-0 ring-2 ring-[color-mix(in_srgb,var(--primary)_20%,transparent)]"
                 />
                 <span className="text-[var(--text)] truncate max-w-[110px] sm:max-w-[160px] text-sm font-medium">{displayName}</span>
                 <MdExpandMore
