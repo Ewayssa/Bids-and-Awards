@@ -894,18 +894,19 @@ input[type="password"]::-ms-clear {
 
 /* Minimalist White Card */
 .glass-card {
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(229, 231, 235, 0.5); /* thin slate-200 border */
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(20px) saturate(190%) contrast(100%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%) contrast(100%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 
-        0 4px 6px -1px rgba(0, 0, 0, 0.05),
-        0 10px 15px -3px rgba(0, 0, 0, 0.03),
-        0 0 0 1px rgba(0, 0, 0, 0.01);
+        0 8px 32px 0 rgba(31, 38, 135, 0.07),
+        0 1px 1px 0 rgba(255, 255, 255, 0.3) inset;
 }
 
 .dark .glass-card {
-    background: rgba(15, 23, 42, 0.8) !important;
+    background: rgba(15, 23, 42, 0.7) !important;
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
@@ -932,24 +933,41 @@ input[type="password"]::-ms-clear {
 .bg-professional {
     background-color: #ffffff !important;
     background-image: 
-        radial-gradient(at 0% 0%, hsla(142, 70%, 45%, 0.04) 0px, transparent 55%),
-        radial-gradient(at 100% 0%, hsla(160, 68%, 21%, 0.03) 0px, transparent 55%),
-        radial-gradient(at 100% 100%, hsla(142, 70%, 45%, 0.03) 0px, transparent 55%),
-        radial-gradient(at 0% 100%, hsla(160, 68%, 21%, 0.03) 0px, transparent 55%),
-        radial-gradient(circle at 2px 2px, rgba(0,0,0,0.015) 1px, transparent 0);
-    background-size: 140% 140%, 140% 140%, 140% 140%, 140% 140%, 32px 32px;
-    animation: mesh-breathing 20s ease-in-out infinite;
+        radial-gradient(at 0% 0%, hsla(142, 70%, 45%, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(160, 68%, 21%, 0.04) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(142, 70%, 45%, 0.04) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, hsla(160, 68%, 21%, 0.04) 0px, transparent 50%);
+    background-size: 100% 100%;
+    animation: mesh-breathing 15s ease-in-out infinite alternate;
     position: relative;
     overflow: hidden;
+}
+
+.bg-professional::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 2px 2px, rgba(0,0,0,0.02) 1px, transparent 0);
+    background-size: 32px 32px;
+    opacity: 0.5;
 }
 
 .bg-professional::after {
     content: "";
     position: absolute;
     inset: 0;
-    opacity: 0.15;
+    opacity: 0.1;
     pointer-events: none;
-    background: radial-gradient(circle at center, rgba(22, 163, 74, 0.05) 0%, transparent 80%);
+    background: radial-gradient(circle at 70% 30%, rgba(22, 163, 74, 0.1) 0%, transparent 60%);
+}
+
+.dark .bg-professional {
+    background-color: #0f172a !important;
+    background-image: 
+        radial-gradient(at 0% 0%, hsla(142, 70%, 45%, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(160, 68%, 21%, 0.06) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(142, 70%, 45%, 0.08) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, hsla(160, 68%, 21%, 0.06) 0px, transparent 50%);
 }
 
 /* Entry Animations */
@@ -1015,16 +1033,80 @@ input[type="password"]::-ms-clear {
     animation: logo-ambient-pulse 4s ease-in-out infinite;
 }
 
-/* Magnetic Button Lift */
-.btn-magnetic {
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+/* Split Login Utilities */
+.split-login-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
 }
 
-.btn-magnetic:hover {
-    transform: scale(1.02) translateY(-2px);
-    box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.3);
+.login-branding-side {
+    display: none;
+    flex: 1.1;
+    background: #064e3b; /* deep emerald-900 */
+    position: relative;
+    overflow: hidden;
+    padding: 3rem;
 }
 
-.btn-magnetic:active {
-    transform: scale(0.98) translateY(0);
+@media (min-width: 1024px) {
+    .login-branding-side {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+    }
+}
+
+.login-form-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+/* Ornament Orbs */
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.orb-1 { width: 400px; height: 400px; background: #10b981; top: -100px; left: -100px; animation: orbit 25s infinite linear; }
+.orb-2 { width: 300px; height: 300px; background: #059669; bottom: -50px; right: -50px; animation: orbit 20s infinite linear reverse; }
+
+@keyframes orbit {
+    from { transform: rotate(0deg) translateX(50px) rotate(0deg); }
+    to { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
+}
+
+/* Premium Typography for Branding */
+.branding-title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: white;
+    margin-bottom: 1.5rem;
+}
+
+.branding-subtitle {
+    font-size: 1.125rem;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 32rem;
+    line-height: 1.6;
+}
+
+/* Text Gradient Effect */
+.text-gradient-emerald {
+    background: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
