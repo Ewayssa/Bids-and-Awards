@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     MdClose, MdDescription, MdChevronRight, MdChevronLeft,
     MdCheckCircle, MdInfo, MdAdd, MdDelete, MdPostAdd,
@@ -43,6 +44,19 @@ const NewProcurementModal = ({
     toNumbersOnly,
     computeRFQNoFromDate,
 }) => {
+    useEffect(() => {
+        if (show) {
+            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
+            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.documentElement.style.overflow = originalHtmlStyle;
+                document.body.style.overflow = originalBodyStyle;
+            };
+        }
+    }, [show]);
+
     if (!show) return null;
 
     const stepLabels = ['Document type', 'Sub-document', 'Details'];
@@ -415,9 +429,9 @@ const NewProcurementModal = ({
 
     const DocIcon = selectedDocType ? (ICON_MAP[selectedDocType.id] || MdDescription) : MdDescription;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md overflow-y-auto" aria-modal="true" role="dialog">
-            <div className="card-elevated max-w-4xl w-full my-auto shadow-2xl rounded-3xl border-0 flex flex-col" style={{ maxHeight: '90vh' }}>
+    const modalContent = (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300 overflow-y-auto" aria-modal="true" role="dialog">
+            <div className="card-elevated max-w-4xl w-full my-auto shadow-2xl rounded-3xl border-0 flex flex-col animate-in zoom-in-95 duration-200" style={{ maxHeight: '90vh' }}>
 
                 {/* Header */}
                 <div className="p-6 sm:p-8 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)] shrink-0">
@@ -684,6 +698,8 @@ const NewProcurementModal = ({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default NewProcurementModal;

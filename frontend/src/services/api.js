@@ -125,7 +125,7 @@ export const dashboardService = {
     async getData(bypassCache = false, uploadedBy = '') {
         const params = bypassCache ? { _: Date.now() } : {};
         if (uploadedBy) params.uploadedBy = uploadedBy;
-        const response = await api.get(`/dashboard`, { params });
+        const response = await api.get(`/dashboard/`, { params });
         return response.data;
     },
 };

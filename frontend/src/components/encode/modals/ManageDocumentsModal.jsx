@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     MdChevronLeft, 
     MdClose, 
@@ -28,119 +29,129 @@ const ManageDocumentsModal = ({
     isAdmin,
     triggerDownload
 }) => {
+    useEffect(() => {
+        if (isOpen) {
+            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
+            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.documentElement.style.overflow = originalHtmlStyle;
+                document.body.style.overflow = originalBodyStyle;
+            };
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
-    return (
-        <>
-            {/* Main Manage Documents Modal */}
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                aria-modal="true"
-                role="dialog"
-            >
-                <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl rounded-2xl border-0 animate-in zoom-in-95 duration-200">
-                    <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between shrink-0 bg-[var(--surface)] rounded-t-2xl">
-                        <div className="flex items-center gap-3 min-w-0">
-                            {manageSelectedTypeId && (
-                                <button
-                                    type="button"
-                                    onClick={() => setManageSelectedTypeId(null)}
-                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] px-3 py-1.5 rounded-lg border border-transparent hover:border-[var(--primary-muted)] hover:bg-[var(--primary-muted)]/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1"
-                                    aria-label="Back to document types"
-                                >
-                                    <MdChevronLeft className="w-4 h-4" aria-hidden="true" />
-                                    Back
-                                </button>
-                            )}
-                            <h2 className="text-lg font-semibold text-[var(--text)] truncate">
-                                {!manageSelectedTypeId ? 'Manage Documents' : (DOC_TYPES.find((d) => d.id === manageSelectedTypeId)?.name || 'Documents')}
-                            </h2>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-lg transition-colors shrink-0"
-                            aria-label="Close"
-                        >
-                            <MdClose className="w-5 h-5" />
-                        </button>
+    const mainModalContent = (
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
+            aria-modal="true"
+            role="dialog"
+        >
+            <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl rounded-2xl border-0 animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between shrink-0 bg-[var(--surface)] rounded-t-2xl">
+                    <div className="flex items-center gap-3 min-w-0">
+                        {manageSelectedTypeId && (
+                            <button
+                                type="button"
+                                onClick={() => setManageSelectedTypeId(null)}
+                                className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-hover)] px-3 py-1.5 rounded-lg border border-transparent hover:border-[var(--primary-muted)] hover:bg-[var(--primary-muted)]/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1"
+                                aria-label="Back to document types"
+                            >
+                                <MdChevronLeft className="w-4 h-4" aria-hidden="true" />
+                                Back
+                            </button>
+                        )}
+                        <h2 className="text-lg font-semibold text-[var(--text)] truncate">
+                            {!manageSelectedTypeId ? 'Manage Documents' : (DOC_TYPES.find((d) => d.id === manageSelectedTypeId)?.name || 'Documents')}
+                        </h2>
                     </div>
-                    <div className="flex-1 overflow-auto p-6">
-                        {!manageSelectedTypeId ? (
-                            /* Level 1: Document type folders */
-                            <>
-                                {manageRefreshing && (
-                                    <div className="flex items-center justify-center gap-2 py-3 text-sm text-[var(--text-muted)]">
-                                        <div className="w-4 h-4 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin" />
-                                        <span>Loading all documents…</span>
-                                    </div>
-                                )}
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                    {DOC_TYPES.map((docType) => {
-                                        const categoryName = (docType.name || '').trim();
-                                        const docsInType = documents.filter((d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase());
-                                        const folderCount = new Set(docsInType.map((d) => (d.prNo || '').trim()).filter(Boolean)).size;
-                                        return (
-                                            <button
-                                                key={docType.id}
-                                                type="button"
-                                                onClick={() => setManageSelectedTypeId(docType.id)}
-                                                className="flex flex-col items-stretch rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)]/20 p-4 text-left transition-all shadow-sm"
-                                            >
-                                                <div className="w-12 h-12 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] mb-3">
-                                                    <MdFolder className="w-7 h-7" />
-                                                </div>
-                                                <p className="font-semibold text-[var(--text)] truncate">{docType.name}</p>
-                                                <p className="text-xs text-[var(--text-muted)] mt-0.5">{folderCount} BAC folder{folderCount !== 1 ? 's' : ''}</p>
-                                            </button>
-                                        );
-                                    })}
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-lg transition-colors shrink-0"
+                        aria-label="Close"
+                    >
+                        <MdClose className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="flex-1 overflow-auto p-6">
+                    {!manageSelectedTypeId ? (
+                        /* Level 1: Document type folders */
+                        <>
+                            {manageRefreshing && (
+                                <div className="flex items-center justify-center gap-2 py-3 text-sm text-[var(--text-muted)]">
+                                    <div className="w-4 h-4 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin" />
+                                    <span>Loading all documents…</span>
                                 </div>
-                            </>
-                        ) : !manageSelectedPrNo ? (
-                            /* Level 2: BAC Folder No. list (sorted) for this document type */
-                            (() => {
-                                const docType = DOC_TYPES.find((d) => d.id === manageSelectedTypeId);
-                                const categoryName = (docType?.name || '').trim();
-                                const docsInCategory = documents.filter((d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase());
-                                const prNoList = [...new Set(docsInCategory.map((d) => (d.prNo || '').trim()).filter(Boolean))].sort();
-                                if (prNoList.length === 0) {
+                            )}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {DOC_TYPES.map((docType) => {
+                                    const categoryName = (docType.name || '').trim();
+                                    const docsInType = documents.filter((d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase());
+                                    const folderCount = new Set(docsInType.map((d) => (d.prNo || '').trim()).filter(Boolean)).size;
                                     return (
-                                        <p className="text-sm text-[var(--text-muted)] text-center py-8">No BAC folders yet for this document type.</p>
+                                        <button
+                                            key={docType.id}
+                                            type="button"
+                                            onClick={() => setManageSelectedTypeId(docType.id)}
+                                            className="flex flex-col items-stretch rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] hover:border-[var(--primary)] hover:bg-[var(--primary-muted)]/20 p-4 text-left transition-all shadow-sm"
+                                        >
+                                            <div className="w-12 h-12 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] mb-3">
+                                                <MdFolder className="w-7 h-7" />
+                                            </div>
+                                            <p className="font-semibold text-[var(--text)] truncate">{docType.name}</p>
+                                            <p className="text-xs text-[var(--text-muted)] mt-0.5">{folderCount} BAC folder{folderCount !== 1 ? 's' : ''}</p>
+                                        </button>
                                     );
-                                }
+                                })}
+                            </div>
+                        </>
+                    ) : !manageSelectedPrNo ? (
+                        /* Level 2: BAC Folder No. list (sorted) for this document type */
+                        (() => {
+                            const docType = DOC_TYPES.find((d) => d.id === manageSelectedTypeId);
+                            const categoryName = (docType?.name || '').trim();
+                            const docsInCategory = documents.filter((d) => (d.category || '').trim().toLowerCase() === categoryName.toLowerCase());
+                            const prNoList = [...new Set(docsInCategory.map((d) => (d.prNo || '').trim()).filter(Boolean))].sort();
+                            if (prNoList.length === 0) {
                                 return (
-                                    <div className="space-y-2">
-                                        <ul className="divide-y divide-[var(--border)] border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]">
-                                            {prNoList.map((prNo) => {
-                                                const count = docsInCategory.filter((d) => (d.prNo || '').trim() === prNo).length;
-                                                return (
-                                                    <li key={prNo}>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setManageFolderPopup({ typeId: manageSelectedTypeId, prNo });
-                                                                setManageFolderPopupIndex(0);
-                                                            }}
-                                                            className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-[var(--primary-muted)]/30 transition-colors"
-                                                        >
-                                                            <span className="font-medium text-[var(--text)]">BAC Folder No. {prNo}</span>
-                                                            <span className="text-sm text-[var(--text-muted)]">{count} document{count !== 1 ? 's' : ''}</span>
-                                                        </button>
-                                                    </li>
-                                                );
-                                            })}
-                                        </ul>
-                                    </div>
+                                    <p className="text-sm text-[var(--text-muted)] text-center py-8">No BAC folders yet for this document type.</p>
                                 );
-                            })()
-                        ) : null}
-                    </div>
+                            }
+                            return (
+                                <div className="space-y-2">
+                                    <ul className="divide-y divide-[var(--border)] border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]">
+                                        {prNoList.map((prNo) => {
+                                            const count = docsInCategory.filter((d) => (d.prNo || '').trim() === prNo).length;
+                                            return (
+                                                <li key={prNo}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setManageFolderPopup({ typeId: manageSelectedTypeId, prNo });
+                                                            setManageFolderPopupIndex(0);
+                                                        }}
+                                                        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-[var(--primary-muted)]/30 transition-colors"
+                                                    >
+                                                        <span className="font-medium text-[var(--text)]">BAC Folder No. {prNo}</span>
+                                                        <span className="text-sm text-[var(--text-muted)]">{count} document{count !== 1 ? 's' : ''}</span>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            );
+                        })()
+                    ) : null}
                 </div>
             </div>
 
-            {/* Manage: popup when a BAC Folder is clicked – shows the file itself automatically */}
-            {manageFolderPopup && (() => {
+            {/* Sub-popup Portal */}
+            {manageFolderPopup && createPortal((() => {
                 const docType = DOC_TYPES.find((d) => d.id === manageFolderPopup.typeId);
                 const categoryName = (docType?.name || '').trim();
                 const docs = documents.filter(
@@ -151,8 +162,8 @@ const ManageDocumentsModal = ({
                 const currentDoc = docs[currentIndex] || null;
                 const showNav = totalDocs > 1;
                 return (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm shadow-2xl animate-in zoom-in-95 duration-200" aria-modal="true" role="dialog">
-                        <div className="bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300 shadow-2xl" aria-modal="true" role="dialog">
+                        <div className="bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                             <div className="p-4 border-b border-[var(--border)] flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-xl bg-green-600 text-white shadow-sm">
@@ -333,9 +344,11 @@ const ManageDocumentsModal = ({
                         </div>
                     </div>
                 );
-            })()}
-        </>
+            })(), document.body)}
+        </div>
     );
+
+    return createPortal(mainModalContent, document.body);
 };
 
 export default ManageDocumentsModal;

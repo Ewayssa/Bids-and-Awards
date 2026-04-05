@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { userService } from '../services/api';
 import {
     MdPerson,
@@ -196,6 +197,54 @@ const Profile = ({ user, onUserUpdated }) => {
     const roleDisplay = getRoleDisplayName(user?.role);
     const passwordStrength = getPasswordStrength(newPassword);
 
+    const confirmProfileContent = showConfirmProfile && (
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
+            aria-modal="true"
+            role="alertdialog"
+            aria-labelledby="confirm-profile-title"
+        >
+            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200">
+                <h2 id="confirm-profile-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Update</h2>
+                <p className="text-sm text-[var(--text-muted)] mb-6">
+                    Are you sure you want to save changes to your account details?
+                </p>
+                <div className="flex gap-3">
+                    <button type="button" onClick={() => setShowConfirmProfile(false)} className="btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="button" onClick={confirmProfileSubmit} className="btn-primary" disabled={profileLoading}>
+                        {profileLoading ? 'Saving…' : 'Confirm'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
+    const confirmPasswordContent = showConfirmPassword && (
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
+            aria-modal="true"
+            role="alertdialog"
+            aria-labelledby="confirm-password-title"
+        >
+            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200">
+                <h2 id="confirm-password-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Password Change</h2>
+                <p className="text-sm text-[var(--text-muted)] mb-6">
+                    Are you sure you want to change your password? You will need to use the new password on your next login.
+                </p>
+                <div className="flex gap-3">
+                    <button type="button" onClick={() => setShowConfirmPassword(false)} className="btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="button" onClick={confirmPasswordSubmit} className="btn-primary" disabled={loading}>
+                        {loading ? 'Updating…' : 'Confirm'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="space-y-6 pb-10">
             <header>
@@ -211,8 +260,8 @@ const Profile = ({ user, onUserUpdated }) => {
                     role="alert"
                     className={`fixed bottom-4 right-4 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2 animate-fade-in ${
                         toast.type === 'error'
-                            ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/90 dark:border-red-800 dark:text-red-200'
-                            : 'bg-green-50 border-green-200 text-green-800 dark:bg-green-950/90 dark:border-green-800 dark:text-green-200'
+                            ? 'bg-red-50 border-red-200 text-red-800'
+                            : 'bg-green-50 border-green-200 text-green-800'
                     }`}
                 >
                     <span className="text-sm font-medium">{toast.message}</span>
@@ -584,55 +633,8 @@ const Profile = ({ user, onUserUpdated }) => {
                 </div>
             </div>
 
-            {/* Confirm Profile Update Dialog */}
-            {showConfirmProfile && (
-                <div
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                    aria-modal="true"
-                    role="alertdialog"
-                    aria-labelledby="confirm-profile-title"
-                >
-                    <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)]">
-                        <h2 id="confirm-profile-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Update</h2>
-                        <p className="text-sm text-[var(--text-muted)] mb-6">
-                            Are you sure you want to save changes to your account details?
-                        </p>
-                        <div className="flex gap-3">
-                            <button type="button" onClick={() => setShowConfirmProfile(false)} className="btn-secondary">
-                                Cancel
-                            </button>
-                            <button type="button" onClick={confirmProfileSubmit} className="btn-primary" disabled={profileLoading}>
-                                {profileLoading ? 'Saving…' : 'Confirm'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Confirm Password Change Dialog */}
-            {showConfirmPassword && (
-                <div
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                    aria-modal="true"
-                    role="alertdialog"
-                    aria-labelledby="confirm-password-title"
-                >
-                    <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)]">
-                        <h2 id="confirm-password-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Password Change</h2>
-                        <p className="text-sm text-[var(--text-muted)] mb-6">
-                            Are you sure you want to change your password? You will need to use the new password on your next login.
-                        </p>
-                        <div className="flex gap-3">
-                            <button type="button" onClick={() => setShowConfirmPassword(false)} className="btn-secondary">
-                                Cancel
-                            </button>
-                            <button type="button" onClick={confirmPasswordSubmit} className="btn-primary" disabled={loading}>
-                                {loading ? 'Updating…' : 'Confirm'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {createPortal(confirmProfileContent, document.body)}
+            {createPortal(confirmPasswordContent, document.body)}
         </div>
     );
 };

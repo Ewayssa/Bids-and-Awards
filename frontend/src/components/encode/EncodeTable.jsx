@@ -76,11 +76,11 @@ const EncodeTable = ({
                                         {isExpanded ? <MdExpandLess className="w-5 h-5 flex-shrink-0" /> : <MdExpandMore className="w-5 h-5 flex-shrink-0" />}
                                         <div className="min-w-0 flex-1">
                                             <p className="font-semibold text-[var(--text)]">BAC Folder No.: {prNo}</p>
-                                            <p className="text-xs text-[var(--text-muted)] truncate">
-                                                {docs.length} documents • 
-                                                {statusCounts.complete > 0 && <span className="ml-1 text-green-600 font-medium">{statusCounts.complete} complete</span>}
-                                                {statusCounts.ongoing > 0 && <span className="ml-1 text-amber-600 font-medium">{statusCounts.ongoing} ongoing</span>}
-                                                {statusCounts.pending > 0 && <span className="ml-1 text-red-600 font-medium">{statusCounts.pending} pending</span>}
+                                            <p className="text-xs text-[var(--text-muted)] mt-1 flex gap-2">
+                                                <span>{docs.length} documents •</span>
+                                                {statusCounts.complete > 0 && <span className="status-badge status-badge--complete !scale-90 !py-0">{statusCounts.complete} complete</span>}
+                                                {statusCounts.ongoing > 0 && <span className="status-badge status-badge--ongoing !scale-90 !py-0">{statusCounts.ongoing} ongoing</span>}
+                                                {statusCounts.pending > 0 && <span className="status-badge status-badge--pending !scale-90 !py-0">{statusCounts.pending} pending</span>}
                                             </p>
                                         </div>
                                     </div>
@@ -112,7 +112,7 @@ const EncodeTable = ({
                                                         <td className="table-td text-left text-xs opacity-75">{getProcurementType(doc)}</td>
                                                         <td className="table-td-muted">{formatDate(doc.date)}</td>
                                                         <td className="table-td">
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(doc.status)}`}>
+                                                            <span className={`status-badge ${getStatusColor(doc.status)}`}>
                                                                 {doc.status || 'pending'}
                                                             </span>
                                                         </td>
@@ -164,7 +164,7 @@ const EncodeTable = ({
                                     <td className="table-td-muted">{doc.uploadedBy || '—'}</td>
                                     <td className="table-td-muted">{formatDate(doc.uploaded_at)}</td>
                                     <td className="table-td">
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(doc.status)}`}>
+                                        <span className={`status-badge ${getStatusColor(doc.status)}`}>
                                             {doc.status || 'pending'}
                                         </span>
                                     </td>

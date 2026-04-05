@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { MdClose, MdUpload } from 'react-icons/md';
 
 const UploadModal = ({ 
@@ -10,13 +11,13 @@ const UploadModal = ({
     uploadError, 
     handleFileChange 
 }) => {
-    return (
+    const modalContent = (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
             aria-modal="true"
             role="dialog"
         >
-            <div className="card-elevated max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0">
+            <div className="card-elevated max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0 animate-in zoom-in-95 duration-200">
                 <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
                     <h2 className="text-lg font-semibold text-[var(--text)]">Upload Report</h2>
                     <button
@@ -67,11 +68,11 @@ const UploadModal = ({
                         <input
                             type="file"
                             onChange={handleFileChange}
-                            className="block w-full text-sm text-[var(--text)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#16a34a] file:hover:bg-[#15803d] file:active:bg-[#166534] file:text-white file:font-medium file:cursor-pointer file:transition-colors file:duration-200"
+                            className="block w-full text-sm text-[var(--text)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:hover:bg-[var(--primary-dark)] file:active:bg-[var(--primary-darker)] file:text-white file:font-medium file:cursor-pointer file:transition-colors file:duration-200"
                             accept=".pdf,application/pdf"
                         />
                         {form.file && (
-                            <p className="mt-1 text-sm text-[var(--text-muted)]">{form.file.name}</p>
+                            <p className="mt-1 text-sm text-[var(--text-muted)] font-medium underline underline-offset-2">{form.file.name}</p>
                         )}
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
@@ -95,6 +96,8 @@ const UploadModal = ({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default UploadModal;

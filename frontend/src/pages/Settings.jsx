@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MdBackup, MdRestore } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 import { backupRestoreService } from '../services/api';
@@ -74,6 +75,68 @@ const Settings = ({ user }) => {
             setRestoring(false);
         }
     };
+
+    const confirmBackupContent = confirmBackup && (
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
+            aria-modal="true"
+            role="alertdialog"
+            aria-labelledby="settings-confirm-backup-title"
+        >
+            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200 overflow-hidden">
+                <h2 id="settings-confirm-backup-title" className="text-lg font-semibold text-[var(--text)] mb-2">
+                    Save records backup
+                </h2>
+                <p className="text-sm text-[var(--text-muted)] mb-6">
+                    Download a JSON backup of all events, users, and document/report records (metadata only; file contents stay on the server)?
+                </p>
+                <div className="flex gap-3 justify-end">
+                    <button type="button" onClick={() => setConfirmBackup(false)} className="btn-secondary">
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={performBackup}
+                        disabled={backingUp}
+                        className="btn-primary"
+                    >
+                        {backingUp ? 'Saving…' : 'Yes, save all'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
+    const confirmRestoreContent = confirmRestore && (
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
+            aria-modal="true"
+            role="alertdialog"
+            aria-labelledby="settings-confirm-restore-title"
+        >
+            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200 overflow-hidden">
+                <h2 id="settings-confirm-restore-title" className="text-lg font-semibold text-[var(--text)] mb-2">
+                    Restore from backup
+                </h2>
+                <p className="text-sm text-[var(--text-muted)] mb-6">
+                    Restore events, user status, and document/report metadata from &quot;{confirmRestore.file.name}&quot;? This may overwrite current data.
+                </p>
+                <div className="flex gap-3 justify-end">
+                    <button type="button" onClick={() => setConfirmRestore(null)} className="btn-secondary">
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={performRestore}
+                        disabled={restoring}
+                        className="btn-primary"
+                    >
+                        {restoring ? 'Restoring…' : 'Yes, restore'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="space-y-5 pb-8">
@@ -167,73 +230,8 @@ const Settings = ({ user }) => {
                 </section>
             </div>
 
-            {/* Confirm backup modal */}
-            {confirmBackup && (
-                <div
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                    aria-modal="true"
-                    role="alertdialog"
-                    aria-labelledby="settings-confirm-backup-title"
-                >
-                    <div className="card-elevated max-w-sm w-full shadow-2xl rounded-2xl border-0 overflow-hidden">
-                        <div className="p-6">
-                            <h2 id="settings-confirm-backup-title" className="text-lg font-semibold text-[var(--text)] mb-2">
-                                Save records backup
-                            </h2>
-                            <p className="text-[var(--text-muted)] mb-6">
-                                Download a JSON backup of all events, users, and document/report records (metadata only; file contents stay on the server)?
-                            </p>
-                            <div className="flex gap-3 justify-end">
-                                <button type="button" onClick={() => setConfirmBackup(false)} className="btn-secondary">
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={performBackup}
-                                    disabled={backingUp}
-                                    className="btn-primary"
-                                >
-                                    {backingUp ? 'Saving…' : 'Yes, save all'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Confirm restore modal */}
-            {confirmRestore && (
-                <div
-                    className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                    aria-modal="true"
-                    role="alertdialog"
-                    aria-labelledby="settings-confirm-restore-title"
-                >
-                    <div className="card-elevated max-w-sm w-full shadow-2xl rounded-2xl border-0 overflow-hidden">
-                        <div className="p-6">
-                            <h2 id="settings-confirm-restore-title" className="text-lg font-semibold text-[var(--text)] mb-2">
-                                Restore from backup
-                            </h2>
-                            <p className="text-[var(--text-muted)] mb-6">
-                                Restore events, user status, and document/report metadata from &quot;{confirmRestore.file.name}&quot;? This may overwrite current data.
-                            </p>
-                            <div className="flex gap-3 justify-end">
-                                <button type="button" onClick={() => setConfirmRestore(null)} className="btn-secondary">
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={performRestore}
-                                    disabled={restoring}
-                                    className="btn-primary"
-                                >
-                                    {restoring ? 'Restoring…' : 'Yes, restore'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {createPortal(confirmBackupContent, document.body)}
+            {createPortal(confirmRestoreContent, document.body)}
         </div>
     );
 };

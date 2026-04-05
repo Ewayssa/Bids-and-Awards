@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { reportService } from '../services/api';
 import { ROLES } from '../utils/auth';
 import { MdUpload, MdChevronLeft, MdChevronRight, MdAdd, MdSearch } from 'react-icons/md';
@@ -313,17 +314,20 @@ const Reports = ({ user }) => {
                 />
             )}
 
-            {confirmUpload && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-                    <div className="card-elevated max-w-sm w-full p-6 shadow-2xl rounded-2xl">
-                        <h2 className="text-lg font-semibold mb-2">Confirm upload</h2>
-                        <p className="text-[var(--text-muted)] mb-6">{confirmUpload.message}</p>
-                        <div className="flex gap-3 justify-end">
-                            <button onClick={() => setConfirmUpload(null)} className="btn-secondary">Cancel</button>
-                            <button onClick={confirmUpload.onConfirm} disabled={uploading} className="btn-primary">{uploading ? 'Uploading...' : 'Yes, upload'}</button>
+            {createPortal(
+                confirmUpload && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300">
+                        <div className="card-elevated max-w-sm w-full p-6 shadow-2xl rounded-2xl border-0 bg-[var(--surface)] animate-in zoom-in-95 duration-200">
+                            <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Confirm upload</h2>
+                            <p className="text-sm text-[var(--text-muted)] mb-6">{confirmUpload.message}</p>
+                            <div className="flex gap-3 justify-end">
+                                <button onClick={() => setConfirmUpload(null)} className="btn-secondary">Cancel</button>
+                                <button onClick={confirmUpload.onConfirm} disabled={uploading} className="btn-primary">{uploading ? 'Uploading...' : 'Yes, upload'}</button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                ),
+                document.body
             )}
         </div>
     );

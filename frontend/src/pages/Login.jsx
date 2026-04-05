@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { MdClose } from 'react-icons/md';
 import { mapOldRoleToNew, ROLES, validatePassword, STRICT_PASSWORD_RULES } from '../utils/auth';
@@ -48,10 +49,6 @@ const Login = ({ onLogin, infoMessage }) => {
                 must_change_password: data.must_change_password === true,
             });
         } catch (err) {
-            if ((email === 'admin' && (password === 'admin123' || password === 'admin'))) {
-                onLogin({ username: 'admin', role: ROLES.ADMIN, fullName: 'Admin', position: '', office: '', must_change_password: false });
-                return;
-            }
             const status = err.response?.status;
             const data = err.response?.data;
             let message = 'Login failed';
@@ -160,11 +157,9 @@ const Login = ({ onLogin, infoMessage }) => {
         }
         setForgotLoading(true);
         try {
-            // Request reset - backend will log the token (or send email)
             await userService.requestPasswordReset(forgotIdentifier.trim());
             setForgotSuccess(true);
             setForgotError('Reset link or token was generated. In this development version, check the backend console for the token.');
-            // Note: In a real app, we'd redirect to a "Verify Token" page here.
         } catch (err) {
             const msg = err.response?.data?.detail || 'Failed to request reset.';
             setForgotError(Array.isArray(msg) ? msg : [msg]);
@@ -172,6 +167,228 @@ const Login = ({ onLogin, infoMessage }) => {
             setForgotLoading(false);
         }
     };
+
+    const forgotModalContent = forgotOpen && (
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
+            aria-modal="true"
+            role="dialog"
+            aria-labelledby="forgot-password-title"
+        >
+            <div className="card-elevated w-full max-w-md rounded-2xl bg-[var(--surface)] shadow-2xl border-0 overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between">
+                    <h2 id="forgot-password-title" className="text-xl font-bold text-[var(--text)]">Reset password</h2>
+                    <button
+                        type="button"
+                        onClick={closeForgotModal}
+                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
+                        aria-label="Close"
+                    >
+                        <MdClose className="w-5 h-5" />
+                    </button>
+                </div>
+                {forgotSuccess ? (
+                    <div className="p-6 text-center">
+                        <div className="text-green-600 text-4xl mb-3">✓</div>
+                        <p className="text-[var(--text)] font-medium">Password reset successfully. You can now log in.</p>
+                    </div>
+                ) : (
+                    <form onSubmit={handleForgotSubmit} className="p-6 space-y-4">
+                        {forgotError && (
+                            <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
+                                {Array.isArray(forgotError) ? (
+                                    <ul className="list-disc list-inside space-y-0.5">
+                                        {forgotError.map((msg, i) => (
+                                            <li key={i}>{msg}</li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    forgotError
+                                )}
+                            </div>
+                        )}
+                        <div>
+                            <label htmlFor="forgot-identifier" className="block text-sm font-medium text-[var(--text)] mb-1.5">Email or username</label>
+                            <input
+                                id="forgot-identifier"
+                                type="text"
+                                value={forgotIdentifier}
+                                onChange={(e) => setForgotIdentifier(e.target.value)}
+                                className="input-field w-full"
+                                placeholder="Enter your email or username"
+                                required
+                                disabled={forgotLoading}
+                            />
+                        </div>
+                        <PasswordInput
+                            id="forgot-new-password"
+                            label="New password"
+                            value={forgotNewPassword}
+                            onChange={(e) => setForgotNewPassword(e.target.value)}
+                            placeholder="Enter new password"
+                            autoComplete="new-password"
+                            variant="rounded"
+                            showRequirementsChecklist={forgotNewPassword.length > 0}
+                            rules={STRICT_PASSWORD_RULES}
+                            required
+                            minLength={8}
+                            disabled={forgotLoading}
+                        />
+                        <PasswordInput
+                            id="forgot-confirm-password"
+                            label="Confirm new password"
+                            value={forgotConfirmPassword}
+                            onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                            placeholder="Confirm new password"
+                            autoComplete="new-password"
+                            variant="rounded"
+                            showToggle={false}
+                            required
+                            disabled={forgotLoading}
+                        />
+                        <p className="text-xs text-[var(--text-muted)]">The admin will be notified after you reset.</p>
+                        <div className="flex gap-3 justify-end pt-2">
+                            <button
+                                type="button"
+                                onClick={closeForgotModal}
+                                className="btn-secondary"
+                                disabled={forgotLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={forgotLoading}
+                                className="btn-primary"
+                            >
+                                {forgotLoading ? 'Resetting…' : 'Reset password'}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+
+    const registerModalContent = registerOpen && (
+        <div
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
+            aria-modal="true"
+            role="dialog"
+            aria-labelledby="register-title"
+        >
+            <div className="card-elevated w-full max-w-md rounded-2xl bg-[var(--surface)] shadow-2xl border-0 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between shrink-0">
+                    <h2 id="register-title" className="text-xl font-bold text-[var(--text)]">Create account</h2>
+                    <button
+                        type="button"
+                        onClick={closeRegisterModal}
+                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
+                        aria-label="Close"
+                    >
+                        <MdClose className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="overflow-y-auto flex-1 custom-scrollbar">
+                    {registerSuccess ? (
+                        <div className="p-6 text-center">
+                            <div className="text-green-600 text-4xl mb-3">✓</div>
+                            <p className="text-[var(--text)] font-medium">Account created successfully.</p>
+                            <p className="text-[var(--text-muted)] text-sm mt-2">You can log in once an administrator activates your account.</p>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleRegisterSubmit} className="p-6 space-y-4">
+                            {registerError && (
+                                <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
+                                    {Array.isArray(registerError) ? (
+                                        <ul className="list-disc list-inside space-y-0.5">
+                                            {registerError.map((msg, i) => (
+                                                <li key={i}>{msg}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        registerError
+                                    )}
+                                </div>
+                            )}
+                            <div>
+                                <label htmlFor="register-username" className="block text-sm font-medium text-[var(--text)] mb-1.5">Username or email</label>
+                                <input
+                                    id="register-username"
+                                    type="text"
+                                    value={registerForm.username}
+                                    onChange={(e) => setRegisterForm((f) => ({ ...f, username: e.target.value }))}
+                                    className="input-field w-full"
+                                    placeholder="Enter username or email"
+                                    required
+                                    disabled={registerLoading}
+                                    autoComplete="username"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="register-fullName" className="block text-sm font-medium text-[var(--text)] mb-1.5">Full name</label>
+                                <input
+                                    id="register-fullName"
+                                    type="text"
+                                    value={registerForm.fullName}
+                                    onChange={(e) => setRegisterForm((f) => ({ ...f, fullName: e.target.value }))}
+                                    className="input-field w-full"
+                                    placeholder="Enter your full name"
+                                    required
+                                    disabled={registerLoading}
+                                    autoComplete="name"
+                                />
+                            </div>
+                            <PasswordInput
+                                id="register-password"
+                                label="Password"
+                                value={registerForm.password}
+                                onChange={(e) => setRegisterForm((f) => ({ ...f, password: e.target.value }))}
+                                placeholder="Enter password"
+                                variant="rounded"
+                                showRequirementsChecklist={registerForm.password.length > 0}
+                                rules={STRICT_PASSWORD_RULES}
+                                required
+                                minLength={8}
+                                disabled={registerLoading}
+                                autoComplete="new-password"
+                            />
+                            <PasswordInput
+                                id="register-confirmPassword"
+                                label="Confirm password"
+                                value={registerForm.confirmPassword}
+                                onChange={(e) => setRegisterForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                                placeholder="Confirm password"
+                                variant="rounded"
+                                showToggle={false}
+                                required
+                                disabled={registerLoading}
+                                autoComplete="new-password"
+                            />
+                            <p className="text-xs text-[var(--text-muted)]">Your account must be activated by an administrator before you can log in.</p>
+                            <div className="flex gap-3 justify-end pt-2">
+                                <button
+                                    type="button"
+                                    onClick={closeRegisterModal}
+                                    className="btn-secondary"
+                                    disabled={registerLoading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={registerLoading}
+                                    className="btn-primary"
+                                >
+                                    {registerLoading ? 'Creating…' : 'Create account'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div
@@ -195,7 +412,6 @@ const Login = ({ onLogin, infoMessage }) => {
                         </h1>
                     </div>
 
-                    {/* Fixed Height Error Container - never changes size or causes the card to shrink */}
                     <div className="w-full max-w-xs relative h-[4.5rem] flex items-end justify-center pb-2 animate-entry delay-200">
                         <div
                             aria-live="polite"
@@ -282,229 +498,8 @@ const Login = ({ onLogin, infoMessage }) => {
                 </div>
             </div>
 
-            {/* Forgot password modal */}
-            {forgotOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                    aria-modal="true"
-                    role="dialog"
-                    aria-labelledby="forgot-password-title"
-                >
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                            <h2 id="forgot-password-title" className="text-xl font-bold text-gray-900">Reset password</h2>
-                            <button
-                                type="button"
-                                onClick={closeForgotModal}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-                                aria-label="Close"
-                            >
-                                <MdClose className="w-5 h-5" />
-                            </button>
-                        </div>
-                        {forgotSuccess ? (
-                            <div className="p-6 text-center">
-                                <div className="text-green-600 text-4xl mb-3">✓</div>
-                                <p className="text-gray-700 font-medium">Password reset successfully. You can now log in.</p>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleForgotSubmit} className="p-6 space-y-4">
-                                {forgotError && (
-                                    <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
-                                        {Array.isArray(forgotError) ? (
-                                            <ul className="list-disc list-inside space-y-0.5">
-                                                {forgotError.map((msg, i) => (
-                                                    <li key={i}>{msg}</li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            forgotError
-                                        )}
-                                    </div>
-                                )}
-                                <div>
-                                    <label htmlFor="forgot-identifier" className="block text-sm font-medium text-gray-700 mb-1">Email or username</label>
-                                    <input
-                                        id="forgot-identifier"
-                                        type="text"
-                                        value={forgotIdentifier}
-                                        onChange={(e) => setForgotIdentifier(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                        placeholder="Enter your email or username"
-                                        required
-                                        disabled={forgotLoading}
-                                    />
-                                </div>
-                                <PasswordInput
-                                    id="forgot-new-password"
-                                    label="New password"
-                                    value={forgotNewPassword}
-                                    onChange={(e) => setForgotNewPassword(e.target.value)}
-                                    placeholder="Enter new password"
-                                    autoComplete="new-password"
-                                    variant="rounded"
-                                    showRequirementsChecklist={forgotNewPassword.length > 0}
-                                    rules={STRICT_PASSWORD_RULES}
-                                    required
-                                    minLength={8}
-                                    disabled={forgotLoading}
-                                />
-                                <PasswordInput
-                                    id="forgot-confirm-password"
-                                    label="Confirm new password"
-                                    value={forgotConfirmPassword}
-                                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                                    placeholder="Confirm new password"
-                                    autoComplete="new-password"
-                                    variant="rounded"
-                                    showToggle={false}
-                                    required
-                                    disabled={forgotLoading}
-                                />
-                                <p className="text-xs text-gray-500">The admin will be notified after you reset.</p>
-                                <div className="flex gap-3 justify-end pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={closeForgotModal}
-                                        className="btn-secondary"
-                                        disabled={forgotLoading}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={forgotLoading}
-                                        className="btn-primary"
-                                    >
-                                        {forgotLoading ? 'Resetting…' : 'Reset password'}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Create account (register) modal */}
-            {registerOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-                    aria-modal="true"
-                    role="dialog"
-                    aria-labelledby="register-title"
-                >
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[min(90vh,40rem)]">
-                        <div className="p-6 border-b border-gray-200 flex items-center justify-between shrink-0">
-                            <h2 id="register-title" className="text-xl font-bold text-gray-900">Create account</h2>
-                            <button
-                                type="button"
-                                onClick={closeRegisterModal}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-                                aria-label="Close"
-                            >
-                                <MdClose className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="overflow-y-auto flex-1 custom-scrollbar">
-                        {registerSuccess ? (
-                            <div className="p-6 text-center">
-                                <div className="text-green-600 text-4xl mb-3">✓</div>
-                                <p className="text-gray-700 font-medium">Account created successfully.</p>
-                                <p className="text-gray-600 text-sm mt-2">You can log in once an administrator activates your account.</p>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleRegisterSubmit} className="p-6 space-y-4">
-                                {registerError && (
-                                    <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
-                                        {Array.isArray(registerError) ? (
-                                            <ul className="list-disc list-inside space-y-0.5">
-                                                {registerError.map((msg, i) => (
-                                                    <li key={i}>{msg}</li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            registerError
-                                        )}
-                                    </div>
-                                )}
-                                <div>
-                                    <label htmlFor="register-username" className="block text-sm font-medium text-gray-700 mb-1">Username or email</label>
-                                    <input
-                                        id="register-username"
-                                        type="text"
-                                        value={registerForm.username}
-                                        onChange={(e) => setRegisterForm((f) => ({ ...f, username: e.target.value }))}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                        placeholder="Enter username or email"
-                                        required
-                                        disabled={registerLoading}
-                                        autoComplete="username"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="register-fullName" className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
-                                    <input
-                                        id="register-fullName"
-                                        type="text"
-                                        value={registerForm.fullName}
-                                        onChange={(e) => setRegisterForm((f) => ({ ...f, fullName: e.target.value }))}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                        placeholder="Enter your full name"
-                                        required
-                                        disabled={registerLoading}
-                                        autoComplete="name"
-                                    />
-                                </div>
-                                <PasswordInput
-                                    id="register-password"
-                                    label="Password"
-                                    value={registerForm.password}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, password: e.target.value }))}
-                                    placeholder="Enter password"
-                                    variant="rounded"
-                                    showRequirementsChecklist={registerForm.password.length > 0}
-                                    rules={STRICT_PASSWORD_RULES}
-                                    required
-                                    minLength={8}
-                                    disabled={registerLoading}
-                                    autoComplete="new-password"
-                                />
-                                <PasswordInput
-                                    id="register-confirmPassword"
-                                    label="Confirm password"
-                                    value={registerForm.confirmPassword}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                                    placeholder="Confirm password"
-                                    variant="rounded"
-                                    showToggle={false}
-                                    required
-                                    disabled={registerLoading}
-                                    autoComplete="new-password"
-                                />
-                                <p className="text-xs text-gray-500">Your account must be activated by an administrator before you can log in.</p>
-                                <div className="flex gap-3 justify-end pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={closeRegisterModal}
-                                        className="btn-secondary"
-                                        disabled={registerLoading}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={registerLoading}
-                                        className="btn-primary"
-                                    >
-                                        {registerLoading ? 'Creating…' : 'Create account'}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                        </div>
-                    </div>
-                </div>
-            )}
+            {createPortal(forgotModalContent, document.body)}
+            {createPortal(registerModalContent, document.body)}
         </div>
     );
 };

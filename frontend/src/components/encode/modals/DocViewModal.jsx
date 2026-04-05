@@ -1,12 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MdClose, MdFolder, MdDescription, MdDownload, MdWarning } from 'react-icons/md';
 import { DocDetailsView } from '../DocDetailsView';
 
 const DocViewModal = ({ doc, onClose }) => {
+    useEffect(() => {
+        if (doc) {
+            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
+            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.documentElement.style.overflow = originalHtmlStyle;
+                document.body.style.overflow = originalBodyStyle;
+            };
+        }
+    }, [doc]);
+
     if (!doc) return null;
-    return (
+
+    const modalContent = (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
             aria-modal="true"
             role="dialog"
         >
@@ -71,6 +86,8 @@ const DocViewModal = ({ doc, onClose }) => {
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default DocViewModal;

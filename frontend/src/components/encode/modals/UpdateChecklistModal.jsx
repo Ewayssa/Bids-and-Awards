@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MdClose } from 'react-icons/md';
 
 const UpdateChecklistModal = ({
@@ -9,15 +10,28 @@ const UpdateChecklistModal = ({
     updateChecklistData,
     onSubDocClick
 }) => {
+    useEffect(() => {
+        if (isOpen) {
+            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
+            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.documentElement.style.overflow = originalHtmlStyle;
+                document.body.style.overflow = originalBodyStyle;
+            };
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl animate-in zoom-in-95 duration-200"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300 shadow-2xl"
             aria-modal="true"
             role="dialog"
         >
-            <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0">
+            <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0 animate-in zoom-in-95 duration-200">
                 <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
                     <h2 className="text-lg font-semibold text-[var(--text)]">
                         Update Documents
@@ -104,6 +118,8 @@ const UpdateChecklistModal = ({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default UpdateChecklistModal;

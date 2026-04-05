@@ -367,58 +367,91 @@ textarea {
         box-shadow: none;
         background: transparent;
     }
-    /* ----- Tables ----- */
+    /* ----- Tables & Data Grids ----- */
     .table-header {
-        background: var(--background-subtle);
-        @apply border-b border-[var(--border)] font-semibold;
+        @apply border-b border-[var(--border)] font-bold sticky top-0 z-10;
+        background: color-mix(in srgb, var(--surface) 80%, transparent);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
-    .table-header .table-th {
-        @apply text-[var(--text-muted)];
+    
+    tbody tr {
+        @apply transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] border-b border-[var(--border-light)] relative;
     }
+    
     tbody tr:nth-child(even) {
-        background-color: color-mix(in srgb, var(--muted) 40%, transparent);
+        background-color: color-mix(in srgb, var(--muted) 20%, transparent);
     }
+    
     tbody tr:hover {
-        background-color: color-mix(in srgb, var(--primary) 4%, transparent);
+        background-color: color-mix(in srgb, var(--primary) 4%, transparent) !important;
+        transform: scale(1.002) translateY(-1px);
+        z-index: 2;
+        @apply shadow-[0_8px_20px_-8px_rgba(0,0,0,0.12)] border-transparent;
     }
+    
     .table-th {
-        padding: 0.75rem 1rem 0.75rem 1.25rem;
-        text-align: center;
+        padding: 1.125rem 1.5rem;
+        text-align: left;
         font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-subtle);
+        font-weight: 800;
+        color: var(--text-muted);
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.1em;
+        white-space: nowrap;
+        transition: color 0.2s ease;
     }
-    @media (min-width: 640px) {
-        .table-th { padding: 0.875rem 1.25rem 0.875rem 1.5rem; font-size: 0.8125rem; }
-    }
+    
     .table-td {
-        padding: 0.875rem 1rem 0.875rem 1.25rem;
-        text-align: center;
-        font-size: 0.875rem;
+        padding: 1.25rem 1.5rem;
+        font-size: 0.9375rem;
         color: var(--text);
-        transition: color 0.15s;
+        vertical-align: middle;
+        transition: all 0.2s ease;
     }
-    @media (min-width: 640px) {
-        .table-td { padding: 1rem 1.25rem 1rem 1.5rem; font-size: 0.9375rem; }
-    }
+    
     .table-td-muted {
-        padding: 0.875rem 1rem 0.875rem 1.25rem;
-        text-align: center;
+        padding: 1.25rem 1.5rem;
         font-size: 0.875rem;
         color: var(--text-muted);
-        transition: color 0.15s;
+        vertical-align: middle;
+        transition: all 0.2s ease;
     }
-    @media (min-width: 640px) {
-        .table-td-muted { padding: 1rem 1.25rem 1rem 1.5rem; font-size: 0.9375rem; }
+
+    .status-badge {
+        @apply inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 shadow-sm border;
+        min-width: 85px;
     }
-    .empty-state {
-        @apply py-14 text-center text-[var(--text-subtle)] text-sm;
+
+    .status-badge--complete {
+        @apply bg-emerald-50 text-emerald-700 border-emerald-200/60;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
-    .loading-state {
-        @apply py-14 text-center text-[var(--text-subtle)] text-sm;
+    .status-badge--complete:hover {
+        @apply bg-emerald-100/80;
+        box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.25);
     }
+
+    .status-badge--pending {
+        @apply bg-rose-50 text-rose-700 border-rose-200/60;
+    }
+    .status-badge--pending:hover {
+        @apply bg-rose-100/80;
+        box-shadow: 0 4px 12px -2px rgba(244, 63, 94, 0.25);
+    }
+
+    .status-badge--ongoing {
+        @apply bg-amber-50 text-amber-700 border-amber-200/60;
+    }
+    .status-badge--ongoing:hover {
+        @apply bg-amber-100/80;
+        box-shadow: 0 4px 12px -2px rgba(245, 158, 11, 0.25);
+    }
+
+    .status-badge:hover {
+        @apply scale-105 -translate-y-0.5;
+    }
+
     .section-header {
         padding: 1rem 1.25rem;
         border-bottom: 1px solid var(--border-light);
@@ -484,16 +517,24 @@ textarea {
 
     /* ----- Status badges ----- */
     .status-badge {
-        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide;
+        @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300;
+        box-shadow: 0 2px 4px -1px var(--shadow-color, transparent);
     }
     .status-badge--complete {
-        @apply status-badge bg-emerald-50 text-emerald-700 border border-emerald-200;
+        --shadow-color: rgba(16, 185, 129, 0.2);
+        @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
     }
     .status-badge--pending {
-        @apply status-badge bg-rose-50 text-rose-700 border border-rose-200;
+        --shadow-color: rgba(244, 63, 94, 0.2);
+        @apply bg-rose-50 text-rose-700 border border-rose-200;
     }
     .status-badge--ongoing {
-        @apply status-badge bg-amber-50 text-amber-700 border border-amber-200;
+        --shadow-color: rgba(245, 158, 11, 0.2);
+        @apply bg-amber-50 text-amber-700 border border-amber-200;
+    }
+    .status-badge:hover {
+        @apply transform scale-105 brightness-110;
+        box-shadow: 0 4px 12px -2px var(--shadow-color, transparent);
     }
 
     /* ----- Alert banners ----- */

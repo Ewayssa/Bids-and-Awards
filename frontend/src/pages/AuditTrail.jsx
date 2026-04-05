@@ -51,7 +51,9 @@ const AuditTrail = () => {
         setLoading(true);
         try {
             const data = await auditLogService.getAll();
-            setLogs(Array.isArray(data) ? data : []);
+            // Backend returns { count, results, ... } due to pagination
+            const logList = Array.isArray(data) ? data : (data?.results || []);
+            setLogs(logList);
         } catch (err) {
             setError(err.response?.data?.detail || err.message || 'Failed to load activity logs.');
             setLogs([]);
@@ -129,7 +131,7 @@ const AuditTrail = () => {
                                         >
                                             <td className="table-td">{entry.actor || '—'}</td>
                                             <td className="table-td text-center">
-                                                <span className="inline-flex justify-center items-center w-full font-medium text-[var(--text)]">
+                                                <span className="inline-flex justify-center items-center px-2.5 py-1 rounded-lg bg-[var(--background-subtle)]/70 text-[var(--text)] text-[11px] font-bold uppercase tracking-wider border border-[var(--border-light)] group-hover:border-[var(--primary-light)] transition-all duration-300">
                                                     {ACTION_LABELS[entry.action] || entry.action}
                                                 </span>
                                             </td>

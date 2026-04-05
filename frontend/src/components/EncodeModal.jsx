@@ -17,14 +17,14 @@ const EncodeModal = ({
 }) => {
     return createPortal(
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
             aria-modal="true"
             role="dialog"
             aria-labelledby="encode-report-title"
             onClick={onClose}
         >
             <div
-                className="bg-white w-full max-w-[96vw] h-[85vh] max-h-[85vh] flex flex-col rounded-xl shadow-2xl border-2 border-gray-300 overflow-hidden"
+                className="bg-[var(--surface)] w-full max-w-[96vw] h-[85vh] max-h-[85vh] flex flex-col rounded-2xl shadow-2xl border border-[var(--border-light)] overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}

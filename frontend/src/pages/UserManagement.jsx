@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { userService } from '../services/api';
 import { MdPersonAdd, MdClose, MdCheckCircle, MdSearch, MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff, MdContentCopy, MdCheck } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
@@ -43,7 +44,9 @@ const Personnel = ({ user }) => {
     const loadUsers = useCallback(async () => {
         try {
             const data = await userService.getAll();
-            setUsers(Array.isArray(data) ? data : []);
+            // Backend returns { count, results, ... } due to pagination
+            const userList = Array.isArray(data) ? data : (data?.results || []);
+            setUsers(userList);
         } catch (e) {
             setUsers([]);
         } finally {
@@ -294,13 +297,13 @@ const Personnel = ({ user }) => {
                                             <td className="table-td-muted">{u.username}</td>
                                             <td className="table-td-muted">{u.position || '—'}</td>
                                             <td className="table-td-muted">{u.office || '—'}</td>
-                                            <td className="table-td">
-                                                <span className={`inline-flex px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-300 ${u.role === ROLES.ADMIN ? 'bg-[var(--primary-muted)] text-[var(--primary)]' : 'bg-[var(--background-subtle)] text-[var(--text-muted)]'}`}>
+                                            <td className="table-td text-center">
+                                                <span className={`status-badge ${u.role === ROLES.ADMIN ? 'status-badge--complete' : 'status-badge--ongoing'}`}>
                                                     {getRoleDisplayName(u.role)}
                                                 </span>
                                             </td>
-                                            <td className="table-td">
-                                                <span className={`inline-flex px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-300 ${u.is_active !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                            <td className="table-td text-center">
+                                                <span className={`status-badge ${u.is_active !== false ? 'status-badge--complete' : 'status-badge--pending'}`}>
                                                     {u.is_active !== false ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
@@ -336,10 +339,9 @@ const Personnel = ({ user }) => {
                 )}
             </section>
 
-            {/* ─── Add User Modal ─── */}
-            {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" aria-modal="true" role="dialog" aria-labelledby="add-user-title">
-                    <div className="card-elevated max-w-md w-full shadow-2xl rounded-2xl border-0 overflow-hidden">
+    const addModalContent = showAddModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300" aria-modal="true" role="dialog" aria-labelledby="add-user-title">
+            <div className="card-elevated max-w-md w-full shadow-2xl rounded-2xl border-0 overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
                             <h2 id="add-user-title" className="text-lg font-semibold text-[var(--text)]">
                                 {createdUser ? 'User Created' : showConfirmAdd ? 'Confirm New User' : 'Add New User'}
@@ -529,95 +531,96 @@ const Personnel = ({ user }) => {
                 </div>
             )}
 
-            {/* ─── Confirm Edit dialog ─── */}
-            {showConfirmEdit && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" aria-modal="true" role="alertdialog" aria-labelledby="confirm-edit-title">
-                    <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl">
-                        <h2 id="confirm-edit-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Update User</h2>
-                        <p className="text-sm text-[var(--text-muted)] mb-6">
-                            Save changes to user <strong className="text-[var(--text)]">{editingUser?.username}</strong>?
-                        </p>
-                        <div className="flex gap-3 justify-end">
-                            <button type="button" onClick={() => setShowConfirmEdit(false)} className="btn-secondary">Cancel</button>
-                            <button type="button" onClick={confirmEditUser} className="btn-primary" disabled={submitting}>
-                                {submitting ? 'Updating…' : 'Confirm'}
-                            </button>
-                        </div>
-                    </div>
+    const confirmEditDialogContent = showConfirmEdit && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300" aria-modal="true" role="alertdialog" aria-labelledby="confirm-edit-title">
+            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl animate-in zoom-in-95 duration-200">
+                <h2 id="confirm-edit-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Update User</h2>
+                <p className="text-sm text-[var(--text-muted)] mb-6">
+                    Save changes to user <strong className="text-[var(--text)]">{editingUser?.username}</strong>?
+                </p>
+                <div className="flex gap-3 justify-end">
+                    <button type="button" onClick={() => setShowConfirmEdit(false)} className="btn-secondary">Cancel</button>
+                    <button type="button" onClick={confirmEditUser} className="btn-primary" disabled={submitting}>
+                        {submitting ? 'Updating…' : 'Confirm'}
+                    </button>
                 </div>
-            )}
+            </div>
+        </div>
+    );
 
-            {/* ─── Edit User modal ─── */}
-            {editingUser && !showConfirmEdit && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" aria-modal="true" role="dialog" aria-labelledby="edit-user-title">
-                    <div className="card-elevated max-w-md w-full shadow-2xl rounded-2xl border-0 overflow-hidden">
-                        <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
-                            <h2 id="edit-user-title" className="text-lg font-semibold text-[var(--text)]">Edit User</h2>
-                            <button type="button" onClick={closeEditModal} className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors" aria-label="Close">
-                                <MdClose className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-                            {editError && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm" role="alert">{editError}</div>
-                            )}
-                            <div>
-                                <label htmlFor="edit-email" className="block text-sm font-medium text-[var(--text)] mb-1">Email</label>
-                                <input id="edit-email" type="email" value={editingUser.username} className="input-field w-full bg-[var(--background-subtle)] opacity-70" disabled />
-                            </div>
-                            <div>
-                                <label htmlFor="edit-fullName" className="block text-sm font-medium text-[var(--text)] mb-1">Full Name</label>
-                                <input id="edit-fullName" type="text" value={editForm.fullName} onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))} className="input-field w-full" placeholder="Display name" disabled={submitting} />
-                            </div>
-                            <div>
-                                <label htmlFor="edit-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation</label>
-                                <select id="edit-position" value={editForm.position} onChange={(e) => setEditForm(f => ({ ...f, position: e.target.value }))} className="input-field w-full" disabled={submitting}>
-                                    <option value="">Select Position</option>
-                                    <option value="BAC Chairperson">BAC Chairperson</option>
-                                    <option value="BAC Secretariat">BAC Secretariat</option>
-                                    <option value="BAC Member">BAC Member</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="edit-office" className="block text-sm font-medium text-[var(--text)] mb-1">Department</label>
-                                <input id="edit-office" type="text" value={editForm.office} onChange={(e) => setEditForm(f => ({ ...f, office: e.target.value }))} className="input-field w-full" placeholder="Enter Department" disabled={submitting} />
-                            </div>
-                            <div>
-                                <label htmlFor="edit-role" className="block text-sm font-medium text-[var(--text)] mb-1">Role</label>
-                                <select id="edit-role" value={editForm.role} onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value }))} className="input-field w-full" disabled={submitting}>
-                                    <option value="">Select Role</option>
-                                    {getAvailableRoles(user?.role).map((role) => (
-                                        <option key={role.value} value={role.value}>{role.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex items-center gap-4 pt-1">
-                                <label htmlFor="edit-status" className="text-sm font-medium text-[var(--text)] shrink-0">Status</label>
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={editForm.is_active}
-                                        id="edit-status"
-                                        onClick={() => setEditForm(f => ({ ...f, is_active: !f.is_active }))}
-                                        disabled={submitting}
-                                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${editForm.is_active ? 'bg-green-600' : 'bg-slate-300'}`}
-                                    >
-                                        <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.is_active ? 'translate-x-5' : 'translate-x-1'}`} />
-                                    </button>
-                                    <span className="text-sm text-[var(--text-muted)]">{editForm.is_active ? 'Active' : 'Inactive'}</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 justify-end pt-2">
-                                <button type="button" onClick={closeEditModal} className="btn-secondary" disabled={submitting}>Cancel</button>
-                                <button type="submit" className="btn-primary" disabled={submitting}>
-                                    {submitting ? 'Updating…' : 'Update User'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+    const editModalContent = editingUser && !showConfirmEdit && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300" aria-modal="true" role="dialog" aria-labelledby="edit-user-title">
+            <div className="card-elevated max-w-md w-full shadow-2xl rounded-2xl border-0 overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
+                    <h2 id="edit-user-title" className="text-lg font-semibold text-[var(--text)]">Edit User</h2>
+                    <button type="button" onClick={closeEditModal} className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors" aria-label="Close">
+                        <MdClose className="w-5 h-5" />
+                    </button>
                 </div>
-            )}
+                <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+                    {editError && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm" role="alert">{editError}</div>
+                    )}
+                    <div>
+                        <label htmlFor="edit-email" className="block text-sm font-medium text-[var(--text)] mb-1">Email</label>
+                        <input id="edit-email" type="email" value={editingUser.username} className="input-field w-full bg-[var(--background-subtle)] opacity-70" disabled />
+                    </div>
+                    <div>
+                        <label htmlFor="edit-fullName" className="block text-sm font-medium text-[var(--text)] mb-1">Full Name</label>
+                        <input id="edit-fullName" type="text" value={editForm.fullName} onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))} className="input-field w-full" placeholder="Display name" disabled={submitting} />
+                    </div>
+                    <div>
+                        <label htmlFor="edit-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation</label>
+                        <select id="edit-position" value={editForm.position} onChange={(e) => setEditForm(f => ({ ...f, position: e.target.value }))} className="input-field w-full" disabled={submitting}>
+                            <option value="">Select Position</option>
+                            <option value="BAC Chairperson">BAC Chairperson</option>
+                            <option value="BAC Secretariat">BAC Secretariat</option>
+                            <option value="BAC Member">BAC Member</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="edit-office" className="block text-sm font-medium text-[var(--text)] mb-1">Department</label>
+                        <input id="edit-office" type="text" value={editForm.office} onChange={(e) => setEditForm(f => ({ ...f, office: e.target.value }))} className="input-field w-full" placeholder="Enter Department" disabled={submitting} />
+                    </div>
+                    <div>
+                        <label htmlFor="edit-role" className="block text-sm font-medium text-[var(--text)] mb-1">Role</label>
+                        <select id="edit-role" value={editForm.role} onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value }))} className="input-field w-full" disabled={submitting}>
+                            <option value="">Select Role</option>
+                            {getAvailableRoles(user?.role).map((role) => (
+                                <option key={role.value} value={role.value}>{role.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-4 pt-1">
+                        <label htmlFor="edit-status" className="text-sm font-medium text-[var(--text)] shrink-0">Status</label>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={editForm.is_active}
+                                id="edit-status"
+                                onClick={() => setEditForm(f => ({ ...f, is_active: !f.is_active }))}
+                                disabled={submitting}
+                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${editForm.is_active ? 'bg-green-600' : 'bg-slate-300'}`}
+                            >
+                                <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.is_active ? 'translate-x-5' : 'translate-x-1'}`} />
+                            </button>
+                            <span className="text-sm text-[var(--text-muted)]">{editForm.is_active ? 'Active' : 'Inactive'}</span>
+                        </div>
+                    </div>
+                    <div className="flex gap-3 justify-end pt-2">
+                        <button type="button" onClick={closeEditModal} className="btn-secondary" disabled={submitting}>Cancel</button>
+                        <button type="submit" className="btn-primary" disabled={submitting}>
+                            {submitting ? 'Updating…' : 'Update User'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+            {createPortal(addModalContent, document.body)}
+            {createPortal(confirmEditDialogContent, document.body)}
+            {createPortal(editModalContent, document.body)}
         </div>
     );
 };

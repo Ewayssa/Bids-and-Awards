@@ -156,14 +156,14 @@ export function isDocumentComplete(doc) {
 export function getStatusColor(status) {
     switch (status?.toLowerCase()) {
         case 'pending':
-            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            return 'status-badge--pending';
         case 'ongoing':
-            return 'bg-blue-100 text-blue-800 border-blue-200';
+            return 'status-badge--ongoing';
         case 'complete':
         case 'completed':
-            return 'bg-green-100 text-green-800 border-green-200';
+            return 'status-badge--complete';
         default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
+            return '';
     }
 }
 
