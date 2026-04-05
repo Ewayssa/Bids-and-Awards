@@ -7,6 +7,8 @@
 export const ROLES = {
     ADMIN: 'admin',
     USER: 'user',
+    ENCODER: 'encoder',
+    VIEWER: 'viewer',
 };
 
 export const ROLE_DISPLAY_NAMES = {

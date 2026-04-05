@@ -465,6 +465,50 @@ textarea {
     .stat-card--complete { border-top-color: #16a34a; }
     .stat-card--ongoing { border-top-color: #d97706; }
     .stat-card--pending { border-top-color: #e11d48; }
+
+    /* ----- Pagination ----- */
+    .pagination-nav {
+        @apply flex items-center justify-center gap-3 py-3 border-t border-[var(--border-light)];
+        background-color: color-mix(in srgb, var(--background-subtle) 40%, transparent);
+    }
+    .pagination-btn {
+        @apply p-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]
+               hover:bg-[var(--background-subtle)] hover:border-[var(--primary)] hover:text-[var(--primary)]
+               disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[var(--surface)]
+               disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-muted)]
+               transition-all duration-200 ease-out active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1;
+    }
+    .pagination-info {
+        @apply text-sm font-medium text-[var(--text-muted)] tabular-nums;
+    }
+
+    /* ----- Status badges ----- */
+    .status-badge {
+        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide;
+    }
+    .status-badge--complete {
+        @apply status-badge bg-emerald-50 text-emerald-700 border border-emerald-200;
+    }
+    .status-badge--pending {
+        @apply status-badge bg-rose-50 text-rose-700 border border-rose-200;
+    }
+    .status-badge--ongoing {
+        @apply status-badge bg-amber-50 text-amber-700 border border-amber-200;
+    }
+
+    /* ----- Alert banners ----- */
+    .alert-success {
+        @apply rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-3;
+    }
+    .alert-error {
+        @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center gap-3;
+    }
+    .alert-info {
+        @apply rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 flex items-center gap-3;
+    }
+    .alert-warning {
+        @apply rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 flex items-center gap-3;
+    }
 }
 
 button:focus-visible,

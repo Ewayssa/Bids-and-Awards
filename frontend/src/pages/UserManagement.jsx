@@ -220,7 +220,7 @@ const Personnel = ({ user }) => {
     const addErrs = validateAdd(addForm);
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 pb-8">
             <PageHeader title="User Management" subtitle="Create and manage user accounts, assign roles and permissions." />
 
             <section className="content-section overflow-hidden rounded-xl p-0">
@@ -322,12 +322,12 @@ const Personnel = ({ user }) => {
                             </table>
                         </div>
                         {filteredUsers.length > TABLE_PAGE_SIZE && (
-                            <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--border)] bg-[var(--background-subtle)]/50">
-                                <button type="button" onClick={() => setTablePage((p) => Math.max(1, p - 1))} disabled={tablePage <= 1} className="p-2 border rounded-lg disabled:opacity-50" aria-label="Previous page">
+                            <div className="pagination-nav">
+                                <button type="button" onClick={() => setTablePage((p) => Math.max(1, p - 1))} disabled={tablePage <= 1} className="pagination-btn" aria-label="Previous page">
                                     <MdChevronLeft className="w-5 h-5" />
                                 </button>
-                                <span className="text-sm text-[var(--text-muted)]">Page {tablePage} of {totalPages}</span>
-                                <button type="button" onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))} disabled={tablePage >= totalPages} className="p-2 border rounded-lg disabled:opacity-50" aria-label="Next page">
+                                <span className="pagination-info">Page {tablePage} of {totalPages}</span>
+                                <button type="button" onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))} disabled={tablePage >= totalPages} className="pagination-btn" aria-label="Next page">
                                     <MdChevronRight className="w-5 h-5" />
                                 </button>
                             </div>

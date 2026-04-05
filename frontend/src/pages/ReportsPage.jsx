@@ -179,13 +179,15 @@ const Reports = ({ user }) => {
     };
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-5 pb-8">
             <PageHeader title="Reports" subtitle="Upload and view all reports in the system." />
 
             <section className="content-section overflow-hidden rounded-xl p-0">
                 {uploadSuccess && (
-                    <div className="p-4 px-5 pt-5 rounded-t-xl bg-green-50 border-b border-green-200 text-green-800 text-sm">
-                        {uploadSuccess}
+                    <div className="px-5 pt-5 pb-0">
+                        <div className="alert-success rounded-xl">
+                            {uploadSuccess}
+                        </div>
                     </div>
                 )}
                 <div className={`section-header ${uploadSuccess ? 'section-header--nested' : ''}`}>
@@ -199,8 +201,8 @@ const Reports = ({ user }) => {
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <button onClick={() => setEncodeModalOpen(true)} className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"><MdAdd /> Encode</button>
-                            <button onClick={() => { setUploadSuccess(''); setUploadModalOpen(true); }} className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"><MdUpload /> Upload Report</button>
+                            <button onClick={() => setEncodeModalOpen(true)} className="btn-secondary inline-flex items-center gap-1.5 py-2.5 px-4 text-sm"><MdAdd className="w-4 h-4" /> Encode</button>
+                            <button onClick={() => { setUploadSuccess(''); setUploadModalOpen(true); }} className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4 text-sm"><MdUpload className="w-4 h-4" /> Upload Report</button>
                         </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-[var(--border-light)]">
@@ -266,10 +268,10 @@ const Reports = ({ user }) => {
                 </div>
 
                 {filteredReports.length > TABLE_PAGE_SIZE && (
-                    <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--border-light)]">
-                        <button onClick={() => setTablePage(p => Math.max(1, p - 1))} disabled={tablePage <= 1} className="p-2 border rounded-lg disabled:opacity-50"><MdChevronLeft /></button>
-                        <span className="text-sm">Page {tablePage} of {totalPages}</span>
-                        <button onClick={() => setTablePage(p => Math.min(totalPages, p + 1))} disabled={tablePage >= totalPages} className="p-2 border rounded-lg disabled:opacity-50"><MdChevronRight /></button>
+                    <div className="pagination-nav">
+                        <button type="button" onClick={() => setTablePage(p => Math.max(1, p - 1))} disabled={tablePage <= 1} className="pagination-btn" aria-label="Previous page"><MdChevronLeft className="w-5 h-5" /></button>
+                        <span className="pagination-info">Page {tablePage} of {totalPages}</span>
+                        <button type="button" onClick={() => setTablePage(p => Math.min(totalPages, p + 1))} disabled={tablePage >= totalPages} className="pagination-btn" aria-label="Next page"><MdChevronRight className="w-5 h-5" /></button>
                     </div>
                 )}
             </section>

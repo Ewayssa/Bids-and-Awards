@@ -14,7 +14,18 @@ import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from '
 const SESSION_TIMEOUT_MINUTES = 5;
 
 function AppContent() {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => {
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+            try {
+                return JSON.parse(savedUser);
+            } catch (e) {
+                console.error('Failed to parse saved user:', e);
+                return null;
+            }
+        }
+        return null;
+    });
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [loginInfoMessage, setLoginInfoMessage] = useState('');
     const navigate = useNavigate();
@@ -27,7 +38,11 @@ function AppContent() {
     };
     const handleLogout = () => {
         setUser(null);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         setLoginInfoMessage('');
+        navigate('/');
     };
     const handlePasswordChanged = () => {
         setUser((prev) => (prev ? { ...prev, must_change_password: false } : null));

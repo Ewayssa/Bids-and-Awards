@@ -164,3 +164,4 @@ const DocDetailsView = ({ doc }) => {
 };
 
 export { DocDetailsView, DocDetailItem };
+export default DocDetailsView;

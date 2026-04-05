@@ -143,24 +143,24 @@ const AuditTrail = () => {
                         </table>
                     </div>
                     {logs.length > TABLE_PAGE_SIZE && (
-                        <div className="flex items-center justify-center gap-3 py-3 border-t border-[var(--border)] bg-[var(--background-subtle)]/50">
+                        <div className="pagination-nav">
                             <button
                                 type="button"
                                 onClick={() => setTablePage((p) => Math.max(1, p - 1))}
                                 disabled={tablePage <= 1}
-                                className="p-2 border rounded-lg disabled:opacity-50"
+                                className="pagination-btn"
                                 aria-label="Previous page"
                             >
                                 <MdChevronLeft className="w-5 h-5" />
                             </button>
-                            <span className="text-sm text-[var(--text-muted)]">
+                            <span className="pagination-info">
                                 Page {tablePage} of {totalPages}
                             </span>
                             <button
                                 type="button"
                                 onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
                                 disabled={tablePage >= totalPages}
-                                className="p-2 border rounded-lg disabled:opacity-50"
+                                className="pagination-btn"
                                 aria-label="Next page"
                             >
                                 <MdChevronRight className="w-5 h-5" />

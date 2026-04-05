@@ -1,7 +1,9 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.http import FileResponse, HttpResponse, JsonResponse
@@ -40,6 +42,7 @@ def _log_audit(action, actor='System', target_type='', target_id='', description
 # --- Authentication Views ---
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def login(request):
     username = request.data.get('username')
     password = request.data.get('password')
@@ -51,9 +54,14 @@ def login(request):
                 {'message': 'Your account is not yet active. An administrator must activate it before you can log in.'}, 
                 status=status.HTTP_403_FORBIDDEN
             )
+        
+        refresh = RefreshToken.for_user(user)
         _log_audit('user_login', user.username, 'user', str(user.id), 'User logged in')
+        
         return Response({
             'message': 'Login successful',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
             'username': user.username,
             'role': user.role,
             'fullName': user.fullName or user.username,
@@ -64,6 +72,7 @@ def login(request):
     return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def register(request):
     """Public self-registration."""
     serializer = RegisterSerializer(data=request.data)
@@ -146,6 +155,7 @@ def change_password(request):
     return Response({'message': 'Password changed successfully.'})
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def forgot_password(request):
     """Request a password reset."""
     identifier = (request.data.get('username') or request.data.get('email') or '').strip()
@@ -156,15 +166,21 @@ def forgot_password(request):
            User.objects.filter(email__iexact=identifier).first()
            
     if not user or not user.is_active:
-        return Response({'detail': 'No active account found.'}, status=status.HTTP_404_NOT_FOUND)
+        # For security, return success even if user doesn't exist (prevents user enumeration)
+        return Response({'message': 'If an account exists, a reset link will be sent.'})
         
     PasswordResetToken.objects.filter(user=user).delete()
     import secrets
     token = secrets.token_urlsafe(32)
     PasswordResetToken.objects.create(user=user, token=token)
-    return Response({'message': 'You can now set a new password.', 'token': token})
+    
+    # Ideally, send this token via email. For now, we'll log it for development.
+    print(f"PASSWORD RESET TOKEN for {user.username}: {token}")
+    
+    return Response({'message': 'Reset instructions have been generated (check logs/email).'})
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def reset_password(request):
     """Set new password with token."""
     token = (request.data.get('token') or '').strip()
@@ -234,7 +250,6 @@ class UserViewSet(viewsets.ModelViewSet):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all().order_by('-uploaded_at')
     serializer_class = DocumentSerializer
-    pagination_class = None
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
@@ -329,7 +344,6 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.all().order_by('-created_at')
     serializer_class = AuditLogSerializer
-    pagination_class = None
 
 # --- Custom Business Logic Views ---
 

@@ -132,7 +132,7 @@ const Settings = ({ user }) => {
                 {/* Restore */}
                 <section className="card overflow-hidden min-w-0 w-full">
                     <div className="px-6 py-5 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/30 flex items-center gap-3">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--background-subtle)] text-[var(--text-muted)]">
                             <MdRestore className="w-6 h-6" />
                         </span>
                         <div className="min-w-0">

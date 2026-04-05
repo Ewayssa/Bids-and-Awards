@@ -37,15 +37,15 @@ const Login = ({ onLogin, infoMessage }) => {
         }
         setLoading(true);
         try {
-            const res = await axios.post('/api/login', { username: email, password });
-            const role = mapOldRoleToNew(res.data?.role);
+            const data = await userService.login(email, password);
+            const role = mapOldRoleToNew(data.role);
             onLogin({
-                username: res.data?.username ?? email,
+                username: data.username,
                 role,
-                fullName: res.data?.fullName ?? email,
-                position: res.data?.position ?? '',
-                office: res.data?.office ?? '',
-                must_change_password: res.data?.must_change_password === true,
+                fullName: data.fullName,
+                position: data.position,
+                office: data.office,
+                must_change_password: data.must_change_password === true,
             });
         } catch (err) {
             if ((email === 'admin' && (password === 'admin123' || password === 'admin'))) {
@@ -57,7 +57,7 @@ const Login = ({ onLogin, infoMessage }) => {
             let message = 'Login failed';
             if (!err.response) {
                 if (err.code === 'ECONNREFUSED' || err.message?.includes('Network')) {
-                    message = 'Connection failed. Make sure the backend is running: run start-project.ps1 in the bids-and-awards folder (or run run-backend.ps1 in one window and run-frontend.ps1 in another). Then open the URL shown by Vite (e.g. http://localhost:5173 or http://localhost:5175).';
+                    message = 'Connection failed. Make sure the backend is running.';
                 }
             } else if (status === 403) {
                 message = 'Your account is not yet active. An administrator must activate it before you can log in.';
@@ -160,18 +160,13 @@ const Login = ({ onLogin, infoMessage }) => {
         }
         setForgotLoading(true);
         try {
-            const data = await userService.requestPasswordReset(forgotIdentifier.trim());
-            if (!data?.token) {
-                setForgotError('Could not get reset token. Please try again.');
-                return;
-            }
-            await userService.resetPassword(data.token, forgotNewPassword);
+            // Request reset - backend will log the token (or send email)
+            await userService.requestPasswordReset(forgotIdentifier.trim());
             setForgotSuccess(true);
-            setTimeout(() => {
-                closeForgotModal();
-            }, 1500);
+            setForgotError('Reset link or token was generated. In this development version, check the backend console for the token.');
+            // Note: In a real app, we'd redirect to a "Verify Token" page here.
         } catch (err) {
-            const msg = err.response?.data?.detail || 'Failed to reset password.';
+            const msg = err.response?.data?.detail || 'Failed to request reset.';
             setForgotError(Array.isArray(msg) ? msg : [msg]);
         } finally {
             setForgotLoading(false);
