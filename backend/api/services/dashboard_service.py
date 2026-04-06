@@ -27,14 +27,21 @@ class DashboardService:
     # Flat list of all required sub-document types per checklist
     # These must match the subDoc values stored in the database (from frontend DOC_TYPES)
     REQUIRED_SUB_DOCS = [
+        # Initial Documents
         'Purchase Request',
         'Activity Design',
         'Project Procurement Management Plan/Supplemental PPMP',
         'Annual Procurement Plan',
         'Market Scopping',
         'Requisition and Issue Slip',
+        
+        # BAC Meeting Documents
+        'Notice of BAC Meeting',
         'Invitation to COA',
         'Attendance Sheet',
+        'Minutes of the Meeting',
+        
+        # Award Documents
         'BAC Resolution',
         'Abstract of Quotation',
         'Lease of Venue: Table Rating Factor',
@@ -43,24 +50,40 @@ class DashboardService:
         'Notice to Proceed',
         'OSS',
         "Applicable: Secretary's Certificate and Special Power of Attorney",
-        # RFQ Concerns — one of each type per procurement method
+        
+        # Award Posting
+        'PhilGEPS Posting of Award',
+        'Certificate of DILG R1 Website Posting of Award',
+        'Notice of Award (Posted)',
+        'Abstract of Quotation (Posted)',
+        'BAC Resolution (Posted)',
+
+        # RFQ Concerns — variants based on procurement method
+        'PHILGEPS - Lease of Venue',
         'PHILGEPS - Small Value Procurement',
         'PHILGEPS - Public Bidding',
+        'Certificate of DILG - Lease of Venue',
         'Certificate of DILG - Small Value Procurement',
         'Certificate of DILG - Public Bidding',
-        # Lease of Venue (pre-bidding)
+
+        # Pre-Bidding (for specific workflows)
         'Lease of Venue',
     ]
 
-    # Sub-docs that apply only to SVP folders
+    # Sub-docs that apply only to specific folder types/methods
     SVP_ONLY = {
         'PHILGEPS - Small Value Procurement',
         'Certificate of DILG - Small Value Procurement',
     }
-    # Sub-docs that apply only to PB folders
     PB_ONLY = {
         'PHILGEPS - Public Bidding',
         'Certificate of DILG - Public Bidding',
+    }
+    LV_ONLY = {
+        'PHILGEPS - Lease of Venue',
+        'Certificate of DILG - Lease of Venue',
+        'Lease of Venue',
+        'Lease of Venue: Table Rating Factor',
     }
 
     @classmethod
@@ -77,10 +100,17 @@ class DashboardService:
         pending_slot = 0
 
         for pr, folder_docs in folders.items():
+            # Determine procurement method for this folder
             is_svp = any('Small Value Procurement' in (d.subDoc or '') for d in folder_docs)
             is_pb = any('Public Bidding' in (d.subDoc or '') for d in folder_docs)
+            is_lv = any('Lease of Venue' in (d.subDoc or '') for d in folder_docs)
 
-            submitted_sub_docs = {(d.subDoc or '').strip() for d in folder_docs}
+            # Only count a document as "started" if its status is ongoing or complete
+            submitted_sub_docs = {
+                (d.subDoc or '').strip() 
+                for d in folder_docs 
+                if d.calculate_status() != 'pending'
+            }
 
             for sub_trim in cls.REQUIRED_SUB_DOCS:
                 # Skip procurement-method-specific docs when method doesn't match
@@ -88,14 +118,8 @@ class DashboardService:
                     continue
                 if sub_trim in cls.PB_ONLY and not is_pb:
                     continue
-                # RFQ base types are superseded by variants
-                if sub_trim in ('PHILGEPS - Small Value Procurement', 'PHILGEPS - Public Bidding',
-                                'Certificate of DILG - Small Value Procurement', 'Certificate of DILG - Public Bidding'):
-                    # Only count if this folder has the relevant procurement method
-                    if sub_trim in cls.SVP_ONLY and not is_svp:
-                        continue
-                    if sub_trim in cls.PB_ONLY and not is_pb:
-                        continue
+                if sub_trim in cls.LV_ONLY and not is_lv:
+                    continue
 
                 if sub_trim not in submitted_sub_docs:
                     pending_slot += 1
@@ -110,11 +134,16 @@ class DashboardService:
 
         doc_counts = cls.get_document_status_counts(docs_qs)
 
+        # Dashboard Logic:
+        # Completed: Documents fully filled/submitted
+        # Ongoing: Documents started but not yet complete
+        # Pending: Documents uploaded but not yet started (no data/file filled)
+        # Total: Total uploaded documents
         pie_data = [
             doc_counts['total'],
             doc_counts['completed'],
             doc_counts['ongoing'],
-            doc_counts['pending']
+            doc_counts['pending'],
         ]
         
         total_documents_uploaded = docs_qs.filter(uploaded_at__isnull=False).count()

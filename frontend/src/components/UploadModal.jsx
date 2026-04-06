@@ -1,6 +1,6 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { MdClose, MdUpload } from 'react-icons/md';
+import { MdUpload, MdDescription, MdCheckCircle, MdInfo } from 'react-icons/md';
+import Modal from './Modal';
 
 const UploadModal = ({ 
     onClose, 
@@ -11,93 +11,92 @@ const UploadModal = ({
     uploadError, 
     handleFileChange 
 }) => {
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="dialog"
+    return (
+        <Modal
+            isOpen={true}
+            onClose={onClose}
+            title="Upload Report"
+            size="md"
+            showCloseButton={true}
         >
-            <div className="card-elevated max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0 animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
-                    <h2 className="text-lg font-semibold text-[var(--text)]">Upload Report</h2>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
-                        aria-label="Close"
-                    >
-                        <MdClose className="w-5 h-5" />
-                    </button>
-                </div>
-                <form onSubmit={onSubmit} className="p-6 space-y-4">
-                    {uploadError && (
-                        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm shadow-sm transition-all duration-300 ease-out">
-                            {uploadError}
-                        </div>
-                    )}
-                    <div>
-                        <label className="block text-sm font-medium text-[var(--text)] mb-1">
-                            Report Title <span className="text-red-500">*</span>
-                        </label>
+            <form onSubmit={onSubmit} className="space-y-6">
+                {uploadError && (
+                    <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center gap-3 text-red-600">
+                        <MdInfo className="w-5 h-5 shrink-0" />
+                        <p className="text-xs font-bold uppercase tracking-tight">{uploadError}</p>
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Report Title</label>
                         <input
                             type="text"
                             value={form.title}
                             onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                             placeholder="Enter Report Title"
-                            className="input-field w-full"
+                            className="input-field w-full h-12 px-4 dark:bg-slate-800 rounded-xl"
                             required
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[var(--text)] mb-1">
-                            Submitting Office <span className="text-red-500">*</span>
-                        </label>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Submitting Office</label>
                         <input
                             type="text"
                             value={form.submitting_office}
                             onChange={(e) => setForm((prev) => ({ ...prev, submitting_office: e.target.value }))}
-                            placeholder="Enter Submitting Office"
-                            className="input-field w-full"
+                            placeholder="Division / Section / Office"
+                            className="input-field w-full h-12 px-4 dark:bg-slate-800 rounded-xl"
                             required
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[var(--text)] mb-1">
-                            File <span className="text-red-500">*</span>
-                        </label>
+
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-colors relative group">
                         <input
                             type="file"
                             onChange={handleFileChange}
-                            className="block w-full text-sm text-[var(--text)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:hover:bg-[var(--primary-dark)] file:active:bg-[var(--primary-darker)] file:text-white file:font-medium file:cursor-pointer file:transition-colors file:duration-200"
+                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
                             accept=".pdf,application/pdf"
+                            required
                         />
-                        {form.file && (
-                            <p className="mt-1 text-sm text-[var(--text-muted)] font-medium underline underline-offset-2">{form.file.name}</p>
-                        )}
+                        <div className="flex flex-col items-center justify-center text-center">
+                            {form.file ? (
+                                <MdCheckCircle className="w-10 h-10 text-emerald-500 mb-2" />
+                            ) : (
+                                <MdDescription className="w-10 h-10 text-slate-400 group-hover:text-blue-500 mb-2 transition-colors" />
+                            )}
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                {form.file ? form.file.name : 'Select Report (PDF Only)'}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase mt-1">Maximum size: 50MB</p>
+                        </div>
                     </div>
-                    <div className="flex justify-end gap-3 pt-2">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="btn-secondary"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={uploading}
-                            className="btn-primary inline-flex items-center gap-2"
-                        >
-                            <MdUpload className="w-5 h-5" />
-                            {uploading ? 'Uploading...' : 'Upload'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
+                </div>
 
-    return createPortal(modalContent, document.body);
+                <div className="pt-4 flex items-center justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={uploading}
+                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2"
+                    >
+                        {uploading ? (
+                            <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Uploading...</span></>
+                        ) : (
+                            <><MdUpload className="w-4 h-4" /><span>Upload</span></>
+                        )}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+    );
 };
 
 export default UploadModal;

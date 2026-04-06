@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.http import FileResponse, HttpResponse, JsonResponse
 import mimetypes
 
-from .models import User, Document, Report, CalendarEvent, Notification, PasswordResetToken, AuditLog
+from .models import User, Document, Report, CalendarEvent, Notification, AuditLog
 from .serializers import (
     UserSerializer,
     RegisterSerializer,
@@ -157,7 +157,7 @@ def change_password(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
-    """Request a password reset."""
+    """Generate a temporary password and require change on next login."""
     identifier = (request.data.get('username') or request.data.get('email') or '').strip()
     if not identifier:
         return Response({'detail': 'Email or username is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -166,51 +166,30 @@ def forgot_password(request):
            User.objects.filter(email__iexact=identifier).first()
            
     if not user or not user.is_active:
-        # For security, return success even if user doesn't exist (prevents user enumeration)
-        return Response({'message': 'If an account exists, a reset link will be sent.'})
+        # Return success even if user doesn't exist for security
+        return Response({'message': 'If an account exists, a temporary password will be generated.'})
         
-    PasswordResetToken.objects.filter(user=user).delete()
     import secrets
-    token = secrets.token_urlsafe(32)
-    PasswordResetToken.objects.create(user=user, token=token)
+    import string
+    alphabet = string.ascii_letters + string.digits + "!@#$%"
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
     
-    # Ideally, send this token via email. For now, we'll log it for development.
-    print(f"PASSWORD RESET TOKEN for {user.username}: {token}")
-    
-    return Response({'message': 'Reset instructions have been generated (check logs/email).'})
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def reset_password(request):
-    """Set new password with token."""
-    token = (request.data.get('token') or '').strip()
-    new_password = request.data.get('new_password')
-    
-    if not token or not new_password:
-        return Response({'detail': 'Token and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    try:
-        reset = PasswordResetToken.objects.get(token=token)
-    except PasswordResetToken.DoesNotExist:
-        return Response({'detail': 'Invalid reset link.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    from datetime import timedelta
-    if reset.created_at < timezone.now() - timedelta(hours=1):
-        reset.delete()
-        return Response({'detail': 'Reset link expired.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    if len(new_password) < 8:
-        return Response({'detail': 'Password too short.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    user = reset.user
-    user.set_password(new_password)
-    user.must_change_password = False
+    user.set_password(temp_password)
+    user.must_change_password = True
     user.save(update_fields=['password', 'must_change_password'])
-    reset.delete()
     
-    _log_audit('password_reset', user.username, 'user', str(user.id), 'Password reset via token')
-    _create_notification(f'{user.fullName or user.username} reset their password.', link='/personnel', admin_only=True)
-    return Response({'message': 'Password reset successfully.'})
+    _log_audit('password_reset_request', user.username, 'user', str(user.id), 'Temporary password generated')
+    
+    # In a real system, send this via email.
+    print(f"TEMPORARY PASSWORD for {user.username}: {temp_password}")
+    
+    return Response({
+        'message': 'A temporary password has been generated.',
+        'temporary_password': temp_password,  # Including for development/demo ease
+        'email_sent': True
+    })
+
+# Removed reset_password view as we now use temporary passwords.
 
 # --- ViewSets ---
 

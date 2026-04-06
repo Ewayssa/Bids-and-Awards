@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { MdClose } from 'react-icons/md';
+import { MdClose, MdCheck } from 'react-icons/md';
 import { mapOldRoleToNew, ROLES, validatePassword, STRICT_PASSWORD_RULES } from '../utils/auth';
 import PasswordInput from '../components/PasswordInput';
+import Modal from '../components/Modal';
 import { userService } from '../services/api';
 
 const LEFT_PANEL_IMAGE = '/dilg-logo.png';
@@ -15,16 +15,15 @@ const Login = ({ onLogin, infoMessage }) => {
     const [loading, setLoading] = useState(false);
     const [forgotOpen, setForgotOpen] = useState(false);
     const [forgotIdentifier, setForgotIdentifier] = useState('');
-    const [forgotNewPassword, setForgotNewPassword] = useState('');
-    const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
     const [forgotError, setForgotError] = useState('');
     const [forgotLoading, setForgotLoading] = useState(false);
     const [forgotSuccess, setForgotSuccess] = useState(false);
     const [registerOpen, setRegisterOpen] = useState(false);
-    const [registerForm, setRegisterForm] = useState({ username: '', fullName: '', password: '', confirmPassword: '' });
+    const [registerForm, setRegisterForm] = useState({ username: '', fullName: '', password: '', confirmPassword: '', position: '', office: '' });
     const [registerError, setRegisterError] = useState('');
     const [registerLoading, setRegisterLoading] = useState(false);
     const [registerSuccess, setRegisterSuccess] = useState(false);
+    const [tempPassword, setTempPassword] = useState('');
     const [hasTriedLogin, setHasTriedLogin] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
 
@@ -71,10 +70,9 @@ const Login = ({ onLogin, infoMessage }) => {
     const openForgotModal = () => {
         setForgotOpen(true);
         setForgotIdentifier('');
-        setForgotNewPassword('');
-        setForgotConfirmPassword('');
         setForgotError('');
         setForgotSuccess(false);
+        setTempPassword('');
     };
 
     const closeForgotModal = () => {
@@ -84,7 +82,7 @@ const Login = ({ onLogin, infoMessage }) => {
     };
 
     const openRegisterModal = () => {
-        setRegisterForm({ username: '', fullName: '', password: '', confirmPassword: '' });
+        setRegisterForm({ username: '', fullName: '', password: '', confirmPassword: '', position: '', office: '' });
         setRegisterError('');
         setRegisterSuccess(false);
         setRegisterOpen(true);
@@ -99,7 +97,7 @@ const Login = ({ onLogin, infoMessage }) => {
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
         setRegisterError('');
-        const { username, fullName, password, confirmPassword } = registerForm;
+        const { username, fullName, password, confirmPassword, position, office } = registerForm;
         if (!username.trim()) {
             setRegisterError('Username or email is required.');
             return;
@@ -123,9 +121,11 @@ const Login = ({ onLogin, infoMessage }) => {
                 username: username.trim(),
                 fullName: fullName.trim(),
                 password,
+                position,
+                office,
             });
             setRegisterSuccess(true);
-            setTimeout(() => closeRegisterModal(), 2500);
+            setTimeout(() => closeRegisterModal(), 3500);
         } catch (err) {
             const d = err.response?.data;
             let msg = 'Registration failed.';
@@ -146,249 +146,20 @@ const Login = ({ onLogin, infoMessage }) => {
             setForgotError('Please enter your email or username.');
             return;
         }
-        const validation = validatePassword(forgotNewPassword);
-        if (!validation.valid) {
-            setForgotError(validation.errors);
-            return;
-        }
-        if (forgotNewPassword !== forgotConfirmPassword) {
-            setForgotError('New password and confirmation do not match.');
-            return;
-        }
         setForgotLoading(true);
         try {
-            await userService.requestPasswordReset(forgotIdentifier.trim());
+            const res = await userService.requestPasswordReset(forgotIdentifier.trim());
             setForgotSuccess(true);
-            setForgotError('Reset link or token was generated. In this development version, check the backend console for the token.');
+            if (res.temporary_password) {
+                setTempPassword(res.temporary_password);
+            }
         } catch (err) {
-            const msg = err.response?.data?.detail || 'Failed to request reset.';
+            const msg = err.response?.data?.detail || 'Failed to request temporary password.';
             setForgotError(Array.isArray(msg) ? msg : [msg]);
         } finally {
             setForgotLoading(false);
         }
     };
-
-    const forgotModalContent = forgotOpen && (
-        <div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="dialog"
-            aria-labelledby="forgot-password-title"
-        >
-            <div className="card-elevated w-full max-w-md rounded-2xl bg-[var(--surface)] shadow-2xl border-0 overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between">
-                    <h2 id="forgot-password-title" className="text-xl font-bold text-[var(--text)]">Reset password</h2>
-                    <button
-                        type="button"
-                        onClick={closeForgotModal}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
-                        aria-label="Close"
-                    >
-                        <MdClose className="w-5 h-5" />
-                    </button>
-                </div>
-                {forgotSuccess ? (
-                    <div className="p-6 text-center">
-                        <div className="text-green-600 text-4xl mb-3">✓</div>
-                        <p className="text-[var(--text)] font-medium">Password reset successfully. You can now log in.</p>
-                    </div>
-                ) : (
-                    <form onSubmit={handleForgotSubmit} className="p-6 space-y-4">
-                        {forgotError && (
-                            <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
-                                {Array.isArray(forgotError) ? (
-                                    <ul className="list-disc list-inside space-y-0.5">
-                                        {forgotError.map((msg, i) => (
-                                            <li key={i}>{msg}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    forgotError
-                                )}
-                            </div>
-                        )}
-                        <div>
-                            <label htmlFor="forgot-identifier" className="block text-sm font-medium text-[var(--text)] mb-1.5">Email or username</label>
-                            <input
-                                id="forgot-identifier"
-                                type="text"
-                                value={forgotIdentifier}
-                                onChange={(e) => setForgotIdentifier(e.target.value)}
-                                className="input-field w-full"
-                                placeholder="Enter your email or username"
-                                required
-                                disabled={forgotLoading}
-                            />
-                        </div>
-                        <PasswordInput
-                            id="forgot-new-password"
-                            label="New password"
-                            value={forgotNewPassword}
-                            onChange={(e) => setForgotNewPassword(e.target.value)}
-                            placeholder="Enter new password"
-                            autoComplete="new-password"
-                            variant="rounded"
-                            showRequirementsChecklist={forgotNewPassword.length > 0}
-                            rules={STRICT_PASSWORD_RULES}
-                            required
-                            minLength={8}
-                            disabled={forgotLoading}
-                        />
-                        <PasswordInput
-                            id="forgot-confirm-password"
-                            label="Confirm new password"
-                            value={forgotConfirmPassword}
-                            onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                            placeholder="Confirm new password"
-                            autoComplete="new-password"
-                            variant="rounded"
-                            showToggle={false}
-                            required
-                            disabled={forgotLoading}
-                        />
-                        <p className="text-xs text-[var(--text-muted)]">The admin will be notified after you reset.</p>
-                        <div className="flex gap-3 justify-end pt-2">
-                            <button
-                                type="button"
-                                onClick={closeForgotModal}
-                                className="btn-secondary"
-                                disabled={forgotLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={forgotLoading}
-                                className="btn-primary"
-                            >
-                                {forgotLoading ? 'Resetting…' : 'Reset password'}
-                            </button>
-                        </div>
-                    </form>
-                )}
-            </div>
-        </div>
-    );
-
-    const registerModalContent = registerOpen && (
-        <div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="dialog"
-            aria-labelledby="register-title"
-        >
-            <div className="card-elevated w-full max-w-md rounded-2xl bg-[var(--surface)] shadow-2xl border-0 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between shrink-0">
-                    <h2 id="register-title" className="text-xl font-bold text-[var(--text)]">Create account</h2>
-                    <button
-                        type="button"
-                        onClick={closeRegisterModal}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
-                        aria-label="Close"
-                    >
-                        <MdClose className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="overflow-y-auto flex-1 custom-scrollbar">
-                    {registerSuccess ? (
-                        <div className="p-6 text-center">
-                            <div className="text-green-600 text-4xl mb-3">✓</div>
-                            <p className="text-[var(--text)] font-medium">Account created successfully.</p>
-                            <p className="text-[var(--text-muted)] text-sm mt-2">You can log in once an administrator activates your account.</p>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleRegisterSubmit} className="p-6 space-y-4">
-                            {registerError && (
-                                <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
-                                    {Array.isArray(registerError) ? (
-                                        <ul className="list-disc list-inside space-y-0.5">
-                                            {registerError.map((msg, i) => (
-                                                <li key={i}>{msg}</li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        registerError
-                                    )}
-                                </div>
-                            )}
-                            <div>
-                                <label htmlFor="register-username" className="block text-sm font-medium text-[var(--text)] mb-1.5">Username or email</label>
-                                <input
-                                    id="register-username"
-                                    type="text"
-                                    value={registerForm.username}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, username: e.target.value }))}
-                                    className="input-field w-full"
-                                    placeholder="Enter username or email"
-                                    required
-                                    disabled={registerLoading}
-                                    autoComplete="username"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="register-fullName" className="block text-sm font-medium text-[var(--text)] mb-1.5">Full name</label>
-                                <input
-                                    id="register-fullName"
-                                    type="text"
-                                    value={registerForm.fullName}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, fullName: e.target.value }))}
-                                    className="input-field w-full"
-                                    placeholder="Enter your full name"
-                                    required
-                                    disabled={registerLoading}
-                                    autoComplete="name"
-                                />
-                            </div>
-                            <PasswordInput
-                                id="register-password"
-                                label="Password"
-                                value={registerForm.password}
-                                onChange={(e) => setRegisterForm((f) => ({ ...f, password: e.target.value }))}
-                                placeholder="Enter password"
-                                variant="rounded"
-                                showRequirementsChecklist={registerForm.password.length > 0}
-                                rules={STRICT_PASSWORD_RULES}
-                                required
-                                minLength={8}
-                                disabled={registerLoading}
-                                autoComplete="new-password"
-                            />
-                            <PasswordInput
-                                id="register-confirmPassword"
-                                label="Confirm password"
-                                value={registerForm.confirmPassword}
-                                onChange={(e) => setRegisterForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                                placeholder="Confirm password"
-                                variant="rounded"
-                                showToggle={false}
-                                required
-                                disabled={registerLoading}
-                                autoComplete="new-password"
-                            />
-                            <p className="text-xs text-[var(--text-muted)]">Your account must be activated by an administrator before you can log in.</p>
-                            <div className="flex gap-3 justify-end pt-2">
-                                <button
-                                    type="button"
-                                    onClick={closeRegisterModal}
-                                    className="btn-secondary"
-                                    disabled={registerLoading}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={registerLoading}
-                                    className="btn-primary"
-                                >
-                                    {registerLoading ? 'Creating…' : 'Create account'}
-                                </button>
-                            </div>
-                        </form>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <div className="split-login-container bg-professional font-sans antialiased">
@@ -459,7 +230,7 @@ const Login = ({ onLogin, infoMessage }) => {
                     {/* Messages Area */}
                     <div 
                         className="transition-all duration-300 overflow-hidden"
-                        style={{ height: (error || (!error && infoMessage && !hasTriedLogin)) ? 'auto' : '0', marginBottom: (error || (!error && infoMessage && !hasTriedLogin)) ? '1.5rem' : '0' }}
+                        style={{ maxHeight: (error || (!error && infoMessage && !hasTriedLogin)) ? '500px' : '0', marginBottom: (error || (!error && infoMessage && !hasTriedLogin)) ? '1.5rem' : '0', opacity: (error || (!error && infoMessage && !hasTriedLogin)) ? '1' : '0' }}
                     >
                         {error && (
                             <div className="bg-red-50 border border-red-200/80 text-red-800 text-sm px-4 py-3 rounded-xl shadow-sm animate-fade-in" role="alert">
@@ -543,12 +314,261 @@ const Login = ({ onLogin, infoMessage }) => {
                             </button>
                         </div>
                     </form>
-                    
                 </div>
             </div>
 
-            {createPortal(forgotModalContent, document.body)}
-            {createPortal(registerModalContent, document.body)}
+            {/* Standardized Modals */}
+            <Modal
+                isOpen={forgotOpen}
+                onClose={closeForgotModal}
+                title="Reset Password"
+                size="md"
+            >
+                {forgotSuccess ? (
+                    <div className="text-center space-y-4">
+                        <div className="flex justify-center">
+                            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center animate-bounce">
+                                <div className="text-emerald-600 dark:text-emerald-400 text-3xl font-bold">✓</div>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Request Successful</h3>
+                            <p className="text-[var(--text-muted)]">A temporary password has been generated for your account.</p>
+                        </div>
+                        
+                        {tempPassword && (
+                            <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-200 dark:border-emerald-500/20 group">
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-widest font-bold mb-1">Your Temporary Password</p>
+                                <div className="flex items-center justify-center gap-2">
+                                    <code className="text-lg font-mono font-bold text-emerald-700 dark:text-emerald-300 tracking-wider">
+                                        {tempPassword}
+                                    </code>
+                                </div>
+                                <p className="text-[10px] text-emerald-600/60 dark:text-emerald-400/60 mt-2">
+                                    Please use this to log in. You will be prompted to set a new password immediately.
+                                </p>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={closeForgotModal}
+                            className="btn-primary w-full py-3 rounded-xl"
+                        >
+                            Back to Sign In
+                        </button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleForgotSubmit} className="space-y-6">
+                        <div className="p-4 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
+                            <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed font-medium">
+                                Provide your username or email and we'll generate a temporary password for you to regain access.
+                            </p>
+                        </div>
+
+                        {forgotError && (
+                            <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
+                                {Array.isArray(forgotError) ? (
+                                    <ul className="list-disc list-inside space-y-0.5">
+                                        {forgotError.map((msg, i) => (
+                                            <li key={i}>{msg}</li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    forgotError
+                                )}
+                            </div>
+                        )}
+
+                        <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
+                            <input
+                                id="forgot-identifier"
+                                type="text"
+                                className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input"
+                                value={forgotIdentifier}
+                                onChange={(e) => setForgotIdentifier(e.target.value)}
+                                placeholder=" "
+                                required
+                                disabled={forgotLoading}
+                                autoComplete="username"
+                            />
+                            <label htmlFor="forgot-identifier" className="floating-label">
+                                Username or email
+                            </label>
+                        </div>
+
+                        <div className="flex gap-3 justify-end pt-2">
+                            <button
+                                type="button"
+                                onClick={closeForgotModal}
+                                className="px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                disabled={forgotLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={forgotLoading}
+                                className="btn-primary px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20"
+                            >
+                                {forgotLoading ? 'Processing…' : 'Generate Password'}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
+
+            <Modal
+                isOpen={registerOpen}
+                onClose={closeRegisterModal}
+                title="Create account"
+                size="xl"
+            >
+                {registerSuccess ? (
+                    <div className="text-center space-y-6">
+                        <div className="flex justify-center">
+                            <div className="text-green-600 text-4xl mb-3">✓</div>
+                        </div>
+                        <p className="text-[var(--text)] font-medium">Account created successfully.</p>
+                        <p className="text-[var(--text-muted)] text-sm mt-2">You can log in once an administrator activates your account.</p>
+                        <button
+                            onClick={closeRegisterModal}
+                            className="btn-primary px-10 py-3 rounded-xl font-bold"
+                        >
+                            Got it, thanks!
+                        </button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                        {registerError && (
+                            <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
+                                {Array.isArray(registerError) ? (
+                                    <ul className="list-disc list-inside space-y-0.5">
+                                        {registerError.map((msg, i) => (
+                                            <li key={i}>{msg}</li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    registerError
+                                )}
+                            </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
+                                <input
+                                    id="register-username"
+                                    type="text"
+                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input"
+                                    value={registerForm.username}
+                                    onChange={(e) => setRegisterForm((f) => ({ ...f, username: e.target.value }))}
+                                    placeholder=" "
+                                    required
+                                    disabled={registerLoading}
+                                    autoComplete="username"
+                                />
+                                <label htmlFor="register-username" className="floating-label">
+                                    Username or email
+                                </label>
+                            </div>
+                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
+                                <input
+                                    id="register-fullName"
+                                    type="text"
+                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input"
+                                    value={registerForm.fullName}
+                                    onChange={(e) => setRegisterForm((f) => ({ ...f, fullName: e.target.value }))}
+                                    placeholder=" "
+                                    required
+                                    disabled={registerLoading}
+                                    autoComplete="name"
+                                />
+                                <label htmlFor="register-fullName" className="floating-label">
+                                    Full name
+                                </label>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
+                                <select
+                                    id="register-position"
+                                    value={registerForm.position}
+                                    onChange={(e) => setRegisterForm((f) => ({ ...f, position: e.target.value }))}
+                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input appearance-none"
+                                    required
+                                    disabled={registerLoading}
+                                >
+                                    <option value="" disabled>Select Position</option>
+                                    <option value="BAC Chairperson">BAC Chairperson</option>
+                                    <option value="BAC Secretariat">BAC Secretariat</option>
+                                    <option value="BAC Member">BAC Member</option>
+                                </select>
+                                <label htmlFor="register-position" className="floating-label active">
+                                    Position
+                                </label>
+                            </div>
+                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
+                                <input
+                                    id="register-office"
+                                    type="text"
+                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input"
+                                    value={registerForm.office}
+                                    onChange={(e) => setRegisterForm((f) => ({ ...f, office: e.target.value }))}
+                                    placeholder=" "
+                                    required
+                                    disabled={registerLoading}
+                                    autoComplete="organization"
+                                />
+                                <label htmlFor="register-office" className="floating-label">
+                                    Office / Division
+                                </label>
+                            </div>
+                        </div>
+                        <PasswordInput
+                            id="register-password"
+                            label="Password"
+                            value={registerForm.password}
+                            onChange={(e) => setRegisterForm((f) => ({ ...f, password: e.target.value }))}
+                            placeholder="Enter password"
+                            variant="rounded"
+                            showRequirementsChecklist={registerForm.password.length > 0}
+                            rules={STRICT_PASSWORD_RULES}
+                            required
+                            minLength={8}
+                            disabled={registerLoading}
+                            autoComplete="new-password"
+                        />
+                        <PasswordInput
+                            id="register-confirmPassword"
+                            label="Confirm password"
+                            value={registerForm.confirmPassword}
+                            onChange={(e) => setRegisterForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                            placeholder="Confirm password"
+                            variant="rounded"
+                            showToggle={false}
+                            required
+                            disabled={registerLoading}
+                            autoComplete="new-password"
+                        />
+                        <p className="text-xs text-[var(--text-muted)]">Your account must be activated by an administrator before you can log in.</p>
+                        <div className="flex gap-3 justify-end pt-2">
+                            <button
+                                type="button"
+                                onClick={closeRegisterModal}
+                                className="btn-secondary"
+                                disabled={registerLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={registerLoading}
+                                className="btn-primary"
+                            >
+                                {registerLoading ? 'Creating…' : 'Create account'}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
         </div>
     );
 };

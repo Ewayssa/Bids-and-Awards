@@ -18,7 +18,7 @@ export const StatsGrid = ({ loading, stats }) => {
         },
         { 
             value: ongoing, 
-            label: 'On-going Projects', 
+            label: 'On going', 
             icon: MdSchedule,
             iconBg: 'bg-orange-500/10', 
             iconColor: 'text-orange-600', 
@@ -27,7 +27,7 @@ export const StatsGrid = ({ loading, stats }) => {
         },
         { 
             value: pending, 
-            label: 'Pending Reviews', 
+            label: 'pending', 
             icon: MdWarning,
             iconBg: 'bg-rose-500/10', 
             iconColor: 'text-rose-600', 

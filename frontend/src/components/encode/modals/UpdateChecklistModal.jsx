@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { MdClose } from 'react-icons/md';
+import React from 'react';
+import { MdLibraryBooks, MdCheckCircle, MdPendingActions, MdEditDocument } from 'react-icons/md';
+import Modal from '../../Modal';
 
 const UpdateChecklistModal = ({
     isOpen,
@@ -10,116 +10,117 @@ const UpdateChecklistModal = ({
     updateChecklistData,
     onSubDocClick
 }) => {
-    useEffect(() => {
-        if (isOpen) {
-            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
-            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
-            document.documentElement.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.documentElement.style.overflow = originalHtmlStyle;
-                document.body.style.overflow = originalBodyStyle;
-            };
-        }
-    }, [isOpen]);
-
-    if (!isOpen) return null;
-
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300 shadow-2xl"
-            aria-modal="true"
-            role="dialog"
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Update Procurements"
+            size="lg"
+            showCloseButton={true}
         >
-            <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0 animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
-                    <h2 className="text-lg font-semibold text-[var(--text)]">
-                        Update Documents
-                    </h2>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--border)] focus:ring-offset-1"
-                        aria-label="Close"
-                    >
-                        <MdClose className="w-5 h-5" />
-                    </button>
+            <div className="flex flex-col space-y-6">
+                <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm text-blue-600 dark:text-blue-400">
+                            <MdLibraryBooks className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">Document Management</p>
+                            <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed font-medium mt-1">
+                                Only documents you uploaded can be updated. Select a document below to modify its details or upload a new version.
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="flex-1 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar space-y-4">
                     {loading ? (
-                        <div className="py-16 text-center">
-                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] mx-auto mb-3" />
-                            <p className="text-sm text-[var(--text-muted)]">Loading documents...</p>
+                        <div className="flex flex-col items-center justify-center py-20 text-[var(--text-muted)]">
+                            <div className="w-10 h-10 rounded-full border-4 border-slate-200 dark:border-slate-800 border-t-emerald-500 animate-spin mb-4" />
+                            <p className="font-bold">Syncing Records</p>
+                            <p className="text-sm opacity-60">Fetching latest document statuses...</p>
+                        </div>
+                    ) : documents.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/50 text-[var(--text-muted)]">
+                            <p className="font-bold">No documents uploaded yet</p>
+                            <p className="text-sm opacity-60">Upload some documents to see them here.</p>
                         </div>
                     ) : (
-                        <>
-                            {documents.length === 0 && (
-                                <p className="text-sm text-[var(--text-muted)] text-center rounded-xl bg-[var(--background-subtle)] px-4 py-3">
-                                    No documents uploaded yet.
-                                </p>
-                            )}
+                        updateChecklistData.map((docType) => {
+                            const subs = docType.subDocsWithStatus || [];
+                            const completed = subs.filter((s) => s.done).length;
+                            const total = subs.length;
+                            const isFullyComplete = completed === total && total > 0;
 
-                            {/* Document checklist – grouped by document type, click a document to update it */}
-                            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-                                <p className="text-xs text-[var(--text-muted)] font-medium">Only documents you uploaded can be updated. Click a document to update it.</p>
-                                {updateChecklistData.map((docType) => {
-                                    const subs = docType.subDocsWithStatus || [];
-                                    const completed = subs.filter((s) => s.done).length;
-                                    const ongoing = subs.filter((s) => !s.done && s.doc).length;
-                                    const pending = subs.filter((s) => !s.doc).length;
-                                    const total = subs.length;
-                                    return (
-                                        <div
-                                            key={docType.id}
-                                            className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm"
-                                        >
-                                            <div className="px-4 py-3 bg-[var(--primary)]/10 border-b border-[var(--border)]">
-                                                <p className="text-sm font-semibold text-[var(--text)]">{docType.name}</p>
-                                                <p className="text-xs text-[var(--text-muted)] mt-1">
-                                                    {total} document{total !== 1 ? 's' : ''}:{' '}
-                                                    <span className="text-green-700 font-medium">{completed} Complete</span>
-                                                    {ongoing > 0 && <><span className="text-[var(--text-muted)]"> · </span><span className="text-amber-700 font-medium">{ongoing} Ongoing</span></>}
-                                                    {pending > 0 && <><span className="text-[var(--text-muted)]"> · </span><span className="text-[var(--text-muted)] font-medium">{pending} Pending</span></>}
-                                                </p>
+                            return (
+                                <div
+                                    key={docType.id}
+                                    className="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                                >
+                                    <div className={`px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between ${isFullyComplete ? 'bg-emerald-50/30' : 'bg-slate-50/50 dark:bg-slate-800/80'}`}>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{docType.name}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <div className="flex h-1.5 w-24 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-emerald-500 transition-all duration-500" 
+                                                        style={{ width: `${(completed / total) * 100}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] font-bold text-slate-500 uppercase">{completed}/{total} Complete</span>
                                             </div>
-                                            <ul className="divide-y divide-[var(--border)]">
-                                                {subs.map((sub) => {
-                                                    const hasDoc = !!sub.doc;
-                                                    const status = sub.done ? 'complete' : hasDoc ? 'ongoing' : 'pending';
-                                                    return (
-                                                        <li key={`${docType.id}-${sub.name}`}>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => hasDoc && sub.canUpdate && onSubDocClick(sub)}
-                                                                disabled={!hasDoc || !sub.canUpdate}
-                                                                className={`w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left transition-colors text-sm ${hasDoc && sub.canUpdate ? 'hover:bg-[var(--primary-muted)]/30 cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
-                                                            >
-                                                                <span className="font-medium text-[var(--text)] truncate">{sub.name}</span>
-                                                                <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                                                                    status === 'complete' ? 'bg-green-100 text-green-800' :
-                                                                    status === 'ongoing' ? 'bg-amber-100 text-amber-800' :
-                                                                    'bg-[var(--background-subtle)] text-[var(--text-muted)]'
-                                                                }`}>
-                                                                    {status === 'complete' ? 'Complete' : status === 'ongoing' ? 'Ongoing' : 'Not started'}
-                                                                </span>
-                                                            </button>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </>
+                                        {isFullyComplete && <MdCheckCircle className="text-emerald-500 w-5 h-5" />}
+                                    </div>
+                                    <ul className="divide-y divide-slate-50 dark:divide-slate-700/30">
+                                        {subs.map((sub) => {
+                                            const hasDoc = !!sub.doc;
+                                            const canClick = hasDoc && sub.canUpdate;
+                                            const status = sub.done ? 'complete' : hasDoc ? 'ongoing' : 'pending';
+                                            
+                                            return (
+                                                <li key={`${docType.id}-${sub.name}`}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => canClick && onSubDocClick(sub)}
+                                                        disabled={!canClick}
+                                                        className={`w-full px-5 py-3 flex items-center justify-between gap-4 text-left transition-all ${canClick ? 'hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 cursor-pointer group' : 'cursor-not-allowed grayscale'}`}
+                                                    >
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                                                                status === 'complete' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
+                                                                status === 'ongoing' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' :
+                                                                'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                                            }`}>
+                                                                {status === 'complete' ? <MdCheckCircle className="w-5 h-5" /> : 
+                                                                 status === 'ongoing' ? <MdPendingActions className="w-5 h-5" /> :
+                                                                 <MdEditDocument className="w-5 h-5" />}
+                                                            </div>
+                                                            <span className={`font-bold text-sm truncate ${canClick ? 'text-slate-800 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400' : 'text-slate-400'}`}>
+                                                                {sub.name}
+                                                            </span>
+                                                        </div>
+                                                        <div className={`shrink-0 text-[10px] uppercase font-bold px-2 py-1 rounded-lg ${
+                                                            status === 'complete' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' :
+                                                            status === 'ongoing' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400' :
+                                                            'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                                        }`}>
+                                                            {status === 'complete' ? 'Completed' : status === 'ongoing' ? 'Modify' : 'Pending'}
+                                                        </div>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
-            </div>
-        </div>
-    );
 
-    return createPortal(modalContent, document.body);
+            </div>
+        </Modal>
+    );
 };
 
 export default UpdateChecklistModal;

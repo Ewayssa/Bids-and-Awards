@@ -1,100 +1,96 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { MdClose } from 'react-icons/md';
+import React from 'react';
+import { MdFilePresent, MdErrorOutline } from 'react-icons/md';
+import Modal from '../../Modal';
 
 const PreviewModal = ({ doc, onClose }) => {
-    useEffect(() => {
-        if (doc) {
-            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
-            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
-            document.documentElement.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.documentElement.style.overflow = originalHtmlStyle;
-                document.body.style.overflow = originalBodyStyle;
-            };
-        }
-    }, [doc]);
-
     if (!doc) return null;
 
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="dialog"
-        >
-            <div className="card-elevated max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl rounded-2xl border-0 flex flex-col animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
-                    <h2 className="text-lg font-semibold text-[var(--text)]">{doc.title}</h2>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
-                        aria-label="Close"
-                    >
-                        <MdClose className="w-5 h-5" />
-                    </button>
+    const renderPreviewContent = () => {
+        if (doc.previewBlobUrl === 'failed') {
+            return (
+                <div className="flex flex-col items-center justify-center py-20 text-red-500 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-100 dark:border-red-500/20">
+                    <MdErrorOutline className="w-12 h-12 mb-3" />
+                    <p className="font-bold">Could not load file.</p>
+                    <p className="text-sm opacity-75">The file might be missing or corrupted.</p>
                 </div>
-                <div className="flex-1 overflow-auto bg-gray-100 p-4">
-                    {doc.previewBlobUrl === 'failed' ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
-                            <p>Could not load file.</p>
-                        </div>
-                    ) : doc.previewBlobUrl ? (
-                        (() => {
-                            const ct = doc.previewBlobType || '';
-                            const isPdf = ct.includes('pdf');
-                            const isImage = /^image\//.test(ct);
-                            if (isPdf) {
-                                return (
-                                    <embed
-                                        src={`${doc.previewBlobUrl}#toolbar=0&navpanes=0`}
-                                        type="application/pdf"
-                                        className="w-full min-h-[600px] flex-1 border-0 rounded-lg"
-                                        title="Document"
-                                    />
-                                );
-                            }
-                            if (isImage) {
-                                return (
-                                    <img
-                                        src={doc.previewBlobUrl}
-                                        alt={doc.title}
-                                        className="max-w-full max-h-[70vh] object-contain mx-auto"
-                                    />
-                                );
-                            }
-                            return (
-                                <iframe
-                                    src={doc.previewBlobUrl}
-                                    title={doc.title}
-                                    className="w-full min-h-[600px] flex-1 border-0 rounded-lg bg-white"
-                                    sandbox="allow-same-origin"
-                                />
-                            );
-                        })()
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
-                            <div className="w-10 h-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-3" aria-hidden />
-                            <span>Loading file…</span>
-                        </div>
-                    )}
-                </div>
-                <div className="p-4 border-t border-[var(--border-light)] bg-[var(--surface)] flex justify-end gap-3">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="btn-primary"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
+            );
+        }
 
-    return createPortal(modalContent, document.body);
+        if (doc.previewBlobUrl) {
+            const ct = doc.previewBlobType || '';
+            const isPdf = ct.includes('pdf');
+            const isImage = /^image\//.test(ct);
+
+            if (isPdf) {
+                return (
+                    <div className="bg-slate-200 dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-inner">
+                        <embed
+                            src={`${doc.previewBlobUrl}#toolbar=0&navpanes=0`}
+                            type="application/pdf"
+                            className="w-full h-[70vh] min-h-[600px]"
+                            title="Document Preview"
+                        />
+                    </div>
+                );
+            }
+
+            if (isImage) {
+                return (
+                    <div className="bg-slate-100 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex items-center justify-center min-h-[400px]">
+                        <img
+                            src={doc.previewBlobUrl}
+                            alt={doc.title}
+                            className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-xl"
+                        />
+                    </div>
+                );
+            }
+
+            return (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner h-[70vh]">
+                    <iframe
+                        src={doc.previewBlobUrl}
+                        title={doc.title}
+                        className="w-full h-full border-0"
+                        sandbox="allow-same-origin"
+                    />
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex flex-col items-center justify-center py-32 text-[var(--text-muted)] bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                <div className="w-12 h-12 rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-emerald-500 animate-spin mb-4" />
+                <p className="font-bold">Loading Preview</p>
+                <p className="text-sm opacity-60">Preparing your document for viewing...</p>
+            </div>
+        );
+    };
+
+    return (
+        <Modal
+            isOpen={!!doc}
+            onClose={onClose}
+            title={doc.title || "File Preview"}
+            size="xl"
+            showCloseButton={true}
+        >
+            <div className="space-y-6">
+                <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                    <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm text-blue-600 dark:text-blue-400">
+                        <MdFilePresent className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Previewing Attachment</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{doc.title}</p>
+                    </div>
+                </div>
+
+                {renderPreviewContent()}
+
+            </div>
+        </Modal>
+    );
 };
 
 export default PreviewModal;

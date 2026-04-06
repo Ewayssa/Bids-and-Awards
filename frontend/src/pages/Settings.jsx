@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { MdBackup, MdRestore } from 'react-icons/md';
+import { MdBackup, MdRestore, MdWarning, MdCheckCircle } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
 import { backupRestoreService } from '../services/api';
+import Modal from '../components/Modal';
 
 const Settings = ({ user }) => {
     const [backingUp, setBackingUp] = useState(false);
@@ -28,15 +28,13 @@ const Settings = ({ user }) => {
             a.download = `bac-records-backup-${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            setMessage('Records backup saved. Events, users, and all document/report metadata are in the JSON file. For full recovery, also back up the server\'s media folder and database.');
+            setMessage('Records backup saved successfully.');
         } catch (err) {
             setError(err.response?.data?.detail || err.message || 'Backup failed.');
         } finally {
             setBackingUp(false);
         }
     };
-
-    const handleBackup = () => setConfirmBackup(true);
 
     const handleRestoreFileSelect = (e) => {
         const file = e.target.files?.[0];
@@ -58,180 +56,136 @@ const Settings = ({ user }) => {
             const actor = (user?.username || user?.fullName || '').trim();
             const result = await backupRestoreService.restore(data, actor);
             setMessage(result?.detail || 'Restore completed.');
-            if (result?.restored) {
-                setMessage((m) => {
-                    const r = result.restored;
-                    const parts = [m];
-                    if (r.calendarEvents != null) parts.push(`Events: ${r.calendarEvents}`);
-                    if (r.users != null) parts.push(`Users: ${r.users}`);
-                    if (r.documents != null) parts.push(`Documents: ${r.documents}`);
-                    if (r.reports != null) parts.push(`Reports: ${r.reports}`);
-                    return parts.join('. ');
-                });
-            }
         } catch (err) {
-            setError(err.response?.data?.detail || err.message || 'Restore failed. Check file format.');
+            setError(err.response?.data?.detail || err.message || 'Restore failed.');
         } finally {
             setRestoring(false);
         }
     };
 
-    const confirmBackupContent = confirmBackup && (
-        <div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="alertdialog"
-            aria-labelledby="settings-confirm-backup-title"
-        >
-            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200 overflow-hidden">
-                <h2 id="settings-confirm-backup-title" className="text-lg font-semibold text-[var(--text)] mb-2">
-                    Save records backup
-                </h2>
-                <p className="text-sm text-[var(--text-muted)] mb-6">
-                    Download a JSON backup of all events, users, and document/report records (metadata only; file contents stay on the server)?
-                </p>
-                <div className="flex gap-3 justify-end">
-                    <button type="button" onClick={() => setConfirmBackup(false)} className="btn-secondary">
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={performBackup}
-                        disabled={backingUp}
-                        className="btn-primary"
-                    >
-                        {backingUp ? 'Saving…' : 'Yes, save all'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
-    const confirmRestoreContent = confirmRestore && (
-        <div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="alertdialog"
-            aria-labelledby="settings-confirm-restore-title"
-        >
-            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200 overflow-hidden">
-                <h2 id="settings-confirm-restore-title" className="text-lg font-semibold text-[var(--text)] mb-2">
-                    Restore from backup
-                </h2>
-                <p className="text-sm text-[var(--text-muted)] mb-6">
-                    Restore events, user status, and document/report metadata from &quot;{confirmRestore.file.name}&quot;? This may overwrite current data.
-                </p>
-                <div className="flex gap-3 justify-end">
-                    <button type="button" onClick={() => setConfirmRestore(null)} className="btn-secondary">
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={performRestore}
-                        disabled={restoring}
-                        className="btn-primary"
-                    >
-                        {restoring ? 'Restoring…' : 'Yes, restore'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
-        <div className="space-y-5 pb-8">
+        <div className="space-y-8 pb-12">
             <PageHeader
-                title="Settings"
-                subtitle="Backup and restore system data."
-                titleSize="default"
+                title="System Settings"
+                subtitle="Manage system backups and data recovery."
             />
 
             {(message || error) && (
-                <div className="space-y-3">
+                <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-top-4 duration-500">
                     {message && (
-                        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 flex items-center gap-3 shadow-sm">
-                            <MdBackup className="w-5 h-5 text-green-600 shrink-0" />
-                            {message}
+                        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-4 text-emerald-700 dark:text-emerald-400">
+                            <MdCheckCircle className="w-6 h-6 shrink-0" />
+                            <p className="text-sm font-bold uppercase tracking-tight">{message}</p>
                         </div>
                     )}
                     {error && (
-                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
-                            {error}
+                        <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center gap-4 text-red-700 dark:text-red-400 mt-4">
+                            <MdWarning className="w-6 h-6 shrink-0" />
+                            <p className="text-sm font-bold uppercase tracking-tight">{error}</p>
                         </div>
                     )}
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 justify-items-center max-w-3xl lg:max-w-4xl mx-auto">
-                {/* Backup */}
-                <section className="card overflow-hidden min-w-0 w-full">
-                    <div className="px-6 py-5 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/30 flex items-center gap-3">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-muted)] text-[var(--primary)]">
-                            <MdBackup className="w-6 h-6" />
-                        </span>
-                        <div className="min-w-0">
-                            <h2 className="text-base font-semibold text-[var(--text)]">Backup</h2>
-                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Save system data to a file</p>
-                        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                {/* Backup Card */}
+                <div className="group relative p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-blue-500/5">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform duration-500">
+                        <MdBackup className="w-8 h-8" />
                     </div>
-                    <div className="p-6">
-                        <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
-                            Save all database records to a JSON file: calendar events, users (no passwords), and full document & report metadata. Uploaded PDFs stay on the server; back up the media folder separately for full recovery.
-                        </p>
-                        <div className="flex justify-center">
-                        <button
-                            type="button"
-                            onClick={handleBackup}
-                            disabled={backingUp}
-                            className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
-                        >
-                            <MdBackup className="w-4 h-4" />
-                            {backingUp ? 'Saving…' : 'Save Backup'}
-                        </button>
-                        </div>
-                    </div>
-                </section>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">System Backup</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                        Export all database records, user profiles, and document metadata into a standardized JSON file for offline storage.
+                    </p>
+                    <button
+                        onClick={() => setConfirmBackup(true)}
+                        disabled={backingUp}
+                        className="w-full py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all flex items-center justify-center gap-3 active:scale-95"
+                    >
+                        {backingUp ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdBackup className="w-5 h-5" />}
+                        Create Backup
+                    </button>
+                </div>
 
-                {/* Restore */}
-                <section className="card overflow-hidden min-w-0 w-full">
-                    <div className="px-6 py-5 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/30 flex items-center gap-3">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--background-subtle)] text-[var(--text-muted)]">
-                            <MdRestore className="w-6 h-6" />
-                        </span>
-                        <div className="min-w-0">
-                            <h2 className="text-base font-semibold text-[var(--text)]">Restore</h2>
-                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Load data from a backup file</p>
-                        </div>
+                {/* Restore Card */}
+                <div className="group relative p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-emerald-500/5">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 mb-6 group-hover:scale-110 transition-transform duration-500">
+                        <MdRestore className="w-8 h-8" />
                     </div>
-                    <div className="p-6">
-                            <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
-                                Restore events, user status, and document/report metadata from a previously saved JSON backup. Use a backup from this system; existing records are updated by ID.
-                            </p>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".json,application/json"
-                            onChange={handleRestoreFileSelect}
-                            className="hidden"
-                            aria-hidden
-                        />
-                        <div className="flex justify-center">
-                        <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={restoring}
-                            className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
-                        >
-                            <MdRestore className="w-4 h-4" />
-                            {restoring ? 'Restoring…' : 'Restore from Backup'}
-                        </button>
-                        </div>
-                    </div>
-                </section>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">System Restore</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                        Import system archives to restore operational state. This process will synchronize metadata and user permissions with the archived snapshot.
+                    </p>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".json"
+                        onChange={handleRestoreFileSelect}
+                        className="hidden"
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={restoring}
+                        className="w-full py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all flex items-center justify-center gap-3 active:scale-95"
+                    >
+                        {restoring ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdRestore className="w-5 h-5" />}
+                        Restore Backup
+                    </button>
+                </div>
             </div>
 
-            {createPortal(confirmBackupContent, document.body)}
-            {createPortal(confirmRestoreContent, document.body)}
+            {/* Confirm Backup Modal */}
+            <Modal
+                isOpen={confirmBackup}
+                onClose={() => setConfirmBackup(false)}
+                title="Backup Confirmation"
+                size="md"
+            >
+                <div className="p-2 space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                        <MdBackup className="w-8 h-8 text-blue-600 shrink-0" />
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            Download a full metadata snapshot of all procurement activities and user records?
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => setConfirmBackup(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">
+                            Cancel
+                        </button>
+                        <button onClick={performBackup} className="flex-1 py-3.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95">
+                            Download Backup
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Confirm Restore Modal */}
+            <Modal
+                isOpen={!!confirmRestore}
+                onClose={() => setConfirmRestore(null)}
+                title="Recovery Warning"
+                size="md"
+            >
+                <div className="p-2 space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-500/20 text-red-600">
+                        <MdWarning className="w-10 h-10 shrink-0" />
+                        <div>
+                            <p className="text-sm font-black uppercase tracking-tight">Destructive Action</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase mt-1">
+                                Restoring from "{confirmRestore?.file?.name}" will synchronize the current database with the archive.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => setConfirmRestore(null)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">
+                            Cancel
+                        </button>
+                        <button onClick={performRestore} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-red-600/20">
+                            Restore Data
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

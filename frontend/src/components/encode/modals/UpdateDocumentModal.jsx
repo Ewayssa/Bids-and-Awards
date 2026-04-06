@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { MdClose, MdDownload, MdInfo, MdAdd } from 'react-icons/md';
+import React from 'react';
+import { MdClose, MdDownload, MdInfo, MdAdd, MdDescription, MdCheckCircle } from 'react-icons/md';
 import { toLettersOnly, toNumbersOnly, formatCurrencyValue } from '../../../utils/validation';
+import Modal from '../../Modal';
 
 const UpdateDocumentModal = ({
     isOpen,
@@ -20,48 +20,42 @@ const UpdateDocumentModal = ({
     user,
     isAdmin
 }) => {
-    useEffect(() => {
-        if (isOpen && selectedDoc) {
-            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
-            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
-            document.documentElement.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.documentElement.style.overflow = originalHtmlStyle;
-                document.body.style.overflow = originalBodyStyle;
-            };
-        }
-    }, [isOpen, selectedDoc]);
-
     if (!isOpen || !selectedDoc) return null;
+    
+    // Dynamic sizing based on content
+    const getModalSize = () => {
+        const sub = selectedDoc?.subDoc;
+        if (['Notice of BAC Meeting', 'Invitation to COA', 'Attendance Sheet', 'Minutes of the Meeting'].includes(sub)) return 'md';
+        if (['Abstract of Quotation'].includes(sub)) return '2xl';
+        if (['Purchase Request', 'Activity Design', 'BAC Resolution', 'Contract Services/Purchase Order', 'Notice to Proceed'].includes(sub)) return 'lg';
+        return 'xl'; // Default for PPMP, APP, Market Scoping, etc.
+    };
 
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="dialog"
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={selectedDoc.subDoc || "Update Procurement"}
+            size={getModalSize()}
+            showCloseButton={true}
         >
-            <div className="card-elevated max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl border-0 animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between sticky top-0 bg-[var(--surface)] rounded-t-2xl z-10">
-                    <h2 className="text-lg font-semibold text-[var(--text)]">
-                        Update Procurement Document
-                    </h2>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--border)] focus:ring-offset-1"
-                        aria-label="Close"
-                    >
-                        <MdClose className="w-5 h-5" />
-                    </button>
+            <div className="space-y-4">
+                {/* Header Banner */}
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-4">
+                    <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm text-emerald-600 shrink-0">
+                        <MdDescription className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">{selectedDoc.category}</span>
+                            <span className="text-slate-300 text-[10px]">/</span>
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{selectedDoc.subDoc}</span>
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Update Procurement</h3>
+                    </div>
                 </div>
 
-                <form onSubmit={onSubmit} className="p-6 space-y-5">
-                    {updateError && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm" role="alert">
-                            {updateError}
-                        </div>
-                    )}
+                <form onSubmit={onSubmit} className="space-y-4">
 
                     {selectedDoc?.subDoc === 'Purchase Request' ? (
                         <>
@@ -946,40 +940,43 @@ const UpdateDocumentModal = ({
                         </div>
                     )}
 
-                    <div className="pt-4 flex items-center justify-between border-t border-[var(--border-light)] gap-3 bg-[var(--surface)] sticky bottom-0 z-10 p-2">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-2.5 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text)] hover:bg-[var(--background-subtle)] transition-all duration-200 active:scale-95"
-                        >
-                            Cancel
-                        </button>
-                        <div className="flex items-center gap-3">
+                    {/* Footer Actions */}
+                    <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-3 w-full sm:w-auto order-2 sm:order-1">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 sm:flex-none px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                            >
+                                Cancel
+                            </button>
                             {isAdmin && selectedDoc?.file_url && (
                                 <button
                                     type="button"
                                     onClick={() => triggerDownload(selectedDoc)}
-                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--background-subtle)] text-[var(--text)] hover:bg-[var(--border-light)] text-sm font-semibold transition-all duration-200 active:scale-95"
+                                    className="flex-1 sm:flex-none px-8 py-3 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-2xl border border-blue-200 dark:border-blue-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all active:scale-95 shadow-sm shadow-blue-500/5"
                                 >
-                                    <MdDownload className="w-4 h-4" />
                                     Download
                                 </button>
                             )}
-                            <button
-                                type="submit"
-                                disabled={updateSubmitting}
-                                className="px-8 py-2.5 rounded-xl bg-[var(--primary)] text-white text-sm font-semibold hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-[var(--primary)]/20 transition-all duration-200 active:scale-95"
-                            >
-                                {updateSubmitting ? 'Updating...' : 'Update'}
-                            </button>
                         </div>
+                        
+                        <button
+                            type="submit"
+                            disabled={updateSubmitting}
+                            className="w-full sm:w-auto order-1 sm:order-2 px-10 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {updateSubmitting ? (
+                                <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving...</span></>
+                            ) : (
+                                <><MdCheckCircle className="w-5 h-5" /><span>Update Procurement</span></>
+                            )}
+                        </button>
                     </div>
                 </form>
             </div>
-        </div>
+        </Modal>
     );
-
-    return createPortal(modalContent, document.body);
 };
 
 export default UpdateDocumentModal;

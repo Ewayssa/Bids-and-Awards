@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { reportService } from '../services/api';
 import { ROLES } from '../utils/auth';
-import { MdUpload, MdChevronLeft, MdChevronRight, MdAdd, MdSearch } from 'react-icons/md';
+import { MdUpload, MdChevronLeft, MdChevronRight, MdAdd, MdSearch, MdCheckCircle } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
+import Modal from '../components/Modal';
 
 // Constants & Helpers
 import { TABLE_PAGE_SIZE } from '../constants/reportConstants';
@@ -227,7 +227,7 @@ const Reports = ({ user }) => {
                                 <th className="table-th">Report Title</th>
                                 <th className="table-th">Submitting Office</th>
                                 <th className="table-th">Uploaded By</th>
-                                <th className="table-th">Date Submitted</th>
+                                <th className="table-th text-center">Date Submitted</th>
                                 {isAdmin && <th className="table-th text-center">Actions</th>}
                             </tr>
                         </thead>
@@ -241,20 +241,20 @@ const Reports = ({ user }) => {
                                     <td className="table-td font-medium">{r.title || '—'}</td>
                                     <td className="table-td-muted">{r.submitting_office || '—'}</td>
                                     <td className="table-td-muted">{r.uploadedBy || '—'}</td>
-                                    <td className="table-td-muted">{formatDate(r.uploaded_at) || '—'}</td>
+                                    <td className="table-td-muted text-center">{formatDate(r.uploaded_at) || '—'}</td>
                                     {isAdmin && (
-                                    <td className="table-td">
+                                    <td className="table-td text-center">
                                         <div className="flex items-center justify-center gap-2">
                                             <button 
                                                 onClick={() => openPreview(r)} 
-                                                className="btn-action-primary px-4 py-1.5 rounded-lg border border-transparent hover:border-[var(--primary)]/30"
+                                                className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm shadow-emerald-500/5"
                                                 title="Preview report"
                                             >
                                                 Preview
                                             </button>
                                             <button 
                                                 onClick={() => triggerDownload(r)} 
-                                                className="btn-secondary px-3 py-1.5 rounded-lg text-xs"
+                                                className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all active:scale-95 shadow-sm shadow-blue-500/5"
                                                 title="Download PDF"
                                             >
                                                 Download
@@ -314,21 +314,38 @@ const Reports = ({ user }) => {
                 />
             )}
 
-            {createPortal(
-                confirmUpload && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300">
-                        <div className="card-elevated max-w-sm w-full p-6 shadow-2xl rounded-2xl border-0 bg-[var(--surface)] animate-in zoom-in-95 duration-200">
-                            <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Confirm upload</h2>
-                            <p className="text-sm text-[var(--text-muted)] mb-6">{confirmUpload.message}</p>
-                            <div className="flex gap-3 justify-end">
-                                <button onClick={() => setConfirmUpload(null)} className="btn-secondary">Cancel</button>
-                                <button onClick={confirmUpload.onConfirm} disabled={uploading} className="btn-primary">{uploading ? 'Uploading...' : 'Yes, upload'}</button>
-                            </div>
+            {/* Confirm Upload Modal */}
+            <Modal
+                isOpen={!!confirmUpload}
+                onClose={() => setConfirmUpload(null)}
+                title="Confirm Upload"
+                size="md"
+            >
+                <div className="p-2 space-y-6">
+                    <div className="flex items-center gap-4 p-5 bg-blue-50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                        <MdUpload className="w-10 h-10 text-blue-600 shrink-0" />
+                        <div>
+                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Confirm Action</p>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                {confirmUpload?.message}
+                            </p>
                         </div>
                     </div>
-                ),
-                document.body
-            )}
+                    <div className="flex gap-3">
+                        <button onClick={() => setConfirmUpload(null)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={confirmUpload?.onConfirm} 
+                            disabled={uploading} 
+                            className="flex-1 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50"
+                        >
+                            {uploading ? <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdUpload className="w-4 h-4" />}
+                            Upload
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

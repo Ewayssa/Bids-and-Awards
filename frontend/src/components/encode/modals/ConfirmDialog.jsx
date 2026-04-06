@@ -1,56 +1,45 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { MdCheckCircle } from 'react-icons/md';
+import React from 'react';
+import { MdCheckCircle, MdHelpOutline } from 'react-icons/md';
+import Modal from '../../Modal';
 
-const ConfirmDialog = ({ message, onConfirm, onCancel }) => {
-    useEffect(() => {
-        if (message) {
-            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
-            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
-            document.documentElement.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.documentElement.style.overflow = originalHtmlStyle;
-                document.body.style.overflow = originalBodyStyle;
-            };
-        }
-    }, [message]);
-
-    if (!message) return null;
-
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="alertdialog"
+const ConfirmDialog = ({ message, onConfirm, onCancel, title = "Confirmation Required" }) => {
+    return (
+        <Modal
+            isOpen={!!message}
+            onClose={onCancel}
+            title={title}
+            size="sm"
         >
-            <div className="card-elevated max-w-sm w-full shadow-2xl rounded-2xl border-0 overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6">
-                    <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Confirm</h2>
-                    <p className="text-[var(--text-muted)] mb-6 text-sm leading-relaxed">{message}</p>
-                    <div className="flex gap-3 justify-end">
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className="btn-secondary flex items-center gap-2"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onConfirm}
-                            className="btn-primary flex items-center gap-2"
-                        >
-                            <MdCheckCircle className="w-4 h-4" />
-                            Yes
-                        </button>
+            <div className="space-y-6 py-2">
+                <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-2">
+                        <MdHelpOutline className="w-10 h-10" />
                     </div>
+                    <p className="text-[var(--text)] font-semibold text-lg leading-relaxed">
+                        {message}
+                    </p>
+                </div>
+                
+                <div className="flex gap-3 justify-center pt-2">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="btn-secondary px-8 py-2.5 rounded-xl text-sm font-bold"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        className="btn-primary px-10 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                    >
+                        <MdCheckCircle className="w-5 h-5" />
+                        Yes, proceed
+                    </button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
-
-    return createPortal(modalContent, document.body);
 };
 
 export default ConfirmDialog;

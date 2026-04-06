@@ -100,9 +100,9 @@ const EncodeTable = ({
                                                 <tr>
                                                     <th className="table-th text-left">Title</th>
                                                     <th className="table-th text-left">Procurement Type</th>
-                                                    <th className="table-th">Date</th>
-                                                    <th className="table-th">Status</th>
-                                                    {isAdmin && <th className="table-th">Action</th>}
+                                                    <th className="table-th text-center">Date</th>
+                                                    <th className="table-th text-center">Status</th>
+                                                    {isAdmin && <th className="table-th text-center">Action</th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-[var(--border-light)]">
@@ -110,16 +110,19 @@ const EncodeTable = ({
                                                     <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/30 transition-colors">
                                                         <td className="table-td text-left font-medium">{doc.title || '—'}</td>
                                                         <td className="table-td text-left text-xs opacity-75">{getProcurementType(doc)}</td>
-                                                        <td className="table-td-muted">{formatDate(doc.date)}</td>
-                                                        <td className="table-td">
+                                                        <td className="table-td-muted text-center">{formatDate(doc.date)}</td>
+                                                        <td className="table-td text-center">
                                                             <span className={`status-badge ${getStatusColor(doc.status)}`}>
                                                                 {doc.status || 'pending'}
                                                             </span>
                                                         </td>
                                                         {isAdmin && (
-                                                            <td className="table-td">
-                                                                <button onClick={() => handleView(doc)} className="p-1 text-[var(--primary)] hover:bg-[var(--primary-muted)] rounded transition-all">
-                                                                    <MdVisibility className="w-5 h-5" />
+                                                            <td className="table-td text-center">
+                                                                <button 
+                                                                    onClick={() => handleView(doc)} 
+                                                                    className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm shadow-emerald-500/5"
+                                                                >
+                                                                    View
                                                                 </button>
                                                             </td>
                                                         )}
@@ -139,39 +142,42 @@ const EncodeTable = ({
                         <thead className="table-header">
                             <tr>
                                 <th className="table-th text-left">Title</th>
-                                <th className="table-th">BAC Folder No.</th>
+                                <th className="table-th text-center">BAC Folder No.</th>
                                 <th className="table-th">
                                     <button onClick={() => handleSort('category')} className="uppercase hover:text-[var(--primary)] transition-colors">
                                         Procurement Type {sortKey === 'category' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                     </button>
                                 </th>
                                 <th className="table-th">Uploaded By</th>
-                                <th className="table-th">
+                                <th className="table-th text-center">
                                     <button onClick={() => handleSort('uploaded_at')} className="uppercase hover:text-[var(--primary)] transition-colors">
                                         Date Submitted {sortKey === 'uploaded_at' && (sortDir === 'asc' ? ' ↑' : ' ↓')}
                                     </button>
                                 </th>
-                                <th className="table-th">Status</th>
-                                {isAdmin && <th className="table-th">Action</th>}
+                                <th className="table-th text-center">Status</th>
+                                {isAdmin && <th className="table-th text-center">Action</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-light)]">
                             {paginatedDocuments.map(doc => (
                                 <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/30 transition-colors">
                                     <td className="table-td text-left font-medium">{doc.title || '—'}</td>
-                                    <td className="table-td-muted">{doc.prNo || '—'}</td>
+                                    <td className="table-td-muted text-center">{doc.prNo || '—'}</td>
                                     <td className="table-td-muted text-xs opacity-75">{getProcurementType(doc)}</td>
                                     <td className="table-td-muted">{doc.uploadedBy || '—'}</td>
-                                    <td className="table-td-muted">{formatDate(doc.uploaded_at)}</td>
-                                    <td className="table-td">
+                                    <td className="table-td-muted text-center">{formatDate(doc.uploaded_at)}</td>
+                                    <td className="table-td text-center">
                                         <span className={`status-badge ${getStatusColor(doc.status)}`}>
                                             {doc.status || 'pending'}
                                         </span>
                                     </td>
                                     {isAdmin && (
-                                        <td className="table-td">
-                                            <button onClick={() => handleView(doc)} className="p-1 text-[var(--primary)] hover:bg-[var(--primary-muted)] rounded transition-all">
-                                                <MdVisibility className="w-5 h-5" />
+                                        <td className="table-td text-center">
+                                            <button 
+                                                onClick={() => handleView(doc)} 
+                                                className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm shadow-emerald-500/5"
+                                            >
+                                                View
                                             </button>
                                         </td>
                                     )}

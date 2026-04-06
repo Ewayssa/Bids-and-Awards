@@ -63,7 +63,7 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
             <div className="px-6 py-5 border-b border-[var(--border-light)] bg-white/50">
                 <h2 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
                     <MdPostAdd className="w-4 h-4 text-[var(--primary)]" />
-                    Procurement Insights
+                    Procurement Progress
                 </h2>
                 <p className="text-[11px] text-[var(--text-subtle)] mt-1 font-medium">Real-time status overview</p>
             </div>

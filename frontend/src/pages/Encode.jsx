@@ -129,8 +129,8 @@ const Encode = ({ user }) => {
         goToPage
     } = useDocumentTable();
     const isAdmin = user?.role === ROLES.ADMIN;
-    const canUploadDocuments = [ROLES.ADMIN, ROLES.ENCODER].includes(user?.role);
-    const canViewAllDocuments = [ROLES.ADMIN, ROLES.VIEWER, ROLES.ENCODER].includes(user?.role);
+    const canUploadDocuments = [ROLES.ADMIN, ROLES.ENCODER, ROLES.USER].includes(user?.role);
+    const canViewAllDocuments = [ROLES.ADMIN, ROLES.VIEWER, ROLES.ENCODER, ROLES.USER].includes(user?.role);
 
     // Combine validation errors from hook and manual checks
     const newFormErrors = useMemo(() => {
@@ -1179,7 +1179,7 @@ const Encode = ({ user }) => {
                                         Initiate a new procurement process by submitting the first set of documents.
                                     </p>
                                 </div>
-                                <button type="button" onClick={openNew} className="btn-primary flex items-center justify-center gap-2.5 px-6 py-3.5 w-full sm:w-auto shadow-md">
+                                <button type="button" onClick={openNew} className="px-8 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 w-full sm:w-auto">
                                     <MdUpload className="w-5 h-5" />
                                     <span>Start New Entry</span>
                                 </button>
@@ -1187,14 +1187,14 @@ const Encode = ({ user }) => {
                             <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-white">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-orange-500 rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
                                 <div className="min-w-0 flex-1">
-                                    <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Update Records</h3>
+                                    <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Update Procurement</h3>
                                     <p className="mt-2 text-[var(--text-muted)] text-sm leading-relaxed">
                                         Keep procurement folders complete by adding missing documents or updating details.
                                     </p>
                                 </div>
-                                <button type="button" onClick={openUpdate} className="btn-secondary flex items-center justify-center gap-2.5 px-6 py-3.5 w-full sm:w-auto border-[var(--border)] font-semibold shadow-sm">
-                                    <MdEdit className="w-5 h-5 text-orange-500" />
-                                    <span>Edit Existing</span>
+                                <button type="button" onClick={openUpdate} className="px-8 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 w-full sm:w-auto">
+                                    <MdEdit className="w-5 h-5" />
+                                    <span>Update</span>
                                 </button>
                             </div>
                         </div>
@@ -1208,13 +1208,15 @@ const Encode = ({ user }) => {
                             <h2 className="text-base sm:text-lg font-semibold text-[var(--text)] truncate">
                                 {canViewAllDocuments ? 'All Uploaded Documents' : 'Submitted Documents'}
                             </h2>
-                            <button
-                                type="button"
-                                onClick={openManage}
-                                className="btn-secondary whitespace-nowrap"
-                            >
-                                Manage Documents
-                            </button>
+                            {isAdmin && (
+                                <button
+                                    type="button"
+                                    onClick={openManage}
+                                    className="btn-secondary whitespace-nowrap"
+                                >
+                                    Manage Documents
+                                </button>
+                            )}
                         </div>
                             
                             {/* Search bar */}

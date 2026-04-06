@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { userService } from '../services/api';
 import {
     MdPerson,
@@ -12,8 +11,11 @@ import {
     MdVisibilityOff,
     MdLock,
     MdCameraAlt,
+    MdCheckCircle,
+    MdInfo,
 } from 'react-icons/md';
 import { getRoleDisplayName, ROLES } from '../utils/auth';
+import Modal from '../components/Modal';
 
 const STORAGE_KEY_PHOTO = (username) => `bac_profile_photo_${username}`;
 const MAX_PHOTO_SIZE = 150 * 1024; // 150KB for localStorage
@@ -157,7 +159,6 @@ const Profile = ({ user, onUserUpdated }) => {
         }
     };
 
-
     const handlePhotoChange = (e) => {
         const file = e.target?.files?.[0];
         if (!file || !file.type.startsWith('image/')) return;
@@ -197,446 +198,314 @@ const Profile = ({ user, onUserUpdated }) => {
     const roleDisplay = getRoleDisplayName(user?.role);
     const passwordStrength = getPasswordStrength(newPassword);
 
-    const confirmProfileContent = showConfirmProfile && (
-        <div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="alertdialog"
-            aria-labelledby="confirm-profile-title"
-        >
-            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200">
-                <h2 id="confirm-profile-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Update</h2>
-                <p className="text-sm text-[var(--text-muted)] mb-6">
-                    Are you sure you want to save changes to your account details?
-                </p>
-                <div className="flex gap-3">
-                    <button type="button" onClick={() => setShowConfirmProfile(false)} className="btn-secondary">
-                        Cancel
-                    </button>
-                    <button type="button" onClick={confirmProfileSubmit} className="btn-primary" disabled={profileLoading}>
-                        {profileLoading ? 'Saving…' : 'Confirm'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
-    const confirmPasswordContent = showConfirmPassword && (
-        <div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="alertdialog"
-            aria-labelledby="confirm-password-title"
-        >
-            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl bg-[var(--surface)] animate-in zoom-in-95 duration-200">
-                <h2 id="confirm-password-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Password Change</h2>
-                <p className="text-sm text-[var(--text-muted)] mb-6">
-                    Are you sure you want to change your password? You will need to use the new password on your next login.
-                </p>
-                <div className="flex gap-3">
-                    <button type="button" onClick={() => setShowConfirmPassword(false)} className="btn-secondary">
-                        Cancel
-                    </button>
-                    <button type="button" onClick={confirmPasswordSubmit} className="btn-primary" disabled={loading}>
-                        {loading ? 'Updating…' : 'Confirm'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
-        <div className="space-y-6 pb-10">
-            <header>
-                <h1 className="text-xl sm:text-2xl font-bold text-[var(--text)] tracking-tight">
-                    Account Settings
-                </h1>
-                <p className="text-sm text-[var(--text-muted)] mt-1">Manage your account and security.</p>
+        <div className="space-y-8 pb-10 max-w-4xl mx-auto">
+            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                        Account Protocol
+                    </h1>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Identity & Security Management</p>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">System Active</span>
+                </div>
             </header>
 
             {/* Toast notifications */}
             {toast && (
                 <div
                     role="alert"
-                    className={`fixed bottom-4 right-4 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2 animate-fade-in ${
+                    className={`fixed bottom-8 right-8 z-[200] px-6 py-4 rounded-3xl shadow-2xl border-2 flex items-center gap-4 animate-in slide-in-from-right duration-500 ${
                         toast.type === 'error'
-                            ? 'bg-red-50 border-red-200 text-red-800'
-                            : 'bg-green-50 border-green-200 text-green-800'
+                            ? 'bg-white dark:bg-slate-900 border-red-500 text-red-600'
+                            : 'bg-white dark:bg-slate-900 border-emerald-500 text-emerald-600'
                     }`}
                 >
-                    <span className="text-sm font-medium">{toast.message}</span>
+                    {toast.type === 'error' ? <MdLock className="w-6 h-6" /> : <MdCheckCircle className="w-6 h-6" />}
+                    <span className="text-xs font-black uppercase tracking-widest">{toast.message}</span>
                 </div>
             )}
 
-            <div className="max-w-2xl w-full mx-auto space-y-6">
-                {/* My Account card */}
-                <div className="bg-[var(--card)] rounded-xl border border-[var(--border-light)] shadow-[var(--shadow-md)] overflow-hidden w-full">
-                    <div className="px-5 sm:px-6 py-4 border-b border-[var(--border-light)] flex items-center justify-between gap-4">
-                        <h2 className="text-base font-semibold text-[var(--text)]">My Account</h2>
-                        {!editingProfile ? (
-                            <button
-                                type="button"
-                                onClick={() => setEditingProfile(true)}
-                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)] rounded-lg transition-colors"
-                            >
-                                <MdEdit className="w-4 h-4" />
-                                Edit
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setEditingProfile(false);
-                                    setProfilePassword('');
-                                    setProfileError('');
-                                }}
-                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
-                            >
-                                Cancel
-                            </button>
-                        )}
-                    </div>
-                    <div className="p-5 sm:p-6">
-                        {!editingProfile ? (
-                            <>
-                                {/* Avatar + name block */}
-                                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pb-6 mb-6 border-b border-[var(--border-light)]">
-                                    <div className="relative group flex-shrink-0">
-                                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[var(--primary-muted)] flex items-center justify-center overflow-hidden border-2 border-[var(--border-light)] text-xl sm:text-2xl font-semibold text-[var(--primary)]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* My Account Section */}
+                <div className="lg:col-span-12">
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden group/card transition-all hover:border-blue-500/30">
+                        <div className="p-8 sm:p-10 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-600/20">
+                                    <MdPerson className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Identity Profile</h2>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Personal credentials</p>
+                                </div>
+                            </div>
+                            {!editingProfile ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingProfile(true)}
+                                    className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-sm border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all flex items-center gap-2"
+                                >
+                                    <MdEdit className="w-4 h-4" /> Edit Profile
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditingProfile(false);
+                                        setProfilePassword('');
+                                        setProfileError('');
+                                    }}
+                                    className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="p-8 sm:p-10">
+                            {!editingProfile ? (
+                                <div className="flex flex-col md:flex-row gap-12">
+                                    <div className="relative group/avatar shrink-0 mx-auto md:mx-0">
+                                        <div className="w-40 h-40 rounded-[3rem] bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border-4 border-white dark:border-slate-900 shadow-xl text-4xl font-black text-blue-600">
                                             {profilePhoto ? (
-                                                <img src={profilePhoto} alt="" className="w-full h-full object-cover" />
+                                                <img src={profilePhoto} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover/avatar:scale-110" />
                                             ) : (
                                                 getInitials(fullName, user?.username)
                                             )}
                                         </div>
-                                        <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                            <MdCameraAlt className="w-8 h-8 text-white" />
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                className="sr-only"
-                                                onChange={handlePhotoChange}
-                                                aria-label="Upload profile photo"
-                                            />
+                                        <label className="absolute inset-0 flex items-center justify-center rounded-[3rem] bg-blue-600/80 opacity-0 group-hover/avatar:opacity-100 transition-all cursor-pointer backdrop-blur-sm">
+                                            <MdCameraAlt className="w-10 h-10 text-white" />
+                                            <input type="file" accept="image/*" className="sr-only" onChange={handlePhotoChange} aria-label="Upload profile photo" />
                                         </label>
                                     </div>
-                                    <div className="text-center sm:text-left min-w-0">
-                                        <p className="text-base font-semibold text-[var(--text)]">{fullName || '—'}</p>
-                                        <p className="text-sm text-[var(--text-muted)] mt-0.5">{user?.username || '—'}</p>
-                                    </div>
-                                </div>
-                                {/* Info rows: icon + label/value, 2-col on sm */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                                    <div className="flex items-start gap-3 min-w-0">
-                                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0">
-                                            <MdPerson className="w-5 h-5" />
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Full Name</p>
-                                            <p className="text-sm text-[var(--text)] mt-0.5">{fullName || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 min-w-0">
-                                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0">
-                                            <MdEmail className="w-5 h-5" />
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Email</p>
-                                            <p className="text-sm text-[var(--text)] break-all mt-0.5">{user?.username || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 min-w-0">
-                                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0">
-                                            <MdWork className="w-5 h-5" />
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Position</p>
-                                            <p className="text-sm text-[var(--text)] mt-0.5">{position || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 min-w-0">
-                                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0">
-                                            <MdBusiness className="w-5 h-5" />
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Department</p>
-                                            <p className="text-sm text-[var(--text)] mt-0.5">{office || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3 min-w-0">
-                                        <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0">
-                                            <MdBadge className="w-5 h-5" />
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">Role</p>
-                                            <p className="text-sm text-[var(--text)] mt-0.5">{roleDisplay}</p>
+
+                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-y-10 gap-x-8">
+                                        <ProfileInfoRow icon={<MdBadge />} label="Full Identity" value={fullName} />
+                                        <ProfileInfoRow icon={<MdEmail />} label="Digital Address" value={user?.username} />
+                                        <ProfileInfoRow icon={<MdWork />} label="Designated Position" value={position} />
+                                        <ProfileInfoRow icon={<MdBusiness />} label="Assigned Department" value={office} />
+                                        <div className="md:col-span-2 pt-4">
+                                            <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
+                                                <MdLock className="w-4 h-4 text-emerald-600" />
+                                                <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-500 uppercase tracking-widest">Authorized as {roleDisplay}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </>
-                        ) : (
-                            <form onSubmit={handleProfileSubmit} className="space-y-6">
-                                {/* Avatar + form grid */}
-                                <div className="flex flex-col sm:flex-row gap-6">
-                                    <div className="flex flex-col items-center sm:items-start gap-2 flex-shrink-0">
-                                        <div className="relative group">
-                                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[var(--primary-muted)] flex items-center justify-center overflow-hidden border-2 border-[var(--border-light)] text-xl sm:text-2xl font-semibold text-[var(--primary)]">
-                                                {profilePhoto ? (
-                                                    <img src={profilePhoto} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    getInitials(fullName, user?.username)
-                                                )}
-                                            </div>
-                                            <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                                <MdCameraAlt className="w-8 h-8 text-white" />
-                                                <input type="file" accept="image/*" className="sr-only" onChange={handlePhotoChange} aria-label="Upload profile photo" />
-                                            </label>
-                                        </div>
-                                        <span className="text-xs text-[var(--text-muted)]">Click to change photo</span>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 min-w-0">
-                                        <div className="sm:col-span-2 flex gap-3 items-start">
-                                            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0 mt-1">
-                                                <MdEmail className="w-5 h-5" />
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <label htmlFor="profile-email" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">Email</label>
+                            ) : (
+                                <form onSubmit={handleProfileSubmit} className="max-w-3xl space-y-10">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <ProfileInput icon={<MdPerson />} label="Full Name" id="profile-fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter formal name" />
+                                        <ProfileInput icon={<MdEmail />} label="Email Address" id="profile-email" value={user?.username} disabled={true} />
+                                        <ProfileInput icon={<MdWork />} label="Position" id="profile-position" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="e.g. Administrator" disabled={!isAdmin} />
+                                        <ProfileInput icon={<MdBusiness />} label="Department" id="profile-office" value={office} onChange={(e) => setOffice(e.target.value)} placeholder="e.g. Operations" disabled={!isAdmin} />
+                                        <div className="md:col-span-2 space-y-2">
+                                            <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-1">Identity Verification</label>
+                                            <div className="relative">
+                                                <MdLock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                                                 <input
-                                                    id="profile-email"
-                                                    type="text"
-                                                    value={user?.username || ''}
-                                                    className="input-field w-full bg-[var(--background-subtle)]"
-                                                    disabled
-                                                    readOnly
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3 items-start">
-                                            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0 mt-1">
-                                                <MdPerson className="w-5 h-5" />
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <label htmlFor="profile-fullName" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">Full Name</label>
-                                                <input
-                                                    id="profile-fullName"
-                                                    type="text"
-                                                    className="input-field w-full"
-                                                    value={fullName}
-                                                    onChange={(e) => setFullName(e.target.value)}
-                                                    placeholder="Your display name"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3 items-start">
-                                            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0 mt-1">
-                                                <MdWork className="w-5 h-5" />
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <label htmlFor="profile-position" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">Position</label>
-                                                <input
-                                                    id="profile-position"
-                                                    type="text"
-                                                    className="input-field w-full bg-[var(--background-subtle)]"
-                                                    value={position}
-                                                    onChange={(e) => setPosition(e.target.value)}
-                                                    placeholder="e.g. BAC Member"
-                                                    readOnly={!isAdmin}
-                                                    disabled={!isAdmin}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3 items-start">
-                                            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0 mt-1">
-                                                <MdBusiness className="w-5 h-5" />
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <label htmlFor="profile-office" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">Department</label>
-                                                <input
-                                                    id="profile-office"
-                                                    type="text"
-                                                    className="input-field w-full bg-[var(--background-subtle)]"
-                                                    value={office}
-                                                    onChange={(e) => setOffice(e.target.value)}
-                                                    placeholder="e.g. Procurement"
-                                                    readOnly={!isAdmin}
-                                                    disabled={!isAdmin}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="sm:col-span-2 flex gap-3 items-start">
-                                            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--background-subtle)] text-[var(--text-muted)] flex-shrink-0 mt-1">
-                                                <MdLock className="w-5 h-5" />
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <label htmlFor="profile-verify-password" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">Current password (required to save)</label>
-                                                <input
-                                                    id="profile-verify-password"
                                                     type="password"
-                                                    className="input-field w-full"
                                                     value={profilePassword}
                                                     onChange={(e) => setProfilePassword(e.target.value)}
-                                                    placeholder="Enter password to confirm changes"
-                                                    autoComplete="current-password"
+                                                    placeholder="Enter password to authorize changes"
+                                                    className="input-field w-full h-14 pl-12 pr-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:border-blue-500 focus:bg-white transition-all shadow-inner font-bold"
+                                                    required
                                                 />
                                             </div>
+                                            {profileError && <p className="text-[10px] font-black text-red-500 uppercase px-1 mt-2">{profileError}</p>}
                                         </div>
                                     </div>
-                                </div>
-                                {profileError && (
-                                    <div className="p-3 rounded-lg bg-red-500/10 text-red-600 text-sm">
-                                        {profileError}
+                                    <div className="pt-4">
+                                        <button type="submit" disabled={profileLoading} className="px-10 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] shadow-xl shadow-blue-600/30 hover:bg-blue-700 transition-all flex items-center justify-center gap-3">
+                                            {profileLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <MdCheckCircle className="w-5 h-5" />}
+                                            Save Profile Update
+                                        </button>
                                     </div>
-                                )}
-                                <div className="flex flex-wrap gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setEditingProfile(false);
-                                            setProfilePassword('');
-                                            setProfileError('');
-                                        }}
-                                        className="btn-secondary"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button type="submit" disabled={profileLoading} className="btn-primary inline-flex items-center justify-center gap-2 min-w-[120px]">
-                                        {profileLoading && (
-                                            <span className="w-4 h-4 border-2 border-[var(--primary-foreground)] border-t-transparent rounded-full animate-spin" aria-hidden />
-                                        )}
-                                        {profileLoading ? 'Saving…' : 'Save changes'}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
+                                </form>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {/* Change Password card */}
-                <div className="bg-[var(--card)] rounded-xl border border-[var(--border-light)] shadow-[var(--shadow-md)] overflow-hidden w-full">
-                    <div className="px-5 sm:px-6 py-4 border-b border-[var(--border-light)]">
-                        <h2 className="text-base font-semibold text-[var(--text)]">Change Password</h2>
-                    </div>
-                    <form onSubmit={handlePasswordSubmit} className="p-5 sm:p-6 space-y-5">
-                        <div>
-                            <label htmlFor="profile-current-password" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Current password</label>
-                            <div className="relative">
-                                <input
-                                    id="profile-current-password"
-                                    type={showCurrent ? 'text' : 'password'}
-                                    className="input-field w-full pr-10"
-                                    value={currentPassword}
-                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                    autoComplete="current-password"
-                                    required
-                                    placeholder="Enter current password"
-                                />
-                                <button
-                                    type="button"
-                                    tabIndex={-1}
-                                    onClick={() => setShowCurrent((v) => !v)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-subtle)] hover:text-[var(--text)]"
-                                    aria-label={showCurrent ? 'Hide password' : 'Show password'}
-                                >
-                                    {showCurrent ? <MdVisibilityOff className="w-5 h-5" /> : <MdVisibility className="w-5 h-5" />}
-                                </button>
+                {/* Password Section */}
+                <div className="lg:col-span-12">
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden group/card transition-all hover:border-red-500/30">
+                        <div className="p-8 sm:p-10 border-b border-slate-50 dark:border-slate-800 flex items-center gap-4 bg-slate-50/50 dark:bg-slate-800/30">
+                            <div className="p-3 bg-red-600 rounded-2xl text-white shadow-lg shadow-red-600/20">
+                                <MdLock className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Security Access</h2>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Update credentials</p>
                             </div>
                         </div>
-                        <div>
-                            <label htmlFor="profile-new-password" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1.5">New password</label>
-                            <div className="relative">
-                                <input
-                                    id="profile-new-password"
-                                    type={showNew ? 'text' : 'password'}
-                                    className="input-field w-full pr-10"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    required
-                                    minLength={8}
-                                    placeholder="Enter new password"
-                                />
-                                <button
-                                    type="button"
-                                    tabIndex={-1}
-                                    onClick={() => setShowNew((v) => !v)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-subtle)] hover:text-[var(--text)]"
-                                    aria-label={showNew ? 'Hide password' : 'Show password'}
-                                >
-                                    {showNew ? <MdVisibilityOff className="w-5 h-5" /> : <MdVisibility className="w-5 h-5" />}
-                                </button>
-                            </div>
-                            {newPassword && (
-                                <div className="mt-2 flex items-center gap-2">
-                                    <div className="flex gap-0.5 flex-1 max-w-[120px]">
-                                        <span
-                                            className={`h-1.5 flex-1 rounded-full ${
-                                                passwordStrength.level === 'weak' ? 'bg-red-500' : passwordStrength.level === 'medium' ? 'bg-amber-500' : 'bg-green-500'
-                                            }`}
-                                        />
-                                        <span
-                                            className={`h-1.5 flex-1 rounded-full ${
-                                                passwordStrength.level === 'medium' || passwordStrength.level === 'strong' ? (passwordStrength.level === 'strong' ? 'bg-green-500' : 'bg-amber-500') : 'bg-[var(--border)]'
-                                            }`}
-                                        />
-                                        <span className={`h-1.5 flex-1 rounded-full ${passwordStrength.level === 'strong' ? 'bg-green-500' : 'bg-[var(--border)]'}`} />
+
+                        <form onSubmit={handlePasswordSubmit} className="p-8 sm:p-10 space-y-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Current Password</label>
+                                    <PasswordInput value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} show={showCurrent} onToggle={() => setShowCurrent(!showCurrent)} />
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">New Password</label>
+                                        <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} show={showNew} onToggle={() => setShowNew(!showNew)} />
                                     </div>
-                                    <span
-                                        className={`text-xs font-medium ${
-                                            passwordStrength.level === 'weak'
-                                                ? 'text-red-600'
-                                                : passwordStrength.level === 'medium'
-                                                ? 'text-amber-600'
-                                                : 'text-green-600'
-                                        }`}
-                                    >
-                                        {passwordStrength.label}
-                                    </span>
+                                    {newPassword && (
+                                        <div className="px-1 space-y-1.5">
+                                            <div className="flex gap-1 h-1">
+                                                <div className={`flex-1 rounded-full ${passwordStrength.level === 'weak' ? 'bg-red-500' : passwordStrength.level === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                                <div className={`flex-1 rounded-full ${passwordStrength.level === 'medium' || passwordStrength.level === 'strong' ? (passwordStrength.level === 'strong' ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-slate-100 dark:bg-slate-800'}`} />
+                                                <div className={`flex-1 rounded-full ${passwordStrength.level === 'strong' ? 'bg-emerald-500' : 'bg-slate-100 dark:bg-slate-800'}`} />
+                                            </div>
+                                            <p className={`text-[10px] font-black uppercase tracking-tight ${passwordStrength.level === 'weak' ? 'text-red-500' : passwordStrength.level === 'medium' ? 'text-amber-600' : 'text-emerald-500'}`}>
+                                                Strength: {passwordStrength.label}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Final Validation</label>
+                                    <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)} placeholder="Re-enter new password" />
+                                </div>
+                                
+                                <div className="md:col-start-1 md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+                                        <MdInfo className="w-4 h-4" /> Standard Operating Requirement
+                                    </p>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-tight leading-relaxed">
+                                        Entropy minimum: 8+ characters, alpha-numeric with signature character and shift-case variety.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 flex items-center gap-3">
+                                    <MdInfo className="w-5 h-5" />
+                                    <p className="text-[10px] font-black uppercase tracking-tight">{error}</p>
                                 </div>
                             )}
-                            <p className="text-xs text-[var(--text-muted)] mt-1.5">At least 8 characters, 1 uppercase, 1 number, 1 special character.</p>
-                        </div>
-                        <div>
-                            <label htmlFor="profile-confirm-password" className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Confirm new password</label>
-                            <div className="relative">
-                                <input
-                                    id="profile-confirm-password"
-                                    type={showConfirm ? 'text' : 'password'}
-                                    className="input-field w-full pr-10"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    required
-                                    placeholder="Confirm new password"
-                                />
-                                <button
-                                    type="button"
-                                    tabIndex={-1}
-                                    onClick={() => setShowConfirm((v) => !v)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-subtle)] hover:text-[var(--text)]"
-                                    aria-label={showConfirm ? 'Hide password' : 'Show password'}
+
+                            <div className="pt-2">
+                                <button 
+                                    type="submit" 
+                                    disabled={loading || !passwordStrength.valid || newPassword !== confirmPassword} 
+                                    className="px-10 py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-30"
                                 >
-                                    {showConfirm ? <MdVisibilityOff className="w-5 h-5" /> : <MdVisibility className="w-5 h-5" />}
+                                    {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <MdLock className="w-5 h-5" />}
+                                    Authorize Access Update
                                 </button>
                             </div>
-                        </div>
-                        {error && <div className="p-3 rounded-lg bg-red-500/10 text-red-600 text-sm" role="alert">{error}</div>}
-                        <div className="pt-1">
-                            <button type="submit" disabled={loading || !passwordStrength.valid || newPassword !== confirmPassword} className="btn-primary inline-flex items-center justify-center gap-2 min-w-[140px]">
-                                {loading && <span className="w-4 h-4 border-2 border-[var(--primary-foreground)] border-t-transparent rounded-full animate-spin" aria-hidden />}
-                                {loading ? 'Updating…' : 'Update password'}
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
-                <div className="text-center py-6">
-                    <p className="text-xs text-[var(--text-subtle)]">BAC Documents Tracking System v2.0</p>
+
+                <div className="lg:col-span-12 text-center py-10 opacity-30">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">BAC Documents Tracking System • Registry Phase 2.0</p>
                 </div>
             </div>
 
-            {createPortal(confirmProfileContent, document.body)}
-            {createPortal(confirmPasswordContent, document.body)}
+            {/* Confirmation Modals using standard Modal component */}
+            <Modal
+                isOpen={showConfirmProfile}
+                onClose={() => setShowConfirmProfile(false)}
+                title="Protocol Confirmation"
+                size="md"
+            >
+                <div className="p-2 space-y-6">
+                    <div className="flex items-center gap-4 p-5 bg-blue-50 dark:bg-blue-500/5 rounded-3xl border border-blue-100 dark:border-blue-500/20 text-blue-600">
+                        <MdCheckCircle className="w-10 h-10 shrink-0" />
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">Administrative Action</p>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Authorize synchronization of revised account details?</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => setShowConfirmProfile(false)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">Cancel</button>
+                        <button onClick={confirmProfileSubmit} className="flex-1 py-3.5 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-600/20">Save Changes</button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={showConfirmPassword}
+                onClose={() => setShowConfirmPassword(false)}
+                title="Security Breach Prevention"
+                size="md"
+            >
+                <div className="p-2 space-y-6">
+                    <div className="flex items-center gap-4 p-5 bg-red-50 dark:bg-red-500/5 rounded-3xl border border-red-100 dark:border-red-500/20 text-red-600">
+                        <MdLock className="w-10 h-10 shrink-0" />
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">Authorization Change</p>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Revised access key will trigger system re-authentication on next login. Proceed?</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => setShowConfirmPassword(false)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">Cancel</button>
+                        <button onClick={confirmPasswordSubmit} className="flex-1 py-3.5 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg">Save Update</button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };
+
+/* Internal UI primitives */
+const ProfileInfoRow = ({ icon, label, value }) => (
+    <div className="flex items-start gap-4 p-5 bg-slate-50 dark:bg-slate-800/20 rounded-3xl border border-slate-100 dark:border-slate-800/50 hover:border-blue-500/30 transition-all">
+        <div className="mt-1 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-sm text-slate-400">
+            {React.cloneElement(icon, { className: 'w-5 h-5' })}
+        </div>
+        <div className="min-w-0">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{value || '—'}</p>
+        </div>
+    </div>
+);
+
+const ProfileInput = ({ icon, label, id, value, onChange, placeholder, disabled = false }) => (
+    <div className="space-y-2">
+        <label htmlFor={id} className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{label}</label>
+        <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                {React.cloneElement(icon, { className: 'w-5 h-5' })}
+            </div>
+            <input
+                id={id}
+                type="text"
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                disabled={disabled}
+                className={`input-field w-full h-14 pl-12 pr-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:border-blue-500 focus:bg-white transition-all shadow-inner font-bold ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            />
+        </div>
+    </div>
+);
+
+const PasswordInput = ({ value, onChange, show, onToggle, placeholder = "Enter password" }) => (
+    <div className="relative">
+        <MdLock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <input
+            type={show ? 'text' : 'password'}
+            className="input-field w-full h-14 pl-12 pr-12 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:border-blue-500 focus:bg-white transition-all shadow-inner font-bold"
+            value={value}
+            onChange={onChange}
+            required
+            placeholder={placeholder}
+        />
+        <button
+            type="button"
+            onClick={onToggle}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-blue-600 transition-colors"
+        >
+            {show ? <MdVisibilityOff className="w-5 h-5" /> : <MdVisibility className="w-5 h-5" />}
+        </button>
+    </div>
+);
 
 export default Profile;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { userService } from '../services/api';
 import { MdPersonAdd, MdClose, MdCheckCircle, MdSearch, MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff, MdContentCopy, MdCheck } from 'react-icons/md';
 import PageHeader from '../components/PageHeader';
+import Modal from '../components/Modal';
 import { ROLES, getRoleDisplayName, getAvailableRoles, hasPermission, PERMISSIONS } from '../utils/auth';
 
 const TABLE_PAGE_SIZE = 10;
@@ -240,8 +240,8 @@ const Personnel = ({ user }) => {
                             <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">All registered users and their roles</p>
                         </div>
                         {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && (
-                            <button type="button" onClick={openAddModal} className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4">
-                                <MdPersonAdd className="w-5 h-5" /> Add User
+                            <button type="button" onClick={openAddModal} className="px-6 py-2.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center gap-2">
+                                <MdPersonAdd className="w-5 h-5" /> Add user
                             </button>
                         )}
                     </div>
@@ -285,9 +285,9 @@ const Personnel = ({ user }) => {
                                         <th className="table-th">Email</th>
                                         <th className="table-th">Position</th>
                                         <th className="table-th">Department</th>
-                                        <th className="table-th">Role</th>
-                                        <th className="table-th">Status</th>
-                                        {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="table-th">Actions</th>}
+                                        <th className="table-th text-center">Role</th>
+                                        <th className="table-th text-center">Status</th>
+                                        {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="table-th text-center">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
@@ -308,7 +308,7 @@ const Personnel = ({ user }) => {
                                                 </span>
                                             </td>
                                             {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && (
-                                                <td className="table-td table-cell-actions">
+                                                <td className="table-td text-center">
                                                     <button
                                                         type="button"
                                                         onClick={() => openEditModal(u)}
@@ -339,131 +339,114 @@ const Personnel = ({ user }) => {
                 )}
             </section>
 
-    const addModalContent = showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300" aria-modal="true" role="dialog" aria-labelledby="add-user-title">
-            <div className="card-elevated max-w-md w-full shadow-2xl rounded-2xl border-0 overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
-                            <h2 id="add-user-title" className="text-lg font-semibold text-[var(--text)]">
-                                {createdUser ? 'User Created' : showConfirmAdd ? 'Confirm New User' : 'Add New User'}
-                            </h2>
-                            <button type="button" onClick={closeAddModal} className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors" aria-label="Close">
-                                <MdClose className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* ── Step 3: Success + show password ── */}
-                        {createdUser ? (
-                            <div className="p-6 space-y-5">
-                                <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
-                                    <MdCheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-green-800">Account created successfully!</p>
-                                        <p className="text-sm text-green-700 mt-0.5">Share the temporary password with <strong>{createdUser.username}</strong>. They will be required to change it on first login.</p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[var(--text)] mb-1">Temporary Password</label>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 relative">
-                                            <input
-                                                type={showPassword ? 'text' : 'password'}
-                                                readOnly
-                                                value={createdUser.temporary_password}
-                                                className="input-field w-full pr-10 font-mono tracking-widest select-all"
-                                            />
-                                            <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)]">
-                                                {showPassword ? <MdVisibilityOff className="w-4 h-4" /> : <MdVisibility className="w-4 h-4" />}
-                                            </button>
-                                        </div>
-                                        <button type="button" onClick={handleCopyPassword} className={`btn-secondary inline-flex items-center gap-1.5 py-2.5 px-3 shrink-0 ${copied ? 'text-green-600 border-green-400' : ''}`}>
-                                            {copied ? <MdCheck className="w-4 h-4" /> : <MdContentCopy className="w-4 h-4" />}
-                                            {copied ? 'Copied' : 'Copy'}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end pt-1">
-                                    <button type="button" onClick={closeAddModal} className="btn-primary py-2.5 px-6">Done</button>
-                                </div>
+            {/* Add User Modal */}
+            <Modal
+                isOpen={showAddModal}
+                onClose={closeAddModal}
+                title={createdUser ? 'User Created' : showConfirmAdd ? 'Confirm New User' : 'Add New User'}
+                size="md"
+            >
+                {createdUser ? (
+                    <div className="space-y-5">
+                        <div className="flex items-start gap-2.5 p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+                            <MdCheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase">Account Created!</p>
+                                <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80 mt-0.5">Share the temporary password with <strong>{createdUser.username}</strong>.</p>
                             </div>
-                        ) : showConfirmAdd ? (
-                            /* ── Step 2: Confirm ── */
-                            <div className="p-6 space-y-5">
-                                <p className="text-sm text-[var(--text-muted)]">Please confirm the details for the new user:</p>
-                                <dl className="space-y-2 text-sm">
-                                    {[
-                                        ['Email', addForm.username],
-                                        ['Full Name', addForm.fullName],
-                                        ['Position', addForm.position],
-                                        ['Department', addForm.office],
-                                        ['Role', addForm.role],
-                                    ].map(([label, val]) => (
-                                        <div key={label} className="flex gap-3">
-                                            <dt className="w-28 shrink-0 font-medium text-[var(--text)]">{label}</dt>
-                                            <dd className="text-[var(--text-muted)] break-all">{val}</dd>
-                                        </div>
-                                    ))}
-                                </dl>
-                                <p className="text-xs text-[var(--text-muted)] bg-[var(--background-subtle)] rounded-lg p-3">
-                                    A temporary password will be generated. The user must change it upon first login.
-                                </p>
-                                {addError && (
-                                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm" role="alert">{addError}</div>
-                                )}
-                                <div className="flex gap-3 justify-end pt-1">
-                                    <button type="button" onClick={() => setShowConfirmAdd(false)} className="btn-secondary" disabled={submitting}>Back</button>
-                                    <button type="button" onClick={confirmAddUser} className="btn-primary" disabled={submitting}>
-                                        {submitting ? 'Creating…' : 'Create User'}
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Temporary Password</label>
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        readOnly
+                                        value={createdUser.temporary_password}
+                                        className="input-field w-full pr-10 font-mono tracking-widest select-all h-10 text-sm rounded-xl"
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                        {showPassword ? <MdVisibilityOff className="w-3.5 h-3.5" /> : <MdVisibility className="w-3.5 h-3.5" />}
                                     </button>
                                 </div>
+                                <button type="button" onClick={handleCopyPassword} className={`h-10 px-4 inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs transition-colors shrink-0 ${copied ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : ''}`}>
+                                    {copied ? <MdCheck className="w-4 h-4" /> : <MdContentCopy className="w-4 h-4" />}
+                                    {copied ? 'Copied' : 'Copy'}
+                                </button>
                             </div>
-                        ) : (
-                            /* ── Step 1: Form ── */
-                            <form onSubmit={handleAddUserSubmit} className="p-6 space-y-4" noValidate>
-                                {addError && (
-                                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm" role="alert">{addError}</div>
+                        </div>
+                        <div className="flex justify-end pt-2">
+                            <button type="button" onClick={closeAddModal} className="btn-primary py-2.5 px-8 rounded-xl font-bold">Done</button>
+                        </div>
+                    </div>
+                ) : showConfirmAdd ? (
+                    <div className="space-y-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200 dark:border-slate-800/50 space-y-2.5">
+                            {[
+                                ['Email', addForm.username],
+                                ['Name', addForm.fullName],
+                                ['Position', addForm.position],
+                                ['Dept', addForm.office],
+                                ['Role', getRoleDisplayName(addForm.role)],
+                            ].map(([label, val]) => (
+                                <div key={label} className="flex gap-4 text-xs font-bold">
+                                    <dt className="w-20 shrink-0 text-slate-400 uppercase text-[9px] tracking-widest pt-0.5">{label}</dt>
+                                    <dd className="text-slate-700 dark:text-slate-300 break-all">{val}</dd>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2">
+                            <button type="button" onClick={() => setShowConfirmAdd(false)} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Back</button>
+                            <button type="button" onClick={confirmAddUser} className="px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-emerald-500/20" disabled={submitting}>
+                                {submitting ? 'Creating…' : 'Add user'}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <form onSubmit={handleAddUserSubmit} className="space-y-5" noValidate>
+                        {addError && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium" role="alert">{addError}</div>
+                        )}
+
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="add-email" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Email / Username <span className="text-red-500">*</span></label>
+                                <input
+                                    id="add-email"
+                                    type="email"
+                                    value={addForm.username}
+                                    onChange={(e) => setAddForm(f => ({ ...f, username: e.target.value }))}
+                                    onBlur={() => setAddTouched(t => ({ ...t, username: true }))}
+                                    className={fieldCls(addTouched.username, addErrs.username)}
+                                    placeholder="user@example.com"
+                                    autoComplete="off"
+                                    disabled={submitting}
+                                />
+                                {addTouched.username && addErrs.username && (
+                                    <p className="text-[10px] font-bold text-red-600 mt-1 ml-1">{addErrs.username}</p>
                                 )}
+                            </div>
 
-                                {/* Email */}
-                                <div>
-                                    <label htmlFor="add-email" className="block text-sm font-medium text-[var(--text)] mb-1">Email <span className="text-red-500">*</span></label>
-                                    <input
-                                        id="add-email"
-                                        type="email"
-                                        value={addForm.username}
-                                        onChange={(e) => setAddForm(f => ({ ...f, username: e.target.value }))}
-                                        onBlur={() => setAddTouched(t => ({ ...t, username: true }))}
-                                        className={fieldCls(addTouched.username, addErrs.username)}
-                                        placeholder="user@dilg.gov.ph"
-                                        autoComplete="off"
-                                        disabled={submitting}
-                                    />
-                                    {addTouched.username && addErrs.username && (
-                                        <p className="text-xs text-red-600 mt-1">{addErrs.username}</p>
-                                    )}
-                                    <p className="text-xs text-[var(--text-muted)] mt-0.5">A temporary password will be generated. The user must change it on first login.</p>
-                                </div>
+                            <div>
+                                <label htmlFor="add-fullName" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Full Name <span className="text-red-500">*</span></label>
+                                <input
+                                    id="add-fullName"
+                                    type="text"
+                                    value={addForm.fullName}
+                                    onChange={(e) => setAddForm(f => ({ ...f, fullName: e.target.value }))}
+                                    onBlur={() => setAddTouched(t => ({ ...t, fullName: true }))}
+                                    className={fieldCls(addTouched.fullName, addErrs.fullName)}
+                                    placeholder="Enter full name"
+                                    disabled={submitting}
+                                />
+                                {addTouched.fullName && addErrs.fullName && (
+                                    <p className="text-[10px] font-bold text-red-600 mt-1 ml-1">{addErrs.fullName}</p>
+                                )}
+                            </div>
 
-                                {/* Full Name */}
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="add-fullName" className="block text-sm font-medium text-[var(--text)] mb-1">Full Name <span className="text-red-500">*</span></label>
-                                    <input
-                                        id="add-fullName"
-                                        type="text"
-                                        value={addForm.fullName}
-                                        onChange={(e) => setAddForm(f => ({ ...f, fullName: e.target.value }))}
-                                        onBlur={() => setAddTouched(t => ({ ...t, fullName: true }))}
-                                        className={fieldCls(addTouched.fullName, addErrs.fullName)}
-                                        placeholder="e.g. Juan Dela Cruz"
-                                        disabled={submitting}
-                                    />
-                                    {addTouched.fullName && addErrs.fullName && (
-                                        <p className="text-xs text-red-600 mt-1">{addErrs.fullName}</p>
-                                    )}
-                                </div>
-
-                                {/* Position */}
-                                <div>
-                                    <label htmlFor="add-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation <span className="text-red-500">*</span></label>
+                                    <label htmlFor="add-position" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Position <span className="text-red-500">*</span></label>
                                     <select
                                         id="add-position"
                                         value={addForm.position}
@@ -472,37 +455,17 @@ const Personnel = ({ user }) => {
                                         className={fieldCls(addTouched.position, addErrs.position)}
                                         disabled={submitting}
                                     >
-                                        <option value="">Select Position</option>
+                                        <option value="">Select</option>
                                         <option value="BAC Chairperson">BAC Chairperson</option>
                                         <option value="BAC Secretariat">BAC Secretariat</option>
                                         <option value="BAC Member">BAC Member</option>
                                     </select>
                                     {addTouched.position && addErrs.position && (
-                                        <p className="text-xs text-red-600 mt-1">{addErrs.position}</p>
+                                        <p className="text-[10px] font-bold text-red-600 mt-1 ml-1">{addErrs.position}</p>
                                     )}
                                 </div>
-
-                                {/* Department */}
                                 <div>
-                                    <label htmlFor="add-office" className="block text-sm font-medium text-[var(--text)] mb-1">Department <span className="text-red-500">*</span></label>
-                                    <input
-                                        id="add-office"
-                                        type="text"
-                                        value={addForm.office}
-                                        onChange={(e) => setAddForm(f => ({ ...f, office: e.target.value }))}
-                                        onBlur={() => setAddTouched(t => ({ ...t, office: true }))}
-                                        className={fieldCls(addTouched.office, addErrs.office)}
-                                        placeholder="Enter Department"
-                                        disabled={submitting}
-                                    />
-                                    {addTouched.office && addErrs.office && (
-                                        <p className="text-xs text-red-600 mt-1">{addErrs.office}</p>
-                                    )}
-                                </div>
-
-                                {/* Role */}
-                                <div>
-                                    <label htmlFor="add-role" className="block text-sm font-medium text-[var(--text)] mb-1">Role <span className="text-red-500">*</span></label>
+                                    <label htmlFor="add-role" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">System Role <span className="text-red-500">*</span></label>
                                     <select
                                         id="add-role"
                                         value={addForm.role}
@@ -511,116 +474,134 @@ const Personnel = ({ user }) => {
                                         className={fieldCls(addTouched.role, addErrs.role)}
                                         disabled={submitting}
                                     >
-                                        <option value="">Select Role</option>
+                                        <option value="">Select</option>
                                         {getAvailableRoles(user?.role).map((role) => (
                                             <option key={role.value} value={role.value}>{role.label}</option>
                                         ))}
                                     </select>
                                     {addTouched.role && addErrs.role && (
-                                        <p className="text-xs text-red-600 mt-1">{addErrs.role}</p>
+                                        <p className="text-[10px] font-bold text-red-600 mt-1 ml-1">{addErrs.role}</p>
                                     )}
                                 </div>
+                            </div>
 
-                                <div className="flex gap-3 justify-end pt-2">
-                                    <button type="button" onClick={closeAddModal} className="btn-secondary" disabled={submitting}>Cancel</button>
-                                    <button type="submit" className="btn-primary" disabled={submitting}>Review & Add</button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
-                </div>
-            )}
+                            <div>
+                                <label htmlFor="add-office" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Department / Office <span className="text-red-500">*</span></label>
+                                <input
+                                    id="add-office"
+                                    type="text"
+                                    value={addForm.office}
+                                    onChange={(e) => setAddForm(f => ({ ...f, office: e.target.value }))}
+                                    onBlur={() => setAddTouched(t => ({ ...t, office: true }))}
+                                    className={fieldCls(addTouched.office, addErrs.office)}
+                                    placeholder="Enter department"
+                                    disabled={submitting}
+                                />
+                                {addTouched.office && addErrs.office && (
+                                    <p className="text-[10px] font-bold text-red-600 mt-1 ml-1">{addErrs.office}</p>
+                                )}
+                            </div>
+                        </div>
 
-    const confirmEditDialogContent = showConfirmEdit && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300" aria-modal="true" role="alertdialog" aria-labelledby="confirm-edit-title">
-            <div className="card-elevated max-w-sm w-full p-6 rounded-2xl border-0 shadow-2xl animate-in zoom-in-95 duration-200">
-                <h2 id="confirm-edit-title" className="text-lg font-semibold text-[var(--text)] mb-2">Confirm Update User</h2>
-                <p className="text-sm text-[var(--text-muted)] mb-6">
-                    Save changes to user <strong className="text-[var(--text)]">{editingUser?.username}</strong>?
-                </p>
-                <div className="flex gap-3 justify-end">
-                    <button type="button" onClick={() => setShowConfirmEdit(false)} className="btn-secondary">Cancel</button>
-                    <button type="button" onClick={confirmEditUser} className="btn-primary" disabled={submitting}>
-                        {submitting ? 'Updating…' : 'Confirm'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
+                        <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <button type="button" onClick={closeAddModal} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Cancel</button>
+                            <button type="submit" className="px-10 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 disabled:opacity-50" disabled={submitting}>Submit</button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
 
-    const editModalContent = editingUser && !showConfirmEdit && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300" aria-modal="true" role="dialog" aria-labelledby="edit-user-title">
-            <div className="card-elevated max-w-md w-full shadow-2xl rounded-2xl border-0 overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
-                    <h2 id="edit-user-title" className="text-lg font-semibold text-[var(--text)]">Edit User</h2>
-                    <button type="button" onClick={closeEditModal} className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors" aria-label="Close">
-                        <MdClose className="w-5 h-5" />
-                    </button>
-                </div>
-                <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-                    {editError && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm" role="alert">{editError}</div>
-                    )}
-                    <div>
-                        <label htmlFor="edit-email" className="block text-sm font-medium text-[var(--text)] mb-1">Email</label>
-                        <input id="edit-email" type="email" value={editingUser.username} className="input-field w-full bg-[var(--background-subtle)] opacity-70" disabled />
-                    </div>
-                    <div>
-                        <label htmlFor="edit-fullName" className="block text-sm font-medium text-[var(--text)] mb-1">Full Name</label>
-                        <input id="edit-fullName" type="text" value={editForm.fullName} onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))} className="input-field w-full" placeholder="Display name" disabled={submitting} />
-                    </div>
-                    <div>
-                        <label htmlFor="edit-position" className="block text-sm font-medium text-[var(--text)] mb-1">Position / Designation</label>
-                        <select id="edit-position" value={editForm.position} onChange={(e) => setEditForm(f => ({ ...f, position: e.target.value }))} className="input-field w-full" disabled={submitting}>
-                            <option value="">Select Position</option>
-                            <option value="BAC Chairperson">BAC Chairperson</option>
-                            <option value="BAC Secretariat">BAC Secretariat</option>
-                            <option value="BAC Member">BAC Member</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label htmlFor="edit-office" className="block text-sm font-medium text-[var(--text)] mb-1">Department</label>
-                        <input id="edit-office" type="text" value={editForm.office} onChange={(e) => setEditForm(f => ({ ...f, office: e.target.value }))} className="input-field w-full" placeholder="Enter Department" disabled={submitting} />
-                    </div>
-                    <div>
-                        <label htmlFor="edit-role" className="block text-sm font-medium text-[var(--text)] mb-1">Role</label>
-                        <select id="edit-role" value={editForm.role} onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value }))} className="input-field w-full" disabled={submitting}>
-                            <option value="">Select Role</option>
-                            {getAvailableRoles(user?.role).map((role) => (
-                                <option key={role.value} value={role.value}>{role.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-4 pt-1">
-                        <label htmlFor="edit-status" className="text-sm font-medium text-[var(--text)] shrink-0">Status</label>
-                        <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={editForm.is_active}
-                                id="edit-status"
-                                onClick={() => setEditForm(f => ({ ...f, is_active: !f.is_active }))}
-                                disabled={submitting}
-                                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${editForm.is_active ? 'bg-green-600' : 'bg-slate-300'}`}
-                            >
-                                <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.is_active ? 'translate-x-5' : 'translate-x-1'}`} />
+            {/* Edit User Modal */}
+            <Modal
+                isOpen={editingUser !== null}
+                onClose={closeEditModal}
+                title={showConfirmEdit ? "Confirm Changes" : "Edit User Details"}
+                size="md"
+            >
+                {showConfirmEdit ? (
+                    <div className="space-y-5">
+                        <div className="flex flex-col items-center text-center space-y-2 py-1">
+                            <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                <MdCheckCircle className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">Confirm Updates</h3>
+                                <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                                    Updating record for <strong>{editingUser?.username}</strong>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 justify-center">
+                            <button type="button" onClick={() => setShowConfirmEdit(false)} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Back</button>
+                            <button type="button" onClick={confirmEditUser} className="px-10 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 disabled:opacity-50" disabled={submitting}>
+                                {submitting ? 'Saving…' : 'Save Changes'}
                             </button>
-                            <span className="text-sm text-[var(--text-muted)]">{editForm.is_active ? 'Active' : 'Inactive'}</span>
                         </div>
                     </div>
-                    <div className="flex gap-3 justify-end pt-2">
-                        <button type="button" onClick={closeEditModal} className="btn-secondary" disabled={submitting}>Cancel</button>
-                        <button type="submit" className="btn-primary" disabled={submitting}>
-                            {submitting ? 'Updating…' : 'Update User'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-            {createPortal(addModalContent, document.body)}
-            {createPortal(confirmEditDialogContent, document.body)}
-            {createPortal(editModalContent, document.body)}
+                ) : (
+                    <form onSubmit={handleEditSubmit} className="space-y-5">
+                        {editError && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium" role="alert">{editError}</div>
+                        )}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Email</label>
+                                <input type="email" value={editingUser?.username || ''} className="input-field w-full bg-[var(--background-subtle)]/50 opacity-70 cursor-not-allowed" disabled />
+                            </div>
+                            <div>
+                                <label htmlFor="edit-fullName" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Full Name</label>
+                                <input id="edit-fullName" type="text" value={editForm.fullName} onChange={(e) => setEditForm(f => ({ ...f, fullName: e.target.value }))} className="input-field w-full" placeholder="Display name" disabled={submitting} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="edit-position" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Position</label>
+                                    <select id="edit-position" value={editForm.position} onChange={(e) => setEditForm(f => ({ ...f, position: e.target.value }))} className="input-field w-full" disabled={submitting}>
+                                        <option value="">Select</option>
+                                        <option value="BAC Chairperson">BAC Chairperson</option>
+                                        <option value="BAC Secretariat">BAC Secretariat</option>
+                                        <option value="BAC Member">BAC Member</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="edit-role" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Role</label>
+                                    <select id="edit-role" value={editForm.role} onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value }))} className="input-field w-full" disabled={submitting}>
+                                        <option value="">Select Role</option>
+                                        {getAvailableRoles(user?.role).map((role) => (
+                                            <option key={role.value} value={role.value}>{role.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label htmlFor="edit-office" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Department</label>
+                                <input id="edit-office" type="text" value={editForm.office} onChange={(e) => setEditForm(f => ({ ...f, office: e.target.value }))} className="input-field w-full" placeholder="Enter Department" disabled={submitting} />
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-[var(--background-subtle)]/30 rounded-2xl border border-[var(--border-light)]">
+                                <div className="space-y-0.5">
+                                    <label className="text-sm font-bold text-[var(--text)]">Account Status</label>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{editForm.is_active ? 'Currently Active' : 'Currently Inactive'}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={editForm.is_active}
+                                    onClick={() => setEditForm(f => ({ ...f, is_active: !f.is_active }))}
+                                    disabled={submitting}
+                                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${editForm.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                >
+                                    <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.is_active ? 'translate-x-5' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <button type="button" onClick={closeEditModal} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Cancel</button>
+                            <button type="submit" className="px-10 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 disabled:opacity-50" disabled={submitting}>
+                                Update Account
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
         </div>
     );
 };

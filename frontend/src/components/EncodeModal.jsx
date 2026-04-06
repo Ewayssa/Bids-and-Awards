@@ -1,8 +1,8 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
-import { MdAdd, MdDownload, MdClose, MdDelete } from 'react-icons/md';
+import { MdAdd, MdDownload, MdClose, MdDelete, MdTableChart, MdSave, MdEdit, MdAutoGraph } from 'react-icons/md';
 import { REPORT_COLUMNS, HEADER_GROUPS, DATE_MIN, DATE_MAX } from '../constants/reportConstants';
 import { toDDMMYYYY, formatNumberAsYouType, sanitizeNumberInput, validateDateRange } from '../utils/reportHelpers';
+import Modal from './Modal';
 
 const EncodeModal = ({
     onClose,
@@ -15,57 +15,56 @@ const EncodeModal = ({
     setIsFinalized,
     currentEncoderId
 }) => {
-    return createPortal(
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="dialog"
-            aria-labelledby="encode-report-title"
-            onClick={onClose}
+    return (
+        <Modal
+            isOpen={true}
+            onClose={onClose}
+            title="Procurement Monitoring Interface"
+            size="full"
+            showCloseButton={true}
         >
-            <div
-                className="bg-[var(--surface)] w-full max-w-[96vw] h-[85vh] max-h-[85vh] flex flex-col rounded-2xl shadow-2xl border border-[var(--border-light)] overflow-hidden animate-in zoom-in-95 duration-200"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="p-4 border-b-2 border-gray-200 shrink-0 bg-gray-50">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <h2 id="encode-report-title" className="text-xl font-bold text-gray-800">Encode Report</h2>
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={exportExcel}
-                                    disabled={encodedRows.length === 0}
-                                    className="btn-secondary inline-flex items-center gap-1.5 py-2.5 px-4"
-                                >
-                                    <MdDownload className="w-5 h-5" /> Export
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={addRow}
-                                    disabled={isFinalized}
-                                    className="btn-primary inline-flex items-center gap-1.5 py-2.5 px-4"
-                                >
-                                    <MdAdd className="w-5 h-5" /> Add row
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsFinalized(!isFinalized)}
-                                    disabled={encodedRows.length === 0}
-                                    className="btn-primary inline-flex items-center justify-center gap-1.5 py-2.5 px-4 w-24"
-                                >
-                                    {isFinalized ? 'Edit' : 'Save'}
-                                </button>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="inline-flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-gray-200 rounded-lg border border-gray-300"
-                            >
-                                <MdClose className="w-6 h-6" />
-                            </button>
+            <div className="flex flex-col h-full space-y-6">
+                {/* Information Banner */}
+                <div className="p-6 bg-emerald-50 dark:bg-emerald-500/5 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all">
+                    <div className="flex items-center gap-5">
+                        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm text-emerald-600 shrink-0">
+                            <MdTableChart className="w-8 h-8" />
                         </div>
+                        <div>
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Standardized Monitoring</p>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Record Encoding Protocol</h3>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={exportExcel}
+                            disabled={encodedRows.length === 0}
+                            className="flex-1 md:flex-none px-6 py-3 bg-white dark:bg-slate-900 text-slate-600 rounded-2xl font-bold uppercase tracking-widest text-[10px] border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all flex items-center justify-center gap-2"
+                        >
+                            <MdDownload className="w-4 h-4" /> Export Excel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={addRow}
+                            disabled={isFinalized}
+                            className="flex-1 md:flex-none px-6 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            <MdAdd className="w-4 h-4" /> Add Row
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsFinalized(!isFinalized)}
+                            disabled={encodedRows.length === 0}
+                            className={`flex-1 md:flex-none px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 ${
+                                isFinalized 
+                                ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-slate-900/20 hover:bg-black font-black' 
+                                : 'bg-emerald-600/90 hover:bg-emerald-700 text-white shadow-emerald-500/20 backdrop-blur-md font-black'
+                            }`}
+                        >
+                            {isFinalized ? <><MdEdit className="w-4 h-4" /> Edit</> : <><MdSave className="w-4 h-4" /> Save</>}
+                        </button>
                     </div>
                 </div>
 
@@ -202,15 +201,14 @@ const EncodeModal = ({
                         {encodedRows.length === 0 && (
                             <div className="py-12 text-center text-[var(--text-muted)] text-base bg-[var(--surface)]">
                                 <p className="font-medium">No entries yet.</p>
-                                <p className="mt-1">Click "Add row" above to start encoding.</p>
+                                <p className="mt-1">Click "Add Row" above to start encoding.</p>
                             </div>
                         )}
-                    </div>
                 </div>
             </div>
-        </div>,
-        document.body
-    );
+        </div>
+    </Modal>
+);
 };
 
 export default EncodeModal;

@@ -86,17 +86,7 @@ class User(AbstractUser):
         return self.username
 
 
-class PasswordResetToken(models.Model):
-    """Token for password reset flow; expires after 1 hour."""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    token = models.CharField(max_length=64, unique=True, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"Reset for {self.user.username}"
 
 
 class Document(models.Model):

@@ -1,93 +1,87 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { MdClose, MdFolder, MdDescription, MdDownload, MdWarning } from 'react-icons/md';
+import React from 'react';
+import { MdFolder, MdDescription, MdDownload, MdWarning } from 'react-icons/md';
+import Modal from '../../Modal';
 import { DocDetailsView } from '../DocDetailsView';
 
 const DocViewModal = ({ doc, onClose }) => {
-    useEffect(() => {
-        if (doc) {
-            const originalHtmlStyle = window.getComputedStyle(document.documentElement).overflow;
-            const originalBodyStyle = window.getComputedStyle(document.body).overflow;
-            document.documentElement.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.documentElement.style.overflow = originalHtmlStyle;
-                document.body.style.overflow = originalBodyStyle;
-            };
-        }
-    }, [doc]);
-
-    if (!doc) return null;
-
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/5 backdrop-blur-[4px] animate-in fade-in duration-300"
-            aria-modal="true"
-            role="dialog"
+    return (
+        <Modal
+            isOpen={!!doc}
+            onClose={onClose}
+            title="Document Details"
+            size="lg"
+            showCloseButton={true}
         >
-            <div className="card-elevated max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl rounded-2xl border-0 flex flex-col animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--surface)]">
-                    <h2 className="text-lg font-semibold text-[var(--text)]">View Document Details</h2>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] rounded-lg transition-colors"
-                        aria-label="Close"
-                    >
-                        <MdClose className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
-                        <div className="flex flex-col bg-white rounded-2xl shadow-sm border overflow-hidden">
-                            <DocDetailsView doc={doc} />
+            <div className="flex flex-col space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Details Side */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <DocDetailsView doc={doc} />
+                    </div>
+
+                    {/* Attachment Side */}
+                    <div className="space-y-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50 space-y-3">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 ml-1">
+                                <MdFolder className="text-emerald-500 w-3.5 h-3.5" />
+                                File Attachment
+                            </h3>
+                            
+                            {doc?.file_url ? (
+                                <div className="flex flex-col space-y-4">
+                                    <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm">
+                                        <div className="p-2.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
+                                            <MdDescription className="w-6 h-6" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate" title={doc.title}>
+                                                {doc.title || 'Attached Document'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <a
+                                        href={doc.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn-primary w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 group text-xs"
+                                    >
+                                        <MdDownload className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                                        Download / View
+                                    </a>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-8 bg-amber-50 dark:bg-amber-500/5 border border-dashed border-amber-200 dark:border-amber-500/20 rounded-2xl text-center">
+                                    <div className="p-3 bg-amber-100 dark:bg-amber-500/20 rounded-full text-amber-600 dark:text-amber-400 mb-3">
+                                        <MdWarning className="w-6 h-6" />
+                                    </div>
+                                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">No file uploaded</p>
+                                    <p className="text-xs text-amber-600 dark:text-amber-400/60 mt-1">This specific document entry doesn't have an attachment yet.</p>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border space-y-4">
-                                <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2 uppercase tracking-widest">
-                                    <MdFolder className="text-[var(--primary)]" />
-                                    Attached Document
-                                </h3>
-                                {doc.file_url ? (
-                                    <div className="flex items-center justify-between p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-blue-100/50 rounded-lg">
-                                                <MdDescription className="w-6 h-6 text-blue-600" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-blue-900 break-all">{doc.title || 'Document File'}</p>
-                                                <p className="text-[10px] uppercase font-bold text-blue-700 opacity-75">Available for view/download</p>
-                                            </div>
-                                        </div>
-                                        <a
-                                            href={doc.file_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="btn-primary py-2 px-4 text-[10px] uppercase font-bold flex items-center gap-2 shadow-sm hover:translate-y-[-1px] transition-transform"
-                                        >
-                                            <MdDownload className="w-4 h-4" />
-                                            View
-                                        </a>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl text-amber-800">
-                                        <MdWarning className="w-5 h-5 text-amber-600" />
-                                        <p className="text-xs font-bold uppercase tracking-wide">No file uploaded for this document yet.</p>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                            <p className="text-[10px] font-bold text-blue-800 dark:text-blue-200 uppercase tracking-widest mb-1.5 ml-1">Quick Note</p>
+                            <p className="text-xs text-blue-600 dark:text-blue-300 leading-relaxed ml-1 font-medium">
+                                Document details are based on the latest submission. For history or changes, check the document trail.
+                            </p>
                         </div>
                     </div>
                 </div>
-                <div className="p-4 border-t border-[var(--border-light)] bg-white flex justify-end">
-                    <button type="button" onClick={onClose} className="btn-secondary px-8 font-bold text-sm uppercase tracking-wide">Close</button>
+
+                <div className="flex justify-end pt-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-10 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold transition-colors"
+                    >
+                        Close Details
+                    </button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
-
-    return createPortal(modalContent, document.body);
 };
 
 export default DocViewModal;
