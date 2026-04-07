@@ -88,43 +88,79 @@ class DashboardService:
 
     @classmethod
     def get_checklist_global_pending(cls, docs_qs):
-        """Count checklist slots not yet submitted across all PR folders."""
+        """Count unique sub-document types that have not been submitted at all."""
         docs = list(docs_qs.filter(uploaded_at__isnull=False))
+        
+        # Get all submitted sub-doc types that are NOT in a 'pending' state
+        # (This matches the user's business logic for incomplete requirements)
+        submitted_sub_docs = set()
+        for d in docs:
+            sub_doc = (d.subDoc or '').strip()
+            if sub_doc and d.calculate_status() != 'pending':
+                submitted_sub_docs.add(sub_doc)
+        
+        # Count required sub-docs that are not submitted
+        missing_count = 0
+        for sub_trim in cls.REQUIRED_SUB_DOCS:
+            if sub_trim not in submitted_sub_docs:
+                missing_count += 1
+        
+        return missing_count
 
+    @classmethod
+    def get_pending_breakdown(cls, docs_qs):
+        """Return a breakdown of missing sub-document types by PR folder."""
+        docs = list(docs_qs.filter(uploaded_at__isnull=False))
         folders = {}
         for d in docs:
             pr = (d.prNo or '').strip()
-            if pr:
-                folders.setdefault(pr, []).append(d)
+            if not pr:
+                continue
+            folders.setdefault(pr, []).append(d)
 
-        pending_slot = 0
-
+        breakdown = []
         for pr, folder_docs in folders.items():
-            # Determine procurement method for this folder
             is_svp = any('Small Value Procurement' in (d.subDoc or '') for d in folder_docs)
             is_pb = any('Public Bidding' in (d.subDoc or '') for d in folder_docs)
             is_lv = any('Lease of Venue' in (d.subDoc or '') for d in folder_docs)
 
-            # Only count a document as "started" if its status is ongoing or complete
+            if is_svp and not is_pb and not is_lv:
+                method = 'Small Value Procurement'
+            elif is_pb and not is_svp and not is_lv:
+                method = 'Public Bidding'
+            elif is_lv and not is_svp and not is_pb:
+                method = 'Lease of Venue'
+            elif is_svp or is_pb or is_lv:
+                method = 'Mixed'
+            else:
+                method = 'General'
+
             submitted_sub_docs = {
-                (d.subDoc or '').strip() 
-                for d in folder_docs 
-                if d.calculate_status() != 'pending'
+                (d.subDoc or '').strip()
+                for d in folder_docs
+                if (d.subDoc or '').strip()
             }
 
+            missing = []
             for sub_trim in cls.REQUIRED_SUB_DOCS:
-                # Skip procurement-method-specific docs when method doesn't match
                 if sub_trim in cls.SVP_ONLY and not is_svp:
                     continue
                 if sub_trim in cls.PB_ONLY and not is_pb:
                     continue
                 if sub_trim in cls.LV_ONLY and not is_lv:
                     continue
-
                 if sub_trim not in submitted_sub_docs:
-                    pending_slot += 1
+                    missing.append(sub_trim)
 
-        return pending_slot
+            if missing:
+                breakdown.append({
+                    'prNo': pr,
+                    'procurementMethod': method,
+                    'missingSubDocs': missing,
+                    'missingCount': len(missing),
+                })
+
+        return breakdown
 
     @classmethod
     def get_dashboard_data(cls, uploaded_by=None):
@@ -133,17 +169,19 @@ class DashboardService:
             docs_qs = docs_qs.filter(uploadedBy=uploaded_by)
 
         doc_counts = cls.get_document_status_counts(docs_qs)
+        checklist_pending = cls.get_checklist_global_pending(docs_qs)
+        pending_breakdown = cls.get_pending_breakdown(docs_qs)
 
         # Dashboard Logic:
         # Completed: Documents fully filled/submitted
         # Ongoing: Documents started but not yet complete
-        # Pending: Documents uploaded but not yet started (no data/file filled)
+        # Pending: Number of required sub-document types that have not been submitted at all
         # Total: Total uploaded documents
         pie_data = [
             doc_counts['total'],
             doc_counts['completed'],
             doc_counts['ongoing'],
-            doc_counts['pending'],
+            checklist_pending,
         ]
         
         total_documents_uploaded = docs_qs.filter(uploaded_at__isnull=False).count()
@@ -167,6 +205,7 @@ class DashboardService:
             'calendarEvents': calendar_events,
             'recentSubmissions': recent_submissions,
             'recentActivity': recent_activity,
+            'pendingBreakdown': pending_breakdown,
         }
 
     @staticmethod

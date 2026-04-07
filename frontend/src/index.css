@@ -260,10 +260,11 @@ textarea {
         @apply btn-action text-[var(--text-muted)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--border)] hover:text-[var(--text)] hover:shadow-sm active:bg-[var(--border-light)];
     }
     .input-field {
-        @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius-sm)] outline-none text-[var(--text)] placeholder-[var(--text-subtle)] bg-white;
-        @apply transition-all duration-200 ease-out;
-        @apply focus:border-[var(--primary)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_15%,transparent)] focus:bg-white;
-        @apply hover:border-[color-mix(in_srgb,var(--text-subtle)_60%,transparent)];
+        @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-xl outline-none text-[var(--text)] placeholder-[var(--text-subtle)] bg-white transition-all duration-300 ease-out;
+        @apply focus:border-[var(--primary)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--primary)_8%,transparent)] focus:bg-white;
+        @apply hover:border-[color-mix(in_srgb,var(--text-subtle)_60%,transparent)] hover:shadow-sm;
+        @apply text-sm leading-relaxed;
+        min-height: 2.75rem;
     }
     /* Hide number input spinner (for currency/total amount) */
     .input-currency {
@@ -277,7 +278,10 @@ textarea {
         margin: 0;
     }
     .label {
-        @apply block text-xs font-semibold text-[var(--text-muted)] mb-1.5 uppercase tracking-wide;
+        @apply block text-[11px] font-bold text-[var(--text-muted)] mb-2 uppercase tracking-widest opacity-80;
+    }
+    .field-group {
+        @apply space-y-1.5;
     }
     /* ----- Page header ----- */
     .page-header {

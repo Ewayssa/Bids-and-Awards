@@ -12,7 +12,8 @@ export const useDashboard = (user) => {
             'Lease of Venue': 0,  
             'Small Value Procurement': 0, 
             'Public Bidding': 0 
-        } 
+        },
+        pendingBreakdown: []
     });
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -39,6 +40,7 @@ export const useDashboard = (user) => {
                     'Small Value Procurement': 0, 
                     'Public Bidding': 0 
                 },
+                pendingBreakdown: data?.pendingBreakdown ?? [],
             });
             setDocuments(sorted);
         } catch {

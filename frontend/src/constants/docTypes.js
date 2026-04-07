@@ -9,7 +9,7 @@ export const DOC_TYPES = [
     {
         id: 'initial',
         name: 'Initial Documents',
-        subDocs: ['Purchase Request', 'Activity Design', 'Project Procurement Management Plan/Supplemental PPMP', 'Annual Procurement Plan', 'Market Scopping', 'Requisition and Issue Slip']
+        subDocs: ['Purchase Request', 'Activity Design', 'Project Procurement Management Plan/Supplemental PPMP', 'Annual Procurement Plan', 'Market Scopping', 'Requisition and Issue Slip', 'Supplies']
     },
     {
         id: 'afq',

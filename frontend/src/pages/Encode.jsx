@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { documentService, reportService } from '../services/api';
+import { documentService, reportService, dashboardService } from '../services/api';
 import { ROLES } from '../utils/auth';
 import {
     MdUpload,
@@ -67,6 +67,7 @@ const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [pendingBreakdown, setPendingBreakdown] = useState([]);
     const [updateSubmitting, setUpdateSubmitting] = useState(false);
     const [updateError, setUpdateError] = useState('');
     const [activeModal, setActiveModal] = useState(null); // 'new' | 'update' | 'updateList' | 'manage' | null
@@ -77,6 +78,7 @@ const Encode = ({ user }) => {
     const [alertMessage, setAlertMessage] = useState(null);
     const [manualErrors, setManualErrors] = useState({});
     const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
+    const [selectedPendingFolder, setSelectedPendingFolder] = useState(null);
 
     // Custom hooks
 
@@ -166,17 +168,21 @@ const Encode = ({ user }) => {
 
     const load = async () => {
         try {
-            const data = await documentService.getAll();
-            const list = Array.isArray(data) ? data : (data?.results ?? []);
-            // First-in-last-out ordering (newest uploads first)
+            const [dashboardData, docsResponse] = await Promise.all([
+                dashboardService.getData(true, ''),
+                documentService.getAll(),
+            ]);
+            const list = Array.isArray(docsResponse) ? docsResponse : (docsResponse?.results ?? []);
             const sorted = [...list].sort((a, b) => {
                 const aTime = a.uploaded_at ? new Date(a.uploaded_at).getTime() : 0;
                 const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
                 return bTime - aTime;
             });
             setDocuments(sorted);
+            setPendingBreakdown(dashboardData?.pendingBreakdown ?? []);
         } catch (e) {
             setDocuments([]);
+            setPendingBreakdown([]);
         } finally {
             setLoading(false);
         }
@@ -561,12 +567,21 @@ const Encode = ({ user }) => {
         } else if (sub === 'Requisition and Issue Slip') {
             if (!doc.office_division) missing.push('Office/Division');
             if (!doc.received_by) missing.push('Received By');
+        } else if (sub === 'Notice of BAC Meeting') {
+            if (!doc.agenda) missing.push('Agenda');
+            if (!doc.date) missing.push('Date');
         } else if (sub === 'Invitation to COA') {
+            if (!doc.date) missing.push('Date');
             if (!doc.date_received) missing.push('Date Received');
         } else if (sub === 'Attendance Sheet') {
+            if (!doc.agenda) missing.push('Agenda');
+            if (!doc.date) missing.push('Date');
             const members = Array.isArray(doc.attendance_members) ? doc.attendance_members : [];
             if (members.length === 0) missing.push('BAC Members List');
             else if (!members.some(m => m.present)) missing.push('At least one member Present');
+        } else if (sub === 'Minutes of the Meeting') {
+            if (!doc.agenda) missing.push('Agenda/Others');
+            if (!doc.date) missing.push('Date');
         } else if (sub === 'BAC Resolution') {
             if (!doc.resolution_no) missing.push('Resolution No.');
             if (!doc.winning_bidder) missing.push('Winning Bidder');
@@ -632,11 +647,23 @@ const Encode = ({ user }) => {
         return DOC_TYPES.map((docType) => {
             const categoryName = (docType.name || '').trim().toLowerCase();
             const isRfq = docType.id === 'afq';
-            const subDocSlots = isRfq
-                ? docType.subDocs.flatMap((header) =>
+            const isInitial = docType.id === 'initial';
+            let subDocSlots;
+            if (isRfq) {
+                subDocSlots = docType.subDocs.flatMap((header) =>
                     RFQ_PROCUREMENT_METHODS.map(({ value }) => `${header} - ${value}`)
-                )
-                : docType.subDocs;
+                );
+            } else if (isInitial) {
+                // For Initial Documents, expand Supplies into its options
+                subDocSlots = docType.subDocs.flatMap((subDoc) => {
+                    if (subDoc === 'Supplies') {
+                        return ['Supplies - Lease of Venue', 'Supplies - Public Bidding', 'Supplies - Small Value Procurement'];
+                    }
+                    return [subDoc];
+                });
+            } else {
+                subDocSlots = docType.subDocs;
+            }
             const subDocsWithStatus = subDocSlots.map((subDocName) => {
                 const doc = updateListDocs.find(
                     (d) =>
@@ -1256,6 +1283,41 @@ const Encode = ({ user }) => {
                                         {canUploadDocuments ? 'Start by creating a new procurement.' : 'No documents have been submitted yet.'}
                                     </p>
                                 </div>
+                            ) : filteredDocuments.length === 0 && filterStatus === 'pending' && pendingBreakdown.length > 0 ? (
+                                <div className="space-y-4 p-4 sm:p-6">
+                                    <div className="mb-2">
+                                        <h2 className="text-lg font-bold text-[var(--text)]">Pending Documents</h2>
+                                        <p className="text-sm text-[var(--text-muted)] mt-1">
+                                            {pendingBreakdown.reduce((sum, f) => sum + f.missingCount, 0)} items pending across {pendingBreakdown.length} folder{pendingBreakdown.length !== 1 ? 's' : ''}
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        {pendingBreakdown.map((folder) => (
+                                            <button
+                                                key={folder.prNo}
+                                                type="button"
+                                                onClick={() => setSelectedPendingFolder(folder)}
+                                                className="group relative rounded-2xl border border-[var(--border-light)] bg-white p-5 shadow-sm hover:shadow-md hover:border-[var(--primary)] transition-all duration-300 ease-out text-left active:scale-95"
+                                            >
+                                                <div className="absolute top-0 left-0 w-1 h-full bg-[var(--primary)] rounded-l-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex-1">
+                                                        <p className="font-bold text-[var(--text)] text-lg group-hover:text-[var(--primary)] transition-colors">{folder.prNo}</p>
+                                                        <p className="text-xs text-[var(--text-muted)] mt-1 font-medium">{folder.procurementMethod}</p>
+                                                    </div>
+                                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[var(--primary-muted)] flex items-center justify-center group-hover:bg-[var(--primary)] group-hover:text-white transition-all">
+                                                        <MdWarning className="w-5 h-5 text-[var(--primary)]" />
+                                                    </div>
+                                                </div>
+                                                <div className="inline-flex items-center rounded-full bg-[var(--primary-muted)] px-3 py-1.5 text-xs font-bold text-[var(--primary)] gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]" />
+                                                    {folder.missingCount} pending
+                                                </div>
+                                                <p className="text-xs text-[var(--text-subtle)] mt-3 group-hover:text-[var(--text-muted)] transition-colors">View missing documents</p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             ) : filteredDocuments.length === 0 ? (
                                 <div className="p-8 text-center text-[var(--text-muted)]">
                                     {filterStatus === 'complete' && 'No completed documents.'}
@@ -1624,6 +1686,62 @@ const Encode = ({ user }) => {
                 documents={documents} 
                 onClose={() => setWorkflowPRNo(null)} 
             />
+
+            {/* Pending Folder Details Modal */}
+            {selectedPendingFolder && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setSelectedPendingFolder(null)}>
+                    <div className="rounded-3xl bg-white max-w-md w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="relative bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-6 py-5 text-white">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12" />
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPendingFolder(null)}
+                                className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+                                aria-label="Close"
+                            >
+                                <MdClose className="w-6 h-6" />
+                            </button>
+                            <div className="relative z-10">
+                                <h3 className="text-2xl font-bold">{selectedPendingFolder.prNo}</h3>
+                                <p className="text-white/90 text-sm mt-1">{selectedPendingFolder.procurementMethod}</p>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="px-6 py-5">
+                            <div className="flex items-center gap-2 mb-4 pb-4 border-b border-[var(--border-light)]">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--primary-muted)] flex items-center justify-center">
+                                    <MdWarning className="w-4 h-4 text-[var(--primary)]" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-[var(--text)]">Missing Documents</p>
+                                    <p className="text-xs text-[var(--text-muted)]">{selectedPendingFolder.missingCount} item{selectedPendingFolder.missingCount !== 1 ? 's' : ''} to complete</p>
+                                </div>
+                            </div>
+                            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-2">
+                                {selectedPendingFolder.missingSubDocs.map((subDoc, idx) => (
+                                    <div key={idx} className="flex items-start gap-3 rounded-xl bg-[var(--background-subtle)] p-3.5 border border-[var(--border-light)] hover:border-[var(--primary-muted)] transition-colors">
+                                        <div className="w-2 h-2 rounded-full bg-[var(--primary)] mt-1.5 flex-shrink-0" />
+                                        <p className="text-sm text-[var(--text)] font-medium">{subDoc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="border-t border-[var(--border-light)] px-6 py-4 bg-[var(--background-subtle)]/30 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPendingFolder(null)}
+                                className="btn-primary rounded-xl"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
