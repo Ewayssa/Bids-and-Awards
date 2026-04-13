@@ -137,7 +137,7 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                 className={[
                     'fixed inset-y-0 left-0 w-64 max-w-[85vw] flex flex-col z-40 sidebar-shell flex-shrink-0',
                     'transform transition-[transform,width] duration-300 ease-out',
-                    'md:translate-x-0 md:relative md:left-auto md:top-auto md:bottom-auto md:inset-auto md:min-h-screen',
+                    'md:translate-x-0 md:sticky md:top-0 md:h-screen',
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full',
                     isExpanded ? 'sidebar-expanded' : 'sidebar-collapsed',
                 ].join(' ')}
