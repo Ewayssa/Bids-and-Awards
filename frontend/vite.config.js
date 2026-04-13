@@ -6,14 +6,22 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true, // listen on 0.0.0.0 so Edge can reach it
+    strictPort: true,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      clientPort: 5173,
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000', // IPv4 so proxy works on Windows
         changeOrigin: true,
+        secure: false,
       },
       '/media': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
+        secure: false,
       },
     },
   },

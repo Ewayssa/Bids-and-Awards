@@ -11,7 +11,7 @@ import {
     MdHistoryToggleOff,
 } from 'react-icons/md';
 import { canAccessRoute, ROLES } from '../utils/auth';
-import NotificationBell from '../components/NotificationBell';
+import NotificationBell from '../features/notifications/NotificationBell';
 
 const NAV_ITEMS = [
     { path: '/', label: 'Dashboard', icon: MdSpaceDashboard },
@@ -124,13 +124,11 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
             </header>
 
             {/* Backdrop when sidebar open on mobile */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden transition-opacity"
-                    aria-hidden
-                    onClick={closeSidebar}
-                />
-            )}
+            <div 
+                className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 md:hidden transition-all duration-300 ${sidebarOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}
+                aria-hidden
+                onClick={closeSidebar}
+            />
 
             {/* Sidebar: fixed drawer on mobile; in-flow on desktop so flex is [sidebar][main], no gap */}
             <aside

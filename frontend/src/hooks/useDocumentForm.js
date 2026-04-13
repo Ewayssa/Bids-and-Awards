@@ -3,6 +3,7 @@ import { documentService } from '../services/api';
 import { parseApiError } from '../utils/errors';
 import { CHECKLIST_ITEMS } from '../utils/constants';
 import { isValidDateFormat } from '../utils/validation';
+import { toBackendDateFormat } from '../utils/helpers';
 
 /**
  * Custom hook for managing document form state, operations, and validation.
@@ -65,7 +66,9 @@ export function useDocumentForm() {
     const newFormErrors = useMemo(() => {
         const errors = {};
         if (!form.title?.trim()) errors.title = 'Title/Purpose is required';
-        if (form.date && !isValidDateFormat(form.date)) errors.date = 'Invalid date format (use YYYY-MM-DD)';
+        if (form.date && !isValidDateFormat(form.date)) errors.date = 'Invalid format (use MM-DD-YY)';
+        if (form.date_received && !isValidDateFormat(form.date_received)) errors.date_received = 'Invalid format (use MM-DD-YY)';
+        if (form.notarized_date && !isValidDateFormat(form.notarized_date)) errors.notarized_date = 'Invalid format (use MM-DD-YY)';
         return errors;
     }, [form]);
 
@@ -120,7 +123,7 @@ export function useDocumentForm() {
             formData.append('title', form.title);
             formData.append('category', form.category || 'General');
             formData.append('subDoc', form.subDoc || 'N/A');
-            if (form.date) formData.append('date', form.date);
+            if (form.date) formData.append('date', toBackendDateFormat(form.date));
             formData.append('uploadedBy', user?.fullName || user?.username || '');
             formData.append('status', form.status || 'pending');
 
@@ -134,7 +137,13 @@ export function useDocumentForm() {
                 'secretary_owner_rep'
             ];
             optionalFields.forEach(f => {
-                if (form[f]) formData.append(f, form[f]);
+                if (form[f] !== undefined && form[f] !== null && form[f] !== '') {
+                    if (f === 'date_received' || f === 'notarized_date' || f === 'market_period_from' || f === 'market_period_to' || f === 'market_expected_delivery') {
+                        formData.append(f, toBackendDateFormat(form[f]));
+                    } else {
+                        formData.append(f, form[f]);
+                    }
+                }
             });
 
             formData.append('certified_true_copy', form.certified_true_copy ? 'true' : 'false');

@@ -104,3 +104,10 @@ export const getSuggestedExt = (url) => {
     const m = url.match(/\.([a-z0-9]+)(?:\?|$)/i);
     return m ? `.${m[1].toLowerCase()}` : '.pdf';
 };
+/**
+ * Returns authentication headers with the current JWT token
+ */
+export const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+};

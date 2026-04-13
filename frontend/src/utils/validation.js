@@ -69,8 +69,18 @@ export function validateRequiredFields(form, requiredFields) {
  */
 export function isValidDateFormat(dateStr) {
     if (!dateStr) return false;
-    const date = new Date(dateStr);
-    return !Number.isNaN(date.getTime()) && dateStr.match(/^\d{4}-\d{2}-\d{2}$/);
+    // Support YYYY-MM-DD
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const d = new Date(dateStr);
+        return !Number.isNaN(d.getTime());
+    }
+    // Support MM-DD-YY
+    if (dateStr.match(/^\d{2}-\d{2}-\d{2}$/)) {
+        const [m, d, y] = dateStr.split('-').map(Number);
+        if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+        return true;
+    }
+    return false;
 }
 
 /**

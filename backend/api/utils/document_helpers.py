@@ -26,8 +26,22 @@ def get_next_transaction_number(date=None):
                 month_num = now.month
             else:
                 parts = s.split('-')
-                year_month = f"{parts[0]}-{parts[1]}"
-                month_num = int(parts[1]) if len(parts) > 1 else 1
+                if len(parts) >= 3:
+                    if len(parts[0]) == 4: # YYYY-MM-DD
+                        year_month = f"{parts[0]}-{parts[1]}"
+                        month_num = int(parts[1])
+                    elif len(parts[2]) == 2: # MM-DD-YY
+                        year = f"20{parts[2]}"
+                        year_month = f"{year}-{parts[0]}"
+                        month_num = int(parts[0])
+                    else:
+                        now = timezone.now()
+                        year_month = now.strftime('%Y-%m')
+                        month_num = now.month
+                else:
+                    now = timezone.now()
+                    year_month = now.strftime('%Y-%m')
+                    month_num = now.month
                 
     return f"{year_month}-{month_num:03d}"
 

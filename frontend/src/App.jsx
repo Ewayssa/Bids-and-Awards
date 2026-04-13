@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import Login from './pages/Login';
-import ChangePassword from './pages/ChangePassword';
-import Dashboard from './pages/Dashboard';
-import Encode from './pages/Encode';
-import Reports from './pages/ReportsPage';
-import Personnel from './pages/UserManagement';
-import Settings from './pages/Settings';
-import AuditTrail from './pages/AuditTrail';
+import Login from './features/auth/Login';
+import ChangePassword from './features/auth/ChangePassword';
+import Dashboard from './features/dashboard/Dashboard';
+import Encode from './features/documents/Encode';
+import Reports from './features/reports/ReportsPage';
+import Personnel from './features/users/UserManagement';
+import Settings from './features/users/Settings';
+import AuditTrail from './features/users/AuditTrail';
 import Navigation from './layouts/Navigation';
 import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/auth';
 
@@ -32,7 +32,9 @@ function AppContent() {
 
     const handleLogin = (userData) => {
         const role = mapOldRoleToNew(userData?.role) || ROLES.USER;
-        setUser({ ...userData, role, must_change_password: userData?.must_change_password === true });
+        const updatedUser = { ...userData, role, must_change_password: userData?.must_change_password === true };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
         setLoginInfoMessage('');
         navigate('/');
     };
@@ -45,7 +47,14 @@ function AppContent() {
         navigate('/');
     };
     const handlePasswordChanged = () => {
-        setUser((prev) => (prev ? { ...prev, must_change_password: false } : null));
+        setUser((prev) => {
+            if (prev) {
+                const updatedUser = { ...prev, must_change_password: false };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                return updatedUser;
+            }
+            return null;
+        });
     };
 
     // Session timeout based on user inactivity

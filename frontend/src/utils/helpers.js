@@ -41,8 +41,8 @@ export function formatDisplayDate(date) {
     if (Number.isNaN(d.getTime())) return '';
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${month}/${day}/${year}`;
+    const year = String(d.getFullYear()).slice(-2);
+    return `${month}-${day}-${year}`;
 }
 
 /**
@@ -53,6 +53,24 @@ export function formatInputDate(date) {
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return '';
     return d.toISOString().split('T')[0];
+}
+
+/**
+ * Ensure date is in MM-DD-YY format for backend if it's in YYYY-MM-DD or full ISO
+ */
+export function toBackendDateFormat(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return dateStr;
+    
+    let datePart = dateStr;
+    if (dateStr.includes('T')) {
+        datePart = dateStr.split('T')[0];
+    }
+    
+    if (datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [y, m, d] = datePart.split('-');
+        return `${m}-${d}-${y.slice(-2)}`;
+    }
+    return dateStr;
 }
 
 /**
