@@ -13,7 +13,8 @@ CHECKLIST_DOC_TYPES = [
         'Project Procurement Management Plan/Supplemental PPMP', 
         'Annual Procurement Plan', 
         'Market Scopping', 
-        'Requisition and Issue Slip'
+        'Requisition and Issue Slip',
+        'Supplies'
     ]),
     ('RFQ Concerns', [
         'PHILGEPS - Lease of Venue',
@@ -24,7 +25,7 @@ CHECKLIST_DOC_TYPES = [
         'Certificate of DILG - Public Bidding',
     ]),
     ('BAC Meeting Documents', [
-        'Certificate of BAC', 
+        'Notice of BAC Meeting', 
         'Invitation to COA', 
         'Attendance Sheet', 
         'Minutes of the Meeting'

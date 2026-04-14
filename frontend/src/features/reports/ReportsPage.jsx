@@ -221,7 +221,7 @@ const Reports = ({ user }) => {
                                 placeholder="Search reports (title, office, uploaded by, date)..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="input-field w-full pl-10 rounded-lg"
+                                className="input-field w-full pl-10"
                             />
                         </div>
                     </div>
@@ -252,16 +252,18 @@ const Reports = ({ user }) => {
                                     {isAdmin && (
                                     <td className="table-td text-center">
                                         <div className="flex items-center justify-center gap-2">
-                                            <button 
-                                                onClick={() => openPreview(r)} 
-                                                className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm shadow-emerald-500/5"
+                                            <button
+                                                type="button"
+                                                onClick={() => openPreview(r)}
+                                                className="btn-compact-primary"
                                                 title="Preview report"
                                             >
                                                 Preview
                                             </button>
-                                            <button 
-                                                onClick={() => triggerDownload(r)} 
-                                                className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all active:scale-95 shadow-sm shadow-blue-500/5"
+                                            <button
+                                                type="button"
+                                                onClick={() => triggerDownload(r)}
+                                                className="btn-compact-muted"
                                                 title="Download PDF"
                                             >
                                                 Download
@@ -328,26 +330,27 @@ const Reports = ({ user }) => {
                 title="Confirm Upload"
                 size="md"
             >
-                <div className="p-2 space-y-6">
-                    <div className="flex items-center gap-4 p-5 bg-blue-50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/20">
-                        <MdUpload className="w-10 h-10 text-blue-600 shrink-0" />
+                <div className="space-y-6">
+                    <div className="alert-info">
+                        <MdUpload className="w-6 h-6 shrink-0 text-blue-600" aria-hidden />
                         <div>
-                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Confirm Action</p>
-                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            <p className="text-xs font-semibold text-blue-800 m-0 mb-1">Confirm action</p>
+                            <p className="text-sm font-medium m-0">
                                 {confirmUpload?.message}
                             </p>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        <button onClick={() => setConfirmUpload(null)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-colors">
+                    <div className="modal-footer !p-0 !border-0 flex gap-3">
+                        <button type="button" onClick={() => setConfirmUpload(null)} className="btn-secondary flex-1 justify-center">
                             Cancel
                         </button>
-                        <button 
-                            onClick={confirmUpload?.onConfirm} 
-                            disabled={uploading} 
-                            className="flex-1 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50"
+                        <button
+                            type="button"
+                            onClick={confirmUpload?.onConfirm}
+                            disabled={uploading}
+                            className="btn-primary flex-1 justify-center inline-flex items-center gap-2"
                         >
-                            {uploading ? <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdUpload className="w-4 h-4" />}
+                            {uploading ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden /> : <MdUpload className="w-4 h-4" />}
                             Upload
                         </button>
                     </div>

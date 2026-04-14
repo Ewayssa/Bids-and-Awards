@@ -2,14 +2,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from datetime import timedelta
 from django.http import FileResponse, HttpResponse, JsonResponse
+from django.conf import settings as django_settings
 import mimetypes
 
 from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog
+from ..permissions import IsAdminRole
 from ..serializers import (
     UserSerializer,
     RegisterSerializer,
@@ -96,6 +99,7 @@ def register(request):
     )
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def update_profile(request):
     """Allow user to update their own profile."""
     username = request.data.get('username')
@@ -103,6 +107,9 @@ def update_profile(request):
     
     if not username or not current_password:
         return Response({'detail': 'email and current_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.user.username != username:
+        return Response({'detail': 'You can only update your own profile.'}, status=status.HTTP_403_FORBIDDEN)
         
     user = authenticate(username=username, password=current_password)
     if not user:
@@ -133,6 +140,7 @@ def update_profile(request):
 # --- Password Management Views ---
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def change_password(request):
     """Allow user to set a new password."""
     username = request.data.get('username')
@@ -141,6 +149,9 @@ def change_password(request):
     
     if not all([username, current_password, new_password]):
         return Response({'detail': 'All password fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.user.username != username:
+        return Response({'detail': 'You can only change your own password.'}, status=status.HTTP_403_FORBIDDEN)
         
     user = authenticate(username=username, password=current_password)
     if not user:
@@ -158,6 +169,10 @@ def change_password(request):
 @permission_classes([AllowAny])
 def forgot_password(request):
     """Generate a temporary password and require change on next login."""
+    _forgot_msg = (
+        'If an account exists for this identifier, recovery steps allowed by your administrator '
+        'have been applied. Contact your administrator if you still cannot sign in.'
+    )
     identifier = (request.data.get('username') or request.data.get('email') or '').strip()
     if not identifier:
         return Response({'detail': 'Email or username is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -166,8 +181,7 @@ def forgot_password(request):
            User.objects.filter(email__iexact=identifier).first()
            
     if not user or not user.is_active:
-        # Return success even if user doesn't exist for security
-        return Response({'message': 'If an account exists, a temporary password will be generated.'})
+        return Response({'message': _forgot_msg})
         
     import secrets
     import string
@@ -179,15 +193,14 @@ def forgot_password(request):
     user.save(update_fields=['password', 'must_change_password'])
     
     _log_audit('password_reset_request', user.username, 'user', str(user.id), 'Temporary password generated')
-    
-    # In a real system, send this via email.
-    print(f"TEMPORARY PASSWORD for {user.username}: {temp_password}")
-    
-    return Response({
-        'message': 'A temporary password has been generated.',
-        'temporary_password': temp_password,  # Including for development/demo ease
-        'email_sent': True
-    })
+
+    if django_settings.DEBUG:
+        print(f"TEMPORARY PASSWORD for {user.username}: {temp_password}")
+
+    payload = {'message': _forgot_msg}
+    if django_settings.DEBUG:
+        payload['temporary_password'] = temp_password
+    return Response(payload)
 
 # Removed reset_password view as we now use temporary passwords.
 
@@ -196,6 +209,11 @@ def forgot_password(request):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
+
+    def get_permissions(self):
+        if self.action == 'bac_members':
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdminRole()]
 
     @action(detail=False, methods=['get'])
     def bac_members(self, request):
@@ -237,43 +255,60 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        username = (request.data.get('currentUsername') or '').strip()
-        if not username:
-            return Response({'detail': 'User required.'}, status=status.HTTP_403_FORBIDDEN)
-        
-        user = User.objects.filter(username=username).first()
-        if not user:
-            return Response({'detail': 'User not found.'}, status=status.HTTP_403_FORBIDDEN)
-            
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+
         doc_by = (instance.uploadedBy or '').strip().lower()
-        # Admin can always bypass the restriction
-        if user.role.lower() != 'admin':
-            if doc_by != username.lower() and doc_by != (user.fullName or '').strip().lower():
-                return Response({'detail': 'Unauthorized uploader. Only the original uploader or an Admin can edit this document.'}, status=status.HTTP_403_FORBIDDEN)
-                
+        if (user.role or '').lower() != 'admin':
+            uname = (user.username or '').strip().lower()
+            fname = (user.fullName or '').strip().lower()
+            if doc_by != uname and doc_by != fname:
+                return Response(
+                    {'detail': 'Unauthorized uploader. Only the original uploader or an Admin can edit this document.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        doc_by = (instance.uploadedBy or '').strip().lower()
+        if (user.role or '').lower() != 'admin':
+            uname = (user.username or '').strip().lower()
+            fname = (user.fullName or '').strip().lower()
+            if doc_by != uname and doc_by != fname:
+                return Response(
+                    {'detail': 'Unauthorized. Only the original uploader or an Admin can delete this document.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        return super().destroy(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         doc = serializer.save()
         title = (doc.title or doc.prNo or 'Document')[:80]
         _log_audit('document_created', doc.uploadedBy or 'Unknown', 'document', str(doc.id), title)
-        _create_notification(f'New BAC document submitted: {title}')
+        _create_notification(f'New BAC document submitted: {title}', admin_only=False)
 
     def perform_update(self, serializer):
         old_status = serializer.instance.calculate_status()
         doc = serializer.save()
         doc.refresh_from_db()
         title = (doc.title or doc.prNo or 'Document')[:80]
-        actor = (self.request.data.get('currentUsername') or doc.uploadedBy or 'Unknown')
+        actor = self.request.user.username
         _log_audit('document_updated', actor, 'document', str(doc.id), title)
-        _create_notification(f'BAC document updated: {title}')
+        _create_notification(f'BAC document updated: {title}', admin_only=True)
         if doc.status == 'complete' and old_status != 'complete':
             _log_audit('document_completed', actor, 'document', str(doc.id), title)
-            _create_notification(f'BAC document completed: {title}')
+            _create_notification(f'BAC document completed: {title}', admin_only=True)
 
     def perform_destroy(self, instance):
         doc_id, title = str(instance.id), (instance.title or instance.prNo or 'Document')[:80]
-        actor = (self.request.data.get('currentUsername') or instance.uploadedBy or 'Unknown')
+        actor = self.request.user.username
         super().perform_destroy(instance)
         _log_audit('document_deleted', actor, 'document', doc_id, title)
 
@@ -290,6 +325,8 @@ class ReportViewSet(viewsets.ModelViewSet):
         report = self.get_object()
         if not report.file: return Response({'detail': 'No file.'}, status=status.HTTP_404_NOT_FOUND)
         try:
+            # NOTE: For production, it's more efficient to offload file serving to a web server
+            # like Nginx using X-Accel-Redirect. This Django view is suitable for development.
             content_type, _ = mimetypes.guess_type(report.file.name)
             content_type = content_type or 'application/octet-stream'
             resp = FileResponse(report.file.open('rb'), content_type=content_type)
@@ -306,10 +343,47 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
         event = serializer.save()
         actor = self.request.data.get('created_by') or 'Unknown'
         _log_audit('calendar_event_created', actor, 'calendar_event', str(event.id), event.title[:80])
+        date_str = event.date.strftime('%b %d, %Y') if event.date else ''
+        title_short = (event.title or 'Activity')[:200]
+        _create_notification(
+            f'BAC activity scheduled: {title_short} — {date_str}',
+            link='/',
+            admin_only=True,
+        )
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Notification.objects.all().order_by('-created_at')
     serializer_class = NotificationSerializer
+
+    def _ensure_upcoming_calendar_notifications(self):
+        """
+        Create user-facing reminders for calendar events occurring tomorrow.
+
+        This runs opportunistically during `get_queryset()` (idempotent via message match)
+        so we don't need a background scheduler.
+        """
+        today = timezone.now().date()
+        reminder_date = today + timedelta(days=1)
+        reminder_date_str = reminder_date.strftime('%b %d, %Y')
+
+        events = CalendarEvent.objects.filter(date=reminder_date)
+        for e in events:
+            title_short = (e.title or 'Activity')[:200]
+            msg = f'Incoming BAC activity: {title_short} — {reminder_date_str}'
+            if not Notification.objects.filter(message=msg, admin_only=False).exists():
+                _create_notification(msg, link='/', admin_only=False)
+
+    def get_queryset(self):
+        qs = Notification.objects.all().order_by('-created_at')
+        user = self.request.user
+        if not user.is_authenticated:
+            return Notification.objects.none()
+        role = (getattr(user, 'role', None) or '').strip().lower()
+        is_admin = role == 'admin' or getattr(user, 'is_superuser', False)
+        if not is_admin:
+            self._ensure_upcoming_calendar_notifications()
+            qs = qs.filter(admin_only=False)
+        return qs
 
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
@@ -320,7 +394,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['post'])
     def mark_all_read(self, request):
-        Notification.objects.filter(read=False).update(read=True)
+        self.get_queryset().filter(read=False).update(read=True)
         return Response({'detail': 'ok'})
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -337,20 +411,37 @@ def next_transaction_number(request):
 @api_view(['GET'])
 def get_dashboard_data(request):
     uploaded_by = request.query_params.get('uploadedBy', '').strip()
-    data = DashboardService.get_dashboard_data(uploaded_by=uploaded_by)
+    user = request.user
+    role = (getattr(user, 'role', None) or '').strip().lower()
+    is_admin = role == 'admin' or getattr(user, 'is_superuser', False)
+    data = DashboardService.get_dashboard_data(uploaded_by=uploaded_by, is_admin=is_admin)
     return Response(data, headers={'Cache-Control': 'no-store, no-cache, must-revalidate'})
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminRole])
 def backup_data(request):
-    data = BackupService.export_data()
-    username = (request.data.get('username') or request.query_params.get('username') or 'System').strip()
-    _log_audit('backup_exported', username, 'system', '', 'Data backup exported')
-    return JsonResponse(data)
+    zip_buffer = BackupService.create_zip_backup()
+    username = (request.query_params.get('username') or 'System').strip()
+    _log_audit('backup_exported', username, 'system', '', 'Full ZIP backup exported')
+    
+    response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+    filename = f"bac_backup_{timezone.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminRole])
 def restore_data(request):
-    restored = BackupService.restore_data(request.data)
-    username = (request.data.get('username') or request.query_params.get('username') or 'System').strip()
+    username = request.user.username
+    
+    if 'file' not in request.FILES:
+        return Response({'detail': 'A .zip backup file is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    upload_file = request.FILES['file']
+    if not upload_file.name.endswith('.zip'):
+        return Response({'detail': 'Please upload a .zip file.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    restored = BackupService.restore_zip_backup(upload_file)
     msg = f"Restore: {restored['calendarEvents']} events, {restored['users']} users, {restored['documents']} docs, {restored['reports']} reports"
     _log_audit('restore_completed', username, 'system', '', msg)
     return Response({'detail': 'Restore completed', 'restored': restored})

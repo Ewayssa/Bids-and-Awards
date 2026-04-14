@@ -10,11 +10,13 @@ export const formatDate = (d, { forFilter = false } = {}) => {
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    if (forFilter) return `${year}-${month}-${day}`;
+    // Return MM/DD/YYYY for display as per user request
+    return `${month}/${day}/${year}`;
 };
 
 /**
- * Formats a date to DD-MM-YYYY format
+ * Formats a date to MM/DD/YYYY format
  */
 export const toDDMMYYYY = (val) => {
     if (val == null || val === '') return '';
@@ -23,7 +25,8 @@ export const toDDMMYYYY = (val) => {
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    // Return MM/DD/YYYY for consistency as per user request
+    return `${month}/${day}/${year}`;
 };
 
 /**

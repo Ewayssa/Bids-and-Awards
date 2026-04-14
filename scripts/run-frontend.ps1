@@ -1,6 +1,6 @@
 # BAC Document Tracking - Start Vite Frontend
-$frontendPath = $PSScriptRoot
-if (-not $frontendPath) { $frontendPath = Get-Location | Select-Object -ExpandProperty Path }
+$root = Split-Path $PSScriptRoot -Parent
+$frontendPath = Join-Path $root "frontend"
 
 Set-Location $frontendPath
 Write-Host "Project folder: $frontendPath" -ForegroundColor Cyan

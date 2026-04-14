@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDisplayDate } from '../../utils/helpers.jsx';
 import { useLocation } from 'react-router-dom';
 import { ROLES, mapOldRoleToNew } from '../../utils/auth';
 import NotificationBell from '../notifications/NotificationBell';
@@ -24,34 +25,29 @@ const Dashboard = ({ user, onLogout }) => {
     const [editEventModal, setEditEventModal] = useState(null);
 
     const isAdmin = mapOldRoleToNew(user?.role) === ROLES.ADMIN;
-    const dateLabel = new Date().toLocaleDateString('en-PH', { 
-        weekday: 'long', 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-    });
+    const dateLabel = formatDisplayDate(new Date());
 
     if (location.pathname !== '/') return null;
 
     return (
-        <div className="space-y-5 pb-8">
+        <div className="space-y-6 pb-8">
             <PageHeader
                 title="BAC Dashboard"
                 subtitle={dateLabel}
                 titleSize="default"
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
                     <NotificationBell user={user} />
                     <UserAccountDropdown user={user} onLogout={onLogout} />
                 </div>
             </PageHeader>
 
-            <div className="content-section overflow-hidden rounded-xl p-0">
-                <div className="p-6 sm:p-7 border-b border-[var(--border-light)]">
+            <div className="content-section overflow-hidden rounded-[var(--radius-lg)] p-0 min-w-0">
+                <div className="p-6 sm:p-7 border-b border-[var(--border-light)] bg-[var(--surface)]">
                     <StatsGrid loading={loading} stats={stats} />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 w-full dashboard-grid">
+                <div className="grid grid-cols-1 lg:grid-cols-2 w-full min-w-0 gap-0 dashboard-grid">
                     <DashboardCalendar 
                         events={stats.calendarEvents} 
                         isAdmin={isAdmin} 

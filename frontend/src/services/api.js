@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api';
+/** Same-origin default (Vite dev proxy). Set VITE_API_BASE_URL for a separate API host in production. */
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 // Create an axios instance
 const api = axios.create({
@@ -132,8 +133,20 @@ export const dashboardService = {
 
 export const notificationService = {
     async getAll() {
-        const response = await api.get(`/notifications/`);
-        return response.data;
+        let all = [];
+        let nextUrl = `/notifications/`;
+        while (nextUrl) {
+            const response = await api.get(nextUrl);
+            const body = response.data;
+            const page = Array.isArray(body) ? body : (body?.results ?? []);
+            all = all.concat(page);
+            const next = body?.next;
+            if (!next) break;
+            nextUrl = next.includes(API_BASE_URL)
+                ? next.split(API_BASE_URL)[1]
+                : (next.startsWith('http') ? new URL(next).pathname + new URL(next).search : next);
+        }
+        return all;
     },
     async markRead(id) {
         const response = await api.post(`/notifications/${id}/mark_read/`);
@@ -233,14 +246,6 @@ export const userService = {
         const response = await api.post(`/forgot-password/`, {
             username: emailOrUsername,
             email: emailOrUsername,
-        });
-        return response.data;
-    },
-
-    async resetPassword(token, newPassword) {
-        const response = await api.post(`/reset-password/`, {
-            token,
-            new_password: newPassword,
         });
         return response.data;
     },

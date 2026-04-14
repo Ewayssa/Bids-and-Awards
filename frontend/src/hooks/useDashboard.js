@@ -98,10 +98,14 @@ export const useDashboard = (user) => {
         const onDocumentChanged = () => loadData();
         window.addEventListener('documentChanged', onDocumentChanged);
 
+        const onCalendarChanged = () => loadData();
+        window.addEventListener('calendarChanged', onCalendarChanged);
+
         return () => {
             window.removeEventListener('focus', onFocus);
             clearInterval(interval);
             window.removeEventListener('documentChanged', onDocumentChanged);
+            window.removeEventListener('calendarChanged', onCalendarChanged);
         };
     }, [location.pathname, loadData]);
 

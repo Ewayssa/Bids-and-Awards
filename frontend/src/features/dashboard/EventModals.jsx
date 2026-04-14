@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MdAdd, MdClose, MdEdit, MdEvent, MdDelete, MdInfo, MdCheckCircle, MdUpdate } from 'react-icons/md';
 import { calendarEventService } from '../../services/api';
+import { formatDisplayDate, DatePicker } from '../../utils/helpers.jsx';
 import Modal from '../../components/Modal';
 
 export const EventModals = ({ 
@@ -40,7 +41,9 @@ export const EventModals = ({
                 title: eventTitle.trim(),
                 date: eventModal.date,
             });
-            onRefresh();
+            await onRefresh();
+            // Notify other open dashboard instances to refresh immediately.
+            window.dispatchEvent(new Event('calendarChanged'));
             setEventModal(null);
             setEventTitle('');
         } catch (err) {
@@ -66,7 +69,8 @@ export const EventModals = ({
                 title: editEventTitle.trim(),
                 date: editEventDate.trim(),
             });
-            onRefresh();
+            await onRefresh();
+            window.dispatchEvent(new Event('calendarChanged'));
             setEditEventModal(null);
         } catch (err) {
             setEditEventError('Failed to update event.');
@@ -81,7 +85,8 @@ export const EventModals = ({
         setDeleteSubmitting(true);
         try {
             await calendarEventService.delete(id);
-            onRefresh();
+            await onRefresh();
+            window.dispatchEvent(new Event('calendarChanged'));
             setConfirmDeleteEvent(null);
             setEditEventModal(null);
         } catch {
@@ -109,38 +114,39 @@ export const EventModals = ({
                     setEventError('');
                     setConfirmAddEvent(true); 
                 }} className="space-y-6">
-                    <div className="p-5 bg-blue-50 dark:bg-blue-500/5 rounded-3xl border border-blue-100 dark:border-blue-500/20 flex items-center gap-4">
-                        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm text-blue-600">
-                            <MdEvent className="w-6 h-6" />
+                    <div className="alert-info">
+                        <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border-light)] text-[var(--primary)] shrink-0">
+                            <MdEvent className="w-6 h-6" aria-hidden />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Selected Date</p>
-                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{eventModal?.date}</p>
+                            <p className="text-xs font-semibold text-[var(--text)] m-0 mb-0.5">Selected date</p>
+                            <p className="text-sm font-medium m-0">{formatDisplayDate(eventModal?.date)}</p>
                         </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Event Title</label>
-                        <input 
-                            type="text" 
-                            value={eventTitle} 
+                    <div className="field-group">
+                        <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="event-title-input">Event title</label>
+                        <input
+                            id="event-title-input"
+                            type="text"
+                            value={eventTitle}
                             onChange={(e) => {
                                 setEventTitle(e.target.value);
                                 if (eventError) setEventError('');
-                            }} 
+                            }}
                             placeholder="e.g. BAC Meeting"
-                            className="input-field w-full h-12 px-4 dark:bg-slate-800 rounded-xl" 
-                            required 
-                            autoFocus 
+                            className="input-field w-full"
+                            required
+                            autoFocus
                         />
-                        {eventError && <p className="text-[10px] font-bold text-red-500 uppercase px-1">{eventError}</p>}
+                        {eventError && <p className="text-xs font-medium text-red-600 mt-1">{eventError}</p>}
                     </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setEventModal(null)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-colors">
+                    <div className="flex gap-3 pt-2 flex-wrap">
+                        <button type="button" onClick={() => setEventModal(null)} className="btn-secondary flex-1 min-w-[6rem] justify-center">
                             Cancel
                         </button>
-                        <button type="submit" className="flex-1 py-3.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <button type="submit" className="btn-primary flex-1 min-w-[6rem] justify-center inline-flex items-center gap-2">
                             <MdAdd className="w-4 h-4" /> Add
                         </button>
                     </div>
@@ -156,56 +162,55 @@ export const EventModals = ({
             >
                 <div className="space-y-6">
                     <div className="space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Event Title</label>
-                            <input 
-                                type="text" 
-                                value={editEventTitle} 
+                        <div className="field-group">
+                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-title">Event title</label>
+                            <input
+                                id="edit-event-title"
+                                type="text"
+                                value={editEventTitle}
                                 onChange={(e) => {
                                     setEditEventTitle(e.target.value);
                                     if (editEventError) setEditEventError('');
-                                }} 
-                                className="input-field w-full h-12 px-4 dark:bg-slate-800 rounded-xl" 
-                                required 
+                                }}
+                                className="input-field w-full"
+                                required
                             />
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Event Date</label>
-                            <input 
-                                type="date" 
-                                value={editEventDate} 
-                                onChange={(e) => {
-                                    setEditEventDate(e.target.value);
+                        <div className="field-group">
+                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-date">Event date</label>
+                            <DatePicker
+                                value={editEventDate}
+                                onChange={(val) => {
+                                    setEditEventDate(val);
                                     if (editEventError) setEditEventError('');
-                                }} 
-                                className="input-field w-full h-12 px-4 dark:bg-slate-800 rounded-xl" 
-                                required 
+                                }}
                             />
                         </div>
                     </div>
 
                     {editEventError && (
-                        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center gap-3 text-red-600">
-                            <MdInfo className="w-5 h-5 shrink-0" />
-                            <p className="text-[10px] font-black uppercase tracking-tight">{editEventError}</p>
+                        <div className="alert-error" role="alert">
+                            <MdInfo className="w-5 h-5 shrink-0" aria-hidden />
+                            <p className="text-sm font-medium m-0">{editEventError}</p>
                         </div>
                     )}
 
-                    <div className="flex gap-3 pt-2">
-                        <button 
-                            type="button" 
-                            onClick={() => setConfirmDeleteEvent({ ev: editEventModal.ev })} 
-                            className="px-6 py-3.5 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-red-100 transition-colors"
+                    <div className="flex gap-3 pt-2 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={() => setConfirmDeleteEvent({ ev: editEventModal.ev })}
+                            className="btn-danger px-4"
                         >
                             Delete
                         </button>
-                        <button 
-                            onClick={handleUpdateEvent} 
-                            disabled={editEventSubmitting} 
-                            className="flex-1 py-3.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                        <button
+                            type="button"
+                            onClick={handleUpdateEvent}
+                            disabled={editEventSubmitting}
+                            className="btn-primary flex-1 min-w-[8rem] justify-center inline-flex items-center gap-2"
                         >
-                            {editEventSubmitting ? <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdUpdate className="w-4 h-4" />}
-                            Save Changes
+                            {editEventSubmitting ? <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden /> : <MdUpdate className="w-4 h-4" />}
+                            Save changes
                         </button>
                     </div>
                 </div>
@@ -218,17 +223,17 @@ export const EventModals = ({
                 title="Confirm Action"
                 size="md"
             >
-                <div className="p-2 space-y-6">
-                    <div className="flex items-center gap-4 p-5 bg-emerald-50 dark:bg-emerald-500/5 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 text-emerald-600">
-                        <MdCheckCircle className="w-10 h-10 shrink-0" />
+                <div className="space-y-6">
+                    <div className="alert-success">
+                        <MdCheckCircle className="w-8 h-8 shrink-0 text-emerald-600" aria-hidden />
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">Entry Confirmation</p>
-                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Are you sure you want to add this event to the calendar?</p>
+                            <p className="text-xs font-semibold text-[var(--text)] m-0 mb-1">Confirm</p>
+                            <p className="text-sm font-medium m-0">Add this event to the calendar?</p>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        <button onClick={() => setConfirmAddEvent(null)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">Cancel</button>
-                        <button onClick={handleAddEvent} className="flex-1 py-3.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95">Confirm</button>
+                    <div className="modal-footer !p-0 !border-0 flex gap-3">
+                        <button type="button" onClick={() => setConfirmAddEvent(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+                        <button type="button" onClick={handleAddEvent} className="btn-primary flex-1 justify-center">Confirm</button>
                     </div>
                 </div>
             </Modal>
@@ -240,19 +245,19 @@ export const EventModals = ({
                 title="Confirm Deletion"
                 size="md"
             >
-                <div className="p-2 space-y-6">
-                    <div className="flex items-center gap-4 p-5 bg-red-50 dark:bg-red-500/5 rounded-3xl border border-red-100 dark:border-red-500/20 text-red-600">
-                        <MdDelete className="w-10 h-10 shrink-0" />
+                <div className="space-y-6">
+                    <div className="alert-error">
+                        <MdDelete className="w-8 h-8 shrink-0" aria-hidden />
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest mb-1">Warning</p>
-                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">This action cannot be undone. Permanent deletion will follow.</p>
+                            <p className="text-sm font-semibold m-0 mb-1">Warning</p>
+                            <p className="text-sm font-medium m-0">This cannot be undone.</p>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        <button onClick={() => setConfirmDeleteEvent(null)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">Cancel</button>
-                        <button onClick={handleDeleteEvent} disabled={deleteSubmitting} className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-600/20 flex items-center justify-center gap-2">
-                            {deleteSubmitting ? <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdDelete className="w-4 h-4" />}
-                            Confirm Delete
+                    <div className="modal-footer !p-0 !border-0 flex gap-3">
+                        <button type="button" onClick={() => setConfirmDeleteEvent(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+                        <button type="button" onClick={handleDeleteEvent} disabled={deleteSubmitting} className="btn-danger flex-1 justify-center inline-flex items-center gap-2">
+                            {deleteSubmitting ? <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden /> : <MdDelete className="w-4 h-4" />}
+                            Delete
                         </button>
                     </div>
                 </div>

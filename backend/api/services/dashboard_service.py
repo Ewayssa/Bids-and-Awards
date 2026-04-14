@@ -34,6 +34,7 @@ class DashboardService:
         'Annual Procurement Plan',
         'Market Scopping',
         'Requisition and Issue Slip',
+        'Supplies',
         
         # BAC Meeting Documents
         'Notice of BAC Meeting',
@@ -91,12 +92,11 @@ class DashboardService:
         """Count unique sub-document types that have not been submitted at all."""
         docs = list(docs_qs.filter(uploaded_at__isnull=False))
         
-        # Get all submitted sub-doc types that are NOT in a 'pending' state
-        # (This matches the user's business logic for incomplete requirements)
+        # Get all submitted sub-doc types
         submitted_sub_docs = set()
         for d in docs:
             sub_doc = (d.subDoc or '').strip()
-            if sub_doc and d.calculate_status() != 'pending':
+            if sub_doc:
                 submitted_sub_docs.add(sub_doc)
         
         # Count required sub-docs that are not submitted
@@ -163,19 +163,21 @@ class DashboardService:
         return breakdown
 
     @classmethod
-    def get_dashboard_data(cls, uploaded_by=None):
+    def get_dashboard_data(cls, uploaded_by=None, is_admin=False):
         docs_qs = Document.objects.all().order_by('-uploaded_at')
         if uploaded_by:
             docs_qs = docs_qs.filter(uploadedBy=uploaded_by)
 
         doc_counts = cls.get_document_status_counts(docs_qs)
-        checklist_pending = cls.get_checklist_global_pending(docs_qs)
         pending_breakdown = cls.get_pending_breakdown(docs_qs)
+        
+        # Calculate Pending total as the sum of all missing documents across all folders
+        checklist_pending = sum(b['missingCount'] for b in pending_breakdown)
 
         # Dashboard Logic:
         # Completed: Documents fully filled/submitted
         # Ongoing: Documents started but not yet complete
-        # Pending: Number of required sub-document types that have not been submitted at all
+        # Pending: Total sum of missing required items across all folders
         # Total: Total uploaded documents
         pie_data = [
             doc_counts['total'],
@@ -253,4 +255,3 @@ class DashboardService:
             {'message': n.message, 'created_at': n.created_at.isoformat(), 'id': str(n.id)}
             for n in Notification.objects.all().order_by('-created_at')[:limit]
         ]
-

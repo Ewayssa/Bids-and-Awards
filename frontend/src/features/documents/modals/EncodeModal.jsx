@@ -25,22 +25,23 @@ const EncodeModal = ({
         >
             <div className="flex flex-col h-full space-y-3">
                 {/* Information Banner */}
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
-                    <div className="flex items-center gap-5">
-                        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm text-emerald-600 shrink-0">
-                            <MdTableChart className="w-8 h-8" />
+                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--primary-muted)]/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <div className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--border-light)] text-[var(--primary)] shrink-0 shadow-sm">
+                            <MdTableChart className="w-7 h-7" />
                         </div>
-                        <div>
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Procurement Monitoring</h3>
+                        <div className="min-w-0">
+                            <h3 className="text-base font-semibold text-[var(--text)] m-0">Procurement monitoring</h3>
+                            <p className="text-xs text-[var(--text-muted)] m-0 mt-0.5">Encode rows, export to Excel, then save when complete.</p>
                         </div>
                     </div>
-                    
-                    <div className="flex items-center gap-3">
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <button
                             type="button"
                             onClick={exportExcel}
                             disabled={encodedRows.length === 0}
-                            className="flex-1 md:flex-none px-6 py-3 bg-white dark:bg-slate-900 text-slate-600 rounded-2xl font-bold uppercase tracking-widest text-[10px] border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all flex items-center justify-center gap-2"
+                            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm py-2 px-4 flex-1 md:flex-none min-w-[8rem]"
                         >
                             <MdDownload className="w-4 h-4" /> Export Excel
                         </button>
@@ -48,19 +49,15 @@ const EncodeModal = ({
                             type="button"
                             onClick={addRow}
                             disabled={isFinalized}
-                            className="flex-1 md:flex-none px-6 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="btn-primary inline-flex items-center justify-center gap-2 text-sm py-2 px-4 flex-1 md:flex-none min-w-[8rem]"
                         >
-                            <MdAdd className="w-4 h-4" /> Add Row
+                            <MdAdd className="w-4 h-4" /> Add row
                         </button>
                         <button
                             type="button"
                             onClick={() => setIsFinalized(!isFinalized)}
                             disabled={encodedRows.length === 0}
-                            className={`flex-1 md:flex-none px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 ${
-                                isFinalized 
-                                ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-slate-900/20 hover:bg-black font-black' 
-                                : 'bg-emerald-600/90 hover:bg-emerald-700 text-white shadow-emerald-500/20 backdrop-blur-md font-black'
-                            }`}
+                            className={`inline-flex items-center justify-center gap-2 text-sm py-2 px-5 flex-1 md:flex-none min-w-[8rem] disabled:opacity-50 ${isFinalized ? 'btn-secondary' : 'btn-primary'}`}
                         >
                             {isFinalized ? <><MdEdit className="w-4 h-4" /> Edit</> : <><MdSave className="w-4 h-4" /> Save</>}
                         </button>
@@ -78,7 +75,10 @@ const EncodeModal = ({
                         </div>
                         <div className="border-b border-[var(--border-light)] px-3 py-1.5 bg-[var(--background-subtle)]">
                             <span className="text-sm font-bold text-[var(--text)]">
-                                Monitoring Report as of {new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                                Monitoring Report as of {(() => {
+                                    const d = new Date();
+                                    return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+                                })()}
                             </span>
                         </div>
                         <div className="bg-[var(--primary)] border-b border-[var(--primary-dark)] px-3 py-1.5">

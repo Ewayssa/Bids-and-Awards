@@ -1,14 +1,13 @@
 import React from 'react';
-import { 
-    MdChevronLeft, 
-    MdClose, 
-    MdFolder, 
-    MdDescription, 
-    MdError, 
+import {
+    MdChevronLeft,
+    MdFolder,
+    MdDescription,
+    MdError,
     MdChevronRight,
     MdNavigateBefore,
     MdNavigateNext,
-    MdOpenInNew
+    MdOpenInNew,
 } from 'react-icons/md';
 import { DocDetailsView } from '../DocDetailsView';
 import Modal from '../../../components/Modal';
@@ -34,9 +33,9 @@ const ManageDocumentsModal = ({
             return (
                 <div className="space-y-6">
                     {manageRefreshing && (
-                        <div className="flex items-center justify-center gap-3 py-4 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400">
-                            <div className="w-5 h-5 rounded-full border-2 border-transparent border-t-blue-600 animate-spin" />
-                            <span className="text-sm font-bold uppercase tracking-widest">Scanning Document Repository...</span>
+                        <div className="alert-info py-3.5">
+                            <div className="w-5 h-5 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin shrink-0" aria-hidden />
+                            <span className="text-sm font-medium">Scanning document repository…</span>
                         </div>
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -49,17 +48,17 @@ const ManageDocumentsModal = ({
                                     key={docType.id}
                                     type="button"
                                     onClick={() => setManageSelectedTypeId(docType.id)}
-                                    className="group relative flex flex-col p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:shadow-lg transition-all text-left"
+                                    className="group relative flex flex-col p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-light)] hover:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] hover:shadow-[var(--shadow-md)] transition-all text-left"
                                 >
-                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-3 group-hover:scale-105 transition-transform">
-                                        <MdFolder className="w-6 h-6" />
+                                    <div className="w-10 h-10 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] mb-3">
+                                        <MdFolder className="w-6 h-6" aria-hidden />
                                     </div>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors truncate">{docType.name}</p>
-                                    <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
-                                        {folderCount} Folders
+                                    <p className="text-sm font-semibold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors truncate m-0">{docType.name}</p>
+                                    <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide mt-1 m-0">
+                                        {folderCount} folder{folderCount !== 1 ? 's' : ''}
                                     </p>
-                                    <div className="absolute top-3 right-3 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all">
-                                        <MdChevronRight className="w-5 h-5" />
+                                    <div className="absolute top-3 right-3 text-[var(--text-subtle)] group-hover:text-[var(--primary)] transition-colors">
+                                        <MdChevronRight className="w-5 h-5" aria-hidden />
                                     </div>
                                 </button>
                             );
@@ -76,25 +75,27 @@ const ManageDocumentsModal = ({
 
         return (
             <div className="space-y-6">
-                <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                <div className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-[var(--background-subtle)]/50">
                     <div className="flex items-center gap-2">
-                        <button 
+                        <button
+                            type="button"
                             onClick={() => setManageSelectedTypeId(null)}
-                            className="p-1.5 bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:text-emerald-600 transition-colors"
+                            className="p-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-[color-mix(in_srgb,var(--primary)_30%,var(--border))] transition-colors"
+                            aria-label="Back to categories"
                         >
                             <MdChevronLeft className="w-4 h-4" />
                         </button>
                         <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Category</p>
-                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase">{docType?.name}</p>
+                            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide m-0">Category</p>
+                            <p className="text-xs font-semibold text-[var(--text)] m-0 mt-0.5">{docType?.name}</p>
                         </div>
                     </div>
                 </div>
 
                 {prNoList.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                        <MdDescription className="w-12 h-12 text-slate-300 mb-3" />
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No folders found</p>
+                    <div className="flex flex-col items-center justify-center py-20 rounded-xl border border-dashed border-[var(--border)] bg-[var(--background-subtle)]/30">
+                        <MdDescription className="w-12 h-12 text-[var(--text-subtle)] mb-3" aria-hidden />
+                        <p className="text-sm font-medium text-[var(--text-muted)] m-0">No folders found</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
@@ -115,23 +116,23 @@ const ManageDocumentsModal = ({
                                         setManageFolderPopup({ typeId: manageSelectedTypeId, prNo });
                                         setManageFolderPopupIndex(0);
                                     }}
-                                    className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/40 dark:hover:bg-emerald-500/5 transition-all group"
+                                    className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface)] border border-[var(--border-light)] hover:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] hover:bg-[var(--primary-muted)]/25 transition-colors group"
                                 >
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 group-hover:text-emerald-600 transition-colors">
-                                            <MdFolder className="w-5 h-5" />
+                                        <div className="w-9 h-9 rounded-lg bg-[var(--background-subtle)] flex items-center justify-center text-[var(--text-muted)] group-hover:bg-[var(--primary-muted)] group-hover:text-[var(--primary)] transition-colors">
+                                            <MdFolder className="w-5 h-5" aria-hidden />
                                         </div>
                                         <div className="text-left">
                                             <div className="flex gap-1 mb-1">
-                                                {statusCounts.complete > 0 && <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.4)]" title={`${statusCounts.complete} complete`} />}
-                                                {statusCounts.ongoing > 0 && <div className="w-1 h-1 rounded-full bg-amber-500 shadow-[0_0_4px_rgba(245,158,11,0.4)]" title={`${statusCounts.ongoing} ongoing`} />}
-                                                {statusCounts.pending > 0 && <div className="w-1 h-1 rounded-full bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.4)]" title={`${statusCounts.pending} pending`} />}
+                                                {statusCounts.complete > 0 && <div className="w-1.5 h-1.5 rounded-full bg-primary-600" title={`${statusCounts.complete} complete`} />}
+                                                {statusCounts.ongoing > 0 && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" title={`${statusCounts.ongoing} ongoing`} />}
+                                                {statusCounts.pending > 0 && <div className="w-1.5 h-1.5 rounded-full bg-rose-500" title={`${statusCounts.pending} pending`} />}
                                             </div>
-                                            <p className="text-[13px] font-bold text-slate-900 dark:text-white uppercase tracking-tight">BAC No. {prNo}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{count} document{count !== 1 ? 's' : ''}</p>
+                                            <p className="text-[13px] font-semibold text-[var(--text)] m-0">BAC No. {prNo}</p>
+                                            <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide m-0 mt-0.5">{count} document{count !== 1 ? 's' : ''}</p>
                                         </div>
                                     </div>
-                                    <MdChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                                    <MdChevronRight className="w-4 h-4 text-[var(--text-subtle)] group-hover:text-[var(--primary)] transition-colors shrink-0" aria-hidden />
                                 </button>
                             );
                         })}
@@ -163,24 +164,28 @@ const ManageDocumentsModal = ({
             >
                 <div className="flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
                     {/* Navigation */}
-                    <div className="p-3 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-xl border border-emerald-100 dark:border-emerald-500/10">
-                        <div className="flex items-center justify-between">
+                    <div className="p-3 rounded-xl border border-[var(--border)] bg-[var(--primary-muted)]/50">
+                        <div className="flex items-center justify-between gap-2">
                             <div>
-                                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">Navigation</p>
-                                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Doc {currentIndex + 1} of {totalDocs}</p>
+                                <p className="text-xs font-semibold text-[var(--text-muted)] m-0">Navigation</p>
+                                <p className="text-xs font-semibold text-[var(--text)] m-0 mt-0.5">Document {currentIndex + 1} of {totalDocs}</p>
                             </div>
-                            <div className="flex gap-1.5">
-                                <button 
+                            <div className="flex gap-1">
+                                <button
+                                    type="button"
                                     disabled={currentIndex === 0}
-                                    onClick={() => setManageFolderPopupIndex(v => v - 1)}
-                                    className="p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-sm text-slate-600 disabled:opacity-30 hover:bg-emerald-50 transition-colors"
+                                    onClick={() => setManageFolderPopupIndex((v) => v - 1)}
+                                    className="pagination-btn p-2"
+                                    aria-label="Previous document"
                                 >
                                     <MdNavigateBefore className="w-5 h-5" />
                                 </button>
-                                <button 
+                                <button
+                                    type="button"
                                     disabled={currentIndex === totalDocs - 1}
-                                    onClick={() => setManageFolderPopupIndex(v => v + 1)}
-                                    className="p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-sm text-slate-600 disabled:opacity-30 hover:bg-emerald-50 transition-colors"
+                                    onClick={() => setManageFolderPopupIndex((v) => v + 1)}
+                                    className="pagination-btn p-2"
+                                    aria-label="Next document"
                                 >
                                     <MdNavigateNext className="w-5 h-5" />
                                 </button>
@@ -188,21 +193,19 @@ const ManageDocumentsModal = ({
                         </div>
                     </div>
 
-                    {/* Single Container for Details & File */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm flex flex-col shrink-0">
+                    <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden shadow-[var(--shadow-sm)] flex flex-col shrink-0">
                         <DocDetailsView doc={currentDoc} />
 
-                        {/* Uploaded File Section at the bottom */}
-                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Digital Copy</p>
+                        <div className="p-4 border-t border-[var(--border-light)] bg-[var(--background-subtle)]/40">
+                            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3 m-0">Digital copy</p>
                             {currentDoc?.file_url ? (
-                                <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                                    <div className="flex items-center gap-3 min-w-0 pr-4">
-                                        <div className="w-9 h-9 shrink-0 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500">
-                                            <MdDescription className="w-5 h-5" />
+                                <div className="flex items-center justify-between gap-3 p-3 bg-[var(--surface)] rounded-xl border border-[var(--border-light)] shadow-sm">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-9 h-9 shrink-0 rounded-lg bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)]">
+                                            <MdDescription className="w-5 h-5" aria-hidden />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={currentDoc.file_url.split('/').pop()}>
+                                            <p className="text-sm font-medium text-[var(--text)] truncate m-0" title={currentDoc.file_url.split('/').pop()}>
                                                 {currentDoc.file_url.split('/').pop() || 'document_file.pdf'}
                                             </p>
                                         </div>
@@ -210,18 +213,18 @@ const ManageDocumentsModal = ({
                                     <button
                                         type="button"
                                         onClick={() => window.open(currentDoc.file_url, '_blank')}
-                                        className="shrink-0 inline-flex items-center justify-center gap-1.5 h-9 px-4 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors active:scale-95"
+                                        className="btn-compact-primary shrink-0"
                                     >
                                         <span>View</span>
                                         <MdOpenInNew className="w-4 h-4" />
                                     </button>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400">
-                                    <div className="w-9 h-9 shrink-0 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
-                                        <MdError className="w-5 h-5 opacity-50" />
+                                <div className="flex items-center gap-3 p-3 bg-[var(--surface)] rounded-xl border border-[var(--border-light)] text-[var(--text-muted)]">
+                                    <div className="w-9 h-9 shrink-0 rounded-lg bg-[var(--background-subtle)] flex items-center justify-center">
+                                        <MdError className="w-5 h-5 opacity-60" aria-hidden />
                                     </div>
-                                    <p className="text-[11px] font-medium tracking-wide">No digital file attached</p>
+                                    <p className="text-xs font-medium m-0">No digital file attached</p>
                                 </div>
                             )}
                         </div>

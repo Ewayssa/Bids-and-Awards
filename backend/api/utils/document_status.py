@@ -11,45 +11,6 @@ from django.utils import timezone
 class DocumentStatusCalculator:
     """Calculates document status based on sub-document type requirements."""
 
-    CHECKLIST_DOC_TYPES = [
-        ("Procurement", [
-            "Annual Procurement Plan",
-            "Activity Design", 
-            "Project Procurement Management Plan/Supplemental PPMP",
-            "Market Scopping",
-            "Requisition and Issue Slip"
-        ]),
-        ("Venue", [
-            "Lease of Venue",
-            "Invitation to COA",
-            "Attendance Sheet"
-        ]),
-        ("Resolution", [
-            "BAC Resolution"
-        ]),
-        ("Quotation", [
-            "Abstract of Quotation"
-        ]),
-        ("Lease", [
-            "Lease of Venue: Table Rating Factor"
-        ]),
-        ("Award", [
-            "Notice of Award"
-        ]),
-        ("Contract", [
-            "Contract Services/Purchase Order"
-        ]),
-        ("Proceed", [
-            "Notice to Proceed"
-        ]),
-        ("OSS", [
-            "OSS"
-        ]),
-        ("Secretary", [
-            "Applicable: Secretary's Certificate and Special Power of Attorney"
-        ]),
-    ]
-
     # Sub-docs that don't require a title (remaining exceptions if any)
     NO_TITLE_REQUIRED = set()
 
@@ -67,6 +28,43 @@ class DocumentStatusCalculator:
         'BAC Resolution (Posted)',
     }
 
+    @staticmethod
+    def _is_filled(val):
+        """Helper to check if a field value is present and not empty."""
+        if val is None: return False
+        if isinstance(val, str): return bool(val.strip())
+        # For numbers, 0 can be a valid value, but for this system's logic,
+        # we often expect non-zero amounts. This can be adjusted if needed.
+        if isinstance(val, (int, float)): return True
+        return True
+
+    # A mapping of sub-document types to their required fields for 'complete' status.
+    # This replaces the large if/elif block in _has_subdoc_specific_fields for maintainability.
+    # It can contain a list of field names or a lambda for more complex validation.
+    REQUIRED_FIELDS_BY_SUBDOC = {
+        'Annual Procurement Plan': lambda doc, is_filled: (
+            is_filled(doc.app_type) and
+            (not doc.certified_true_copy or is_filled(doc.certified_signed_by))
+        ),
+        'Market Scopping': ['market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3'],
+        'Requisition and Issue Slip': ['office_division', 'received_by'],
+        'Invitation to COA': ['date_received'],
+        'Attendance Sheet': lambda doc, is_filled: (
+            len(json.loads(doc.attendance_members or '[]')) > 0 and
+            any(m.get('present') for m in json.loads(doc.attendance_members or '[]'))
+        ),
+        'BAC Resolution': ['resolution_no', 'winning_bidder', 'resolution_option', 'office_division', 'venue'],
+        'Abstract of Quotation': lambda doc, is_filled: (
+            is_filled(doc.aoq_no) and len(json.loads(doc.abstract_bidders or '[]')) >= 3
+        ),
+        'Lease of Venue: Table Rating Factor': ['table_rating_service_provider', 'table_rating_address', 'table_rating_factor_value'],
+        'Notice of Award': ['notice_award_service_provider', 'notice_award_authorized_rep', 'notice_award_conforme'],
+        'Contract Services/Purchase Order': ['contract_amount', 'notarized_place', 'notarized_date'],
+        'Notice to Proceed': ['ntp_service_provider', 'ntp_authorized_rep', 'ntp_received_by'],
+        'OSS': ['oss_service_provider', 'oss_authorized_rep'],
+        "Applicable: Secretary's Certificate and Special Power of Attorney": ['secretary_service_provider', 'secretary_owner_rep'],
+    }
+
     @classmethod
     def is_new_procurement(cls, document) -> bool:
         """Check if document is new procurement (Procurement category or Requisition and Issue Slip, recent/empty prNo)."""
@@ -81,7 +79,7 @@ class DocumentStatusCalculator:
         try:
             current_ym = timezone.now().date().strftime('%Y-%m')
             return pr_no.startswith(current_ym + '-')
-        except:
+        except Exception:
             return True  # fallback if date issues
 
     @classmethod
@@ -187,94 +185,23 @@ class DocumentStatusCalculator:
 
     @classmethod
     def _has_subdoc_specific_fields(cls, document, sub_doc: str) -> bool:
-        """Check sub-document specific field requirements for completion."""
+        """Check sub-document specific field requirements for completion using a mapping."""
+        requirements = cls.REQUIRED_FIELDS_BY_SUBDOC.get(sub_doc)
+        if not requirements:
+            return True  # No specific fields required for this sub_doc
+
+        if callable(requirements):
+            try:
+                # Pass the document and the helper method to the lambda
+                return requirements(document, cls._is_filled)
+            except (json.JSONDecodeError, TypeError):
+                return False
         
-        def is_filled(val):
-            if val is None: return False
-            if isinstance(val, str): return bool(val.strip())
-            if isinstance(val, (int, float)): return True # even 0 might be valid for some amounts, but usually we want > 0
-            return True
+        if isinstance(requirements, list):
+            # Check if all fields in the list are filled
+            return all(cls._is_filled(getattr(document, field, None)) for field in requirements)
 
-        # Mapping of sub-doc types to their required "details"
-        if sub_doc == 'Annual Procurement Plan':
-            if not is_filled(document.app_type): return False
-            if document.certified_true_copy and not is_filled(document.certified_signed_by): return False
-            return True
-            
-        if sub_doc == 'Market Scopping':
-            return all([
-                is_filled(document.market_budget),
-                is_filled(document.market_service_provider_1),
-                is_filled(document.market_service_provider_2),
-                is_filled(document.market_service_provider_3)
-            ])
-            
-        if sub_doc == 'Requisition and Issue Slip':
-            return all([is_filled(document.office_division), is_filled(document.received_by)])
-            
-        if sub_doc == 'Invitation to COA':
-            return is_filled(document.date_received)
-            
-        if sub_doc == 'Attendance Sheet':
-            # attendance_members is a JSON string of array
-            try:
-                members = json.loads(document.attendance_members or '[]')
-                return len(members) > 0 and any(m.get('present') for m in members)
-            except:
-                return False
-                
-        if sub_doc == 'BAC Resolution':
-            return all([
-                is_filled(document.resolution_no),
-                is_filled(document.winning_bidder),
-                is_filled(document.resolution_option),
-                is_filled(document.office_division),
-                is_filled(document.venue)
-            ])
-            
-        if sub_doc == 'Abstract of Quotation':
-            if not is_filled(document.aoq_no): return False
-            try:
-                bidders = json.loads(document.abstract_bidders or '[]')
-                return len(bidders) >= 3 # User requirement: min 3 bidders
-            except:
-                return False
-                
-        if sub_doc == 'Lease of Venue: Table Rating Factor':
-            return all([
-                is_filled(document.table_rating_service_provider),
-                is_filled(document.table_rating_address),
-                is_filled(document.table_rating_factor_value)
-            ])
-            
-        if sub_doc == 'Notice of Award':
-            return all([
-                is_filled(document.notice_award_service_provider),
-                is_filled(document.notice_award_authorized_rep),
-                is_filled(document.notice_award_conforme)
-            ])
-            
-        if sub_doc == 'Contract Services/Purchase Order':
-            return all([
-                is_filled(document.contract_amount),
-                is_filled(document.notarized_place),
-                is_filled(document.notarized_date)
-            ])
-            
-        if sub_doc == 'Notice to Proceed':
-            return all([
-                is_filled(document.ntp_service_provider),
-                is_filled(document.ntp_authorized_rep),
-                is_filled(document.ntp_received_by)
-            ])
-            
-        if sub_doc == 'OSS':
-            return all([is_filled(document.oss_service_provider), is_filled(document.oss_authorized_rep)])
-            
-        if sub_doc == "Applicable: Secretary's Certificate and Special Power of Attorney":
-            return all([is_filled(document.secretary_service_provider), is_filled(document.secretary_owner_rep)])
-
-        return True
+        return True # Should not be reached if config is correct, but safe default
 
     @classmethod
     def _has_required_file(cls, document, sub_doc: str) -> bool:
@@ -293,4 +220,3 @@ class DocumentStatusCalculator:
             has_file = bool(document.file.name and str(document.file.name).strip())
 
         return has_file
-

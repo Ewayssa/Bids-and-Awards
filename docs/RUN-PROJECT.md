@@ -34,7 +34,7 @@
 
 **Terminal 1 – Backend**
 ```powershell
-cd "c:\Users\elyss\OneDrive\Documents\React Projects\BIDS_and_Award\bids-and-awards\backend"
+cd backend
 python manage.py runserver
 ```
 

@@ -8,42 +8,47 @@ def get_next_transaction_number(date=None):
     NNN is the sequence number for the month (1-based index).
     Example: 2026-01-15 -> 2026-01-001
     """
+    import django.db.models as django_models
+    from django.utils import timezone
+    
     if date is None:
         now = timezone.now()
         year_month = now.strftime('%Y-%m')
-        month_num = now.month
     else:
         # Check if it's a date/datetime object
         if hasattr(date, 'year') and hasattr(date, 'month'):
             year_month = f"{date.year}-{date.month:02d}"
-            month_num = date.month
         else:
-            # Assume it's a string YYYY-MM-DD
+            # Assume it's a string YYYY-MM-DD or MM-DD-YY
             s = str(date).strip()[:10]
             if not s or s.count('-') < 2:
                 now = timezone.now()
                 year_month = now.strftime('%Y-%m')
-                month_num = now.month
             else:
                 parts = s.split('-')
                 if len(parts) >= 3:
                     if len(parts[0]) == 4: # YYYY-MM-DD
                         year_month = f"{parts[0]}-{parts[1]}"
-                        month_num = int(parts[1])
                     elif len(parts[2]) == 2: # MM-DD-YY
-                        year = f"20{parts[2]}"
-                        year_month = f"{year}-{parts[0]}"
-                        month_num = int(parts[0])
+                        year_month = f"20{parts[2]}-{parts[0]}"
                     else:
-                        now = timezone.now()
-                        year_month = now.strftime('%Y-%m')
-                        month_num = now.month
+                        year_month = timezone.now().strftime('%Y-%m')
                 else:
-                    now = timezone.now()
-                    year_month = now.strftime('%Y-%m')
-                    month_num = now.month
-                
-    return f"{year_month}-{month_num:03d}"
+                    year_month = timezone.now().strftime('%Y-%m')
+
+    from django.apps import apps
+    from django.utils import timezone
+    Document = apps.get_model('api', 'Document')
+    
+    # We check for both YYYY-MM and YYYY/MM prefixes
+    legacy_prefix = year_month.replace('-', '/')
+    
+    count = Document.objects.filter(
+        django_models.Q(prNo__startswith=year_month) | 
+        django_models.Q(prNo__startswith=legacy_prefix)
+    ).count()
+    
+    return f"{year_month}-{count + 1:03d}"
 
 
 def get_document_missing_count(document):

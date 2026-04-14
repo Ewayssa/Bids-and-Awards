@@ -46,7 +46,7 @@ export const HEADER_GROUPS = [
     { groupLabel: 'PMO/End-User', colKeys: ['pmo_end_user'] },
     { groupLabel: 'Is this an Early Procurement Activity?', colKeys: ['early_procurement'] },
     { groupLabel: 'Mode of Procurement', colKeys: ['mode_of_procurement'] },
-    { groupLabel: 'Actual Procurement Activities (DD-MM-YYYY)', colKeys: ['pre_proc_conference', 'ads_post_ib', 'pre_bid_conf', 'eligibility_check', 'sub_open_bids', 'bid_evaluation', 'post_qual', 'bac_resolution_date'] },
+    { groupLabel: 'Actual Procurement Activities (MM/DD/YYYY)', colKeys: ['pre_proc_conference', 'ads_post_ib', 'pre_bid_conf', 'eligibility_check', 'sub_open_bids', 'bid_evaluation', 'post_qual', 'bac_resolution_date'] },
     { groupLabel: 'Notice of Award', colKeys: ['notice_of_award'] },
     { groupLabel: 'Contract Signing', colKeys: ['contract_signing'] },
     { groupLabel: 'Notice to Proceed', colKeys: ['notice_to_proceed'] },

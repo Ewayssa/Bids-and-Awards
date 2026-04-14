@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDisplayDate } from '../../utils/helpers.jsx';
 import { MdDescription } from 'react-icons/md';
 
 const DocDetailItem = ({ label, value }) => {
@@ -58,7 +59,7 @@ const DocDetailsView = ({ doc }) => {
                     <>
                         <DocDetailItem label="Title" value={doc.title} />
                         <DocDetailItem label="Budget" value={doc.market_budget ? `₱${Number(doc.market_budget).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
-                        <DocDetailItem label="Period" value={`${doc.market_period_from || '—'} to ${doc.market_period_to || '—'}`} />
+                        <DocDetailItem label="Period" value={`${formatDisplayDate(doc.market_period_from) || '—'} to ${formatDisplayDate(doc.market_period_to) || '—'}`} />
                         <DocDetailItem label="Expected Delivery" value={doc.market_expected_delivery} />
                         <DocDetailItem label="Service Providers" value={[doc.market_service_provider_1, doc.market_service_provider_2, doc.market_service_provider_3].filter(Boolean).join(', ')} />
                     </>
@@ -74,7 +75,7 @@ const DocDetailsView = ({ doc }) => {
             case 'Notice of BAC Meeting':
                 return <DocDetailItem label="Agenda" value={doc.title} />;
             case 'Invitation to COA':
-                return <DocDetailItem label="Date Received" value={doc.date_received} />;
+                return <DocDetailItem label="Date Received" value={formatDisplayDate(doc.date_received)} />;
             case 'Attendance Sheet':
                 return <DocDetailItem label="Agenda" value={doc.title} />;
             case 'BAC Resolution':
@@ -95,7 +96,7 @@ const DocDetailsView = ({ doc }) => {
                     <>
                         <DocDetailItem label="Contract Amount" value={doc.contract_amount ? `₱${Number(doc.contract_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
                         <DocDetailItem label="Received by COA" value={doc.contract_received_by_coa ? 'Yes' : 'No'} />
-                        <DocDetailItem label="Notarized" value={`${doc.notarized_place || ''} ${doc.notarized_date || ''}`} />
+                        <DocDetailItem label="Notarized" value={`${doc.notarized_place || ''} ${formatDisplayDate(doc.notarized_date) || ''}`} />
                     </>
                 );
             case 'Notice to Proceed':
@@ -160,7 +161,7 @@ const DocDetailsView = ({ doc }) => {
                     </div>
                     
                     <div className="pt-5">
-                        <DocDetailItem label="Date Encoding" value={doc.date ? new Date(doc.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—'} />
+                        <DocDetailItem label="Date Encoding" value={formatDisplayDate(doc.date) || '—'} />
                     </div>
                 </div>
                 

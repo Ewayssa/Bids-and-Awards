@@ -29,7 +29,8 @@ try {
 }
 
 Write-Host "Starting frontend in this window..." -ForegroundColor Green
-Set-Location $PSScriptRoot
+$frontendPath = Join-Path $projectRoot "frontend"
+Set-Location $frontendPath
 if (-not (Test-Path "node_modules")) {
     Write-Host "Installing npm dependencies (first run)..." -ForegroundColor Yellow
     npm install

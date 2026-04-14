@@ -198,8 +198,8 @@ const Login = ({ onLogin, infoMessage }) => {
 
             {/* Form Side */}
             <div className="login-form-side">
-                <div 
-                    className={`w-full max-w-md rounded-3xl glass-card p-8 sm:p-10 animate-entry ${isFocused ? 'glass-card-glow' : ''}`}
+                <div
+                    className={`w-full max-w-md rounded-2xl glass-card p-8 sm:p-10 animate-entry border border-[var(--border)] shadow-[var(--shadow-md)] ${isFocused ? 'glass-card-glow' : ''}`}
                     style={{ animationDelay: '200ms' }}
                 >
                     {/* Compact Header for Form Side (Mobile Logo) */}
@@ -282,7 +282,7 @@ const Login = ({ onLogin, infoMessage }) => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full py-4 rounded-2xl text-lg font-bold btn-magnetic shadow-lg shadow-emerald-500/20"
+                            className="btn-primary btn-lg w-full text-base"
                         >
                             {loading ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -396,11 +396,11 @@ const Login = ({ onLogin, infoMessage }) => {
                             </label>
                         </div>
 
-                        <div className="flex gap-3 justify-end pt-2">
+                        <div className="flex gap-3 justify-end pt-2 flex-wrap">
                             <button
                                 type="button"
                                 onClick={closeForgotModal}
-                                className="px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                className="btn-ghost"
                                 disabled={forgotLoading}
                             >
                                 Cancel

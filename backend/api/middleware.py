@@ -45,11 +45,12 @@ class SecureHeadersMiddleware:
         # Prevent MIME type sniffing.
         response.setdefault("X-Content-Type-Options", "nosniff")
 
-        # Enforce HTTPS for clients that have seen this header (HSTS).
-        response.setdefault(
-            "Strict-Transport-Security",
-            "max-age=31536000; includeSubDomains",
-        )
+        # HSTS: only in production to avoid pinning localhost / plain HTTP dev.
+        if not settings.DEBUG:
+            response.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
 
         # Limit information sent in the Referer header.
         response.setdefault("Referrer-Policy", "no-referrer-when-downgrade")

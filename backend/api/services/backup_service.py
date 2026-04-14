@@ -1,7 +1,12 @@
+import io
 import json
+import os
+import zipfile
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from django.conf import settings
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from ..models import User, Document, Report, CalendarEvent
 
 class BackupService:
@@ -40,6 +45,50 @@ class BackupService:
         }
 
     @classmethod
+    def create_zip_backup(cls):
+        """Create an in-memory ZIP containing the database JSON and the media folder."""
+        data = cls.export_data()
+        json_str = json.dumps(data, indent=2)
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Add database JSON
+            zipf.writestr('database_backup.json', json_str)
+            
+            # Add all files from the media root
+            media_root = settings.MEDIA_ROOT
+            if os.path.exists(media_root):
+                for root, dirs, files in os.walk(media_root):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        # Maintain relative folder structure inside the ZIP
+                        arcname = os.path.join('media', os.path.relpath(file_path, media_root))
+                        zipf.write(file_path, arcname)
+
+        zip_buffer.seek(0)
+        return zip_buffer
+
+    @classmethod
+    def restore_zip_backup(cls, zip_file):
+        """Extract the ZIP, restore media files, and parse the JSON database."""
+        with zipfile.ZipFile(zip_file, 'r') as zipf:
+            if 'database_backup.json' not in zipf.namelist():
+                raise ValueError("Invalid backup file: database_backup.json is missing.")
+            
+            data = json.loads(zipf.read('database_backup.json').decode('utf-8'))
+            media_root = settings.MEDIA_ROOT
+            os.makedirs(media_root, exist_ok=True)
+            
+            for item in zipf.namelist():
+                if item.startswith('media/') and not item.endswith('/'):
+                    target_path = os.path.join(media_root, item[len('media/'):])
+                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                    with open(target_path, 'wb') as f:
+                        f.write(zipf.read(item))
+
+        return cls.restore_data(data)
+
+    @classmethod
     def restore_data(cls, data):
         """
         Restore system metadata from a backup dictionary.
@@ -62,43 +111,64 @@ class BackupService:
                 if uid:
                     try:
                         user = User.objects.get(pk=uid)
-                        if 'is_active' in u: user.is_active = bool(u['is_active'])
-                        if 'role' in u: user.role = u['role']
-                        if 'fullName' in u: user.fullName = u['fullName'] or ''
-                        if 'position' in u: user.position = u.get('position') or ''
-                        if 'office' in u: user.office = u['office'] or ''
-                        user.save()
-                        restored['users'] += 1
                     except User.DoesNotExist:
-                        pass
+                        user = User(id=uid, username=u.get('username', f'user_{uid}'))
+                        # Set a temporary password and force a change on next login for security.
+                        user.set_password('default123!')
+                        user.must_change_password = True
+                        
+                    if 'is_active' in u: user.is_active = bool(u['is_active'])
+                    if 'role' in u: user.role = u['role']
+                    if 'fullName' in u: user.fullName = u['fullName'] or ''
+                    if 'position' in u: user.position = u.get('position') or ''
+                    if 'office' in u: user.office = u['office'] or ''
+                    user.save()
+                    restored['users'] += 1
 
         # Documents
         if 'documents' in data and isinstance(data['documents'], list):
+            Document.objects.all().delete()
             for d in data['documents']:
                 doc_id = d.get('id')
                 if doc_id:
                     try:
                         doc = Document.objects.get(pk=doc_id)
-                        cls._update_document_metadata(doc, d)
-                        doc.save()
-                        restored['documents'] += 1
                     except (Document.DoesNotExist, ValueError):
-                        pass
+                        doc = Document(id=doc_id)
+                        
+                    cls._update_document_metadata(doc, d)
+                    
+                    if 'file_name' in d and d['file_name']:
+                        doc.file.name = d['file_name']
+                    if 'uploaded_at' in d and d['uploaded_at']:
+                        doc.uploaded_at = parse_datetime(d['uploaded_at'])
+                    if 'updated_at' in d and d['updated_at']:
+                        doc.updated_at = parse_datetime(d['updated_at'])
+                        
+                    doc.save()
+                    restored['documents'] += 1
 
         # Reports
         if 'reports' in data and isinstance(data['reports'], list):
+            Report.objects.all().delete()
             for r in data['reports']:
                 rid = r.get('id')
                 if rid:
                     try:
                         report = Report.objects.get(pk=rid)
-                        if 'title' in r: report.title = r['title'] or report.title
-                        if 'submitting_office' in r: report.submitting_office = r['submitting_office'] or ''
-                        if 'uploadedBy' in r: report.uploadedBy = r['uploadedBy'] or ''
-                        report.save()
-                        restored['reports'] += 1
                     except (Report.DoesNotExist, ValueError):
-                        pass
+                        report = Report(id=rid)
+                        
+                    if 'title' in r: report.title = r['title'] or report.title
+                    if 'submitting_office' in r: report.submitting_office = r['submitting_office'] or ''
+                    if 'uploadedBy' in r: report.uploadedBy = r['uploadedBy'] or ''
+                    if 'file_name' in r and r['file_name']: 
+                        report.file.name = r['file_name']
+                    if 'uploaded_at' in r and r['uploaded_at']: 
+                        report.uploaded_at = parse_datetime(r['uploaded_at'])
+                        
+                    report.save()
+                    restored['reports'] += 1
 
         return restored
 

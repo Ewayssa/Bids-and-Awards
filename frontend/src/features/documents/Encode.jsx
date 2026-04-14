@@ -36,6 +36,7 @@ import {
 import { toLettersOnly, toNumbersOnly, formatCurrencyValue } from '../../utils/validation';
 import { 
     computeRFQNoFromDate, 
+    formatDisplayDate,
     formatInputDate,
     toBackendDateFormat,
     filterDocumentsByQuery,
@@ -44,26 +45,25 @@ import {
     sortDocuments,
     groupDocumentsByCategory,
     getStatusColor
-} from '../../utils/helpers';
+} from '../../utils/helpers.jsx';
 import { getAuthHeaders } from '../../utils/reportHelpers';
 import { parseApiError } from '../../utils/errors';
 import { useDocumentForm } from '../../hooks/useDocumentForm';
 import { useDocumentTable } from '../../hooks/useDocumentTable';
-import { useReportForm } from '../../hooks/useReportForm';
 
 // Modular Components
-import { DocDetailsView } from './DocDetailsView';
-import WorkflowVisualization from './WorkflowVisualization';
-import DocViewModal from './modals/DocViewModal';
-import WorkflowModal from './modals/WorkflowModal';
-import CommentModal from './modals/CommentModal';
-import AlertModal from './modals/AlertModal';
-import ConfirmDialog from './modals/ConfirmDialog';
-import PreviewModal from './modals/PreviewModal';
-import NewProcurementModal from './modals/NewProcurementModal';
-import ManageDocumentsModal from './modals/ManageDocumentsModal';
-import UpdateChecklistModal from './modals/UpdateChecklistModal';
-import UpdateDocumentModal from './modals/UpdateDocumentModal';
+import {
+    DocViewModal,
+    WorkflowModal,
+    CommentModal,
+    AlertModal,
+    ConfirmDialog,
+    PreviewModal,
+    NewProcurementModal,
+    ManageDocumentsModal,
+    UpdateChecklistModal,
+    UpdateDocumentModal,
+} from './DocumentModals';
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
@@ -361,12 +361,11 @@ const Encode = ({ user }) => {
 
             await documentService.update(selectedDoc.id, fd);
 
+            // Reload immediately so the user sees the update reflected (including recalculated status)
+            await load();
+
             setSelectedDoc(null);
-            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', date_received: '', attendance_members: '', resolution_no: '', winning_bidder: '', resolution_option: '', venue: '', aoq_no: '', abstract_bidders: '', contract_received_by_coa: false, contract_amount: '', notarized_place: '', notarized_date: '', ntp_service_provider: '', ntp_authorized_rep: '', ntp_received_by: '', oss_service_provider: '', oss_authorized_rep: '', secretary_service_provider: '', secretary_owner_rep: '', category: '', subDoc: '', date: '', file: null, status: form.status });
-            // Small delay to ensure backend has processed status calculation
-            setTimeout(() => {
-                load();
-            }, 300);
+            setForm({ title: '', prNo: '', user_pr_no: '', total_amount: '', source_of_fund: '', ppmp_no: '', app_no: '', app_type: '', certified_true_copy: false, certified_signed_by: '', market_budget: '', market_period_from: '', market_period_to: '', market_expected_delivery: '', deadline_date: '', deadline_time: '', market_service_provider_1: '', market_service_provider_2: '', market_service_provider_3: '', office_division: '', received_by: '', date_received: '', attendance_members: '', resolution_no: '', winning_bidder: '', resolution_option: '', venue: '', aoq_no: '', abstract_bidders: '', contract_received_by_coa: false, contract_amount: '', notarized_place: '', notarized_date: '', ntp_service_provider: '', ntp_authorized_rep: '', ntp_received_by: '', oss_service_provider: '', oss_authorized_rep: '', secretary_service_provider: '', secretary_owner_rep: '', category: '', subDoc: '', date: '', file: null, status: 'pending' });
             setActiveModal(null);
             setAlertMessage('Document updated successfully.');
             // Notify dashboard to refresh stats
@@ -414,7 +413,7 @@ const Encode = ({ user }) => {
         });
     };
 
-    const formatDate = (d) => (!d ? '—' : typeof d === 'string' ? d.split('T')[0] : d);
+    const formatDate = (d) => formatDisplayDate(d) || '—';
 
     // Sub-doc types that have no Title field in fill-out details (same as backend) — completion = date + file + other required fields
     const docRequiresTitle = (doc) => true; // All documents now require a Title/Purpose
@@ -1214,7 +1213,7 @@ const Encode = ({ user }) => {
                 {canUploadDocuments && (
                     <div className="p-6 sm:p-8 bg-[var(--page-bg)]/50 border-b border-[var(--border-light)]">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-white">
+                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-[var(--surface)]">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-[var(--primary)] rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
                                 <div className="min-w-0 flex-1">
                                     <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Start New Procurement</h3>
@@ -1222,20 +1221,20 @@ const Encode = ({ user }) => {
                                         Initiate a new procurement process by submitting the first set of documents.
                                     </p>
                                 </div>
-                                <button type="button" onClick={openNew} className="px-8 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 w-full sm:w-auto">
+                                <button type="button" onClick={openNew} className="btn-primary btn-lg inline-flex items-center justify-center gap-2.5 w-full sm:w-auto shrink-0">
                                     <MdUpload className="w-5 h-5" />
                                     <span>Start New Entry</span>
                                 </button>
                             </div>
-                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-white">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500 rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
+                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-[var(--surface)]">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
                                 <div className="min-w-0 flex-1">
                                     <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Update Procurement</h3>
                                     <p className="mt-2 text-[var(--text-muted)] text-sm leading-relaxed">
                                         Keep procurement folders complete by adding missing documents or updating details.
                                     </p>
                                 </div>
-                                <button type="button" onClick={openUpdate} className="px-8 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 w-full sm:w-auto">
+                                <button type="button" onClick={openUpdate} className="btn-primary btn-lg inline-flex items-center justify-center gap-2.5 w-full sm:w-auto shrink-0">
                                     <MdEdit className="w-5 h-5" />
                                     <span>Update</span>
                                 </button>
@@ -1313,7 +1312,7 @@ const Encode = ({ user }) => {
                                                 key={folder.prNo}
                                                 type="button"
                                                 onClick={() => setSelectedPendingFolder(folder)}
-                                                className="group relative rounded-2xl border border-[var(--border-light)] bg-white p-5 shadow-sm hover:shadow-md hover:border-[var(--primary)] transition-all duration-300 ease-out text-left active:scale-95"
+                                                className="group relative rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] transition-all duration-200 ease-out text-left"
                                             >
                                                 <div className="absolute top-0 left-0 w-1 h-full bg-[var(--primary)] rounded-l-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 <div className="flex items-start justify-between mb-3">
@@ -1356,7 +1355,7 @@ const Encode = ({ user }) => {
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleGroup(prNo)}
-                                                    className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-[var(--background-subtle)] transition-all duration-300 ease-out text-left active:scale-[0.99]"
+                                                    className="w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-[var(--background-subtle)] transition-colors duration-200 text-left"
                                                 >
                                                     <div className="flex items-center justify-between w-full min-w-0">
                                                         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1369,11 +1368,11 @@ const Encode = ({ user }) => {
                                                                 <p className="font-semibold text-[var(--text)]">
                                                                     BAC Folder No.: {prNo}
                                                                 </p>
-                                                                <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                                                                    {docs.length} document{docs.length !== 1 ? 's' : ''} • 
-                                                                    {statusCounts.complete && <span className="ml-1 text-green-600">{statusCounts.complete} complete</span>}
-                                                                    {statusCounts.ongoing && <span className="ml-1 text-amber-600">{statusCounts.ongoing} ongoing</span>}
-                                                                    {statusCounts.pending && <span className="ml-1 text-red-600">{statusCounts.pending} pending</span>}
+                                                                <p className="text-xs text-[var(--text-muted)] mt-0.5 flex flex-wrap items-center gap-1.5">
+                                                                    <span>{docs.length} document{docs.length !== 1 ? 's' : ''}</span>
+                                                                    {statusCounts.complete > 0 && <span className="status-badge status-badge--complete !scale-90 !py-0 !min-w-0">{statusCounts.complete} complete</span>}
+                                                                    {statusCounts.ongoing > 0 && <span className="status-badge status-badge--ongoing !scale-90 !py-0 !min-w-0">{statusCounts.ongoing} ongoing</span>}
+                                                                    {statusCounts.pending > 0 && <span className="status-badge status-badge--pending !scale-90 !py-0 !min-w-0">{statusCounts.pending} pending</span>}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -1403,11 +1402,10 @@ const Encode = ({ user }) => {
                                                             </thead>
                                                             <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
                                                                 {docs.map((doc) => {
-                                                                    const statusColor = getStatusColor(doc.status);
                                                                     const procurementType = getProcurementType(doc);
 
                                                                     return (
-                                                                        <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
+                                                                        <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-colors duration-200 group">
                                                                             <td className="table-td font-medium">{doc.title || '—'}</td>
                                                                             <td className="table-td-muted">
                                                                                 <div className="max-w-[200px] truncate" title={procurementType}>
@@ -1416,7 +1414,7 @@ const Encode = ({ user }) => {
                                                                             </td>
                                                                             <td className="table-td-muted">{formatDate(doc.date)}</td>
                                                                             <td className="table-td">
-                                                                                <span className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium border w-fit ${statusColor} capitalize`}>
+                                                                                <span className={`status-badge ${getStatusColor(doc.status) || 'status-badge--pending'} capitalize`}>
                                                                                     {doc.status || 'pending'}
                                                                                 </span>
                                                                             </td>
@@ -1462,29 +1460,25 @@ const Encode = ({ user }) => {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
-                                        {paginatedDocuments.map((doc) => {
-                                            const statusColor = getStatusColor(doc.status);
-                                            
-                                            return (
-                                                <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
-                                                    <td className="table-td font-medium">{doc.title || '—'}</td>
-                                                    <td className="table-td-muted">{doc.prNo || '—'}</td>
-                                                    <td className="table-td-muted">
-                                                        <div className="max-w-[200px] truncate" title={getProcurementType(doc)}>
-                                                            {getProcurementType(doc)}
-                                                        </div>
-                                                    </td>
-                                                    <td className="table-td-muted">{doc.uploadedBy || '—'}</td>
-                                                    <td className="table-td-muted">{formatDate(doc.uploaded_at)}</td>
-                                                    <td className="table-td-muted">{formatDate(doc.updated_at)}</td>
-                                                    <td className="table-td">
-                                                        <span className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium border w-fit ${statusColor} capitalize`}>
-                                                            {doc.status === 'complete' ? 'Completed' : doc.status === 'ongoing' ? 'Ongoing' : (doc.status || 'Pending')}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                        {paginatedDocuments.map((doc) => (
+                                            <tr key={doc.id} className="hover:bg-[var(--background-subtle)]/50 transition-colors duration-200 group">
+                                                <td className="table-td font-medium">{doc.title || '—'}</td>
+                                                <td className="table-td-muted">{doc.prNo || '—'}</td>
+                                                <td className="table-td-muted">
+                                                    <div className="max-w-[200px] truncate" title={getProcurementType(doc)}>
+                                                        {getProcurementType(doc)}
+                                                    </div>
+                                                </td>
+                                                <td className="table-td-muted">{doc.uploadedBy || '—'}</td>
+                                                <td className="table-td-muted">{formatDate(doc.uploaded_at)}</td>
+                                                <td className="table-td-muted">{formatDate(doc.updated_at)}</td>
+                                                <td className="table-td">
+                                                    <span className={`status-badge ${getStatusColor(doc.status) || 'status-badge--pending'} capitalize`}>
+                                                        {doc.status === 'complete' ? 'Completed' : doc.status === 'ongoing' ? 'Ongoing' : (doc.status || 'Pending')}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             )}
@@ -1679,7 +1673,7 @@ const Encode = ({ user }) => {
             {/* Pending Folder Details Modal */}
             {selectedPendingFolder && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setSelectedPendingFolder(null)}>
-                    <div className="rounded-3xl bg-white max-w-md w-full shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] max-w-md w-full shadow-[var(--shadow-xl)] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         {/* Header */}
                         <div className="relative bg-gradient-to-r from-[var(--primary)] to-[var(--primary-hover)] px-6 py-5 text-white">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12" />

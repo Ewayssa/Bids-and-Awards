@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MdNotifications } from 'react-icons/md';
+import { MdNotifications, MdNotificationsNone, MdHistory, MdFiberManualRecord, MdAccessTime } from 'react-icons/md';
 import { notificationService } from '../../services/api';
+import { formatDisplayDateTime } from '../../utils/helpers.jsx';
 
 const NotificationBell = ({ user }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [notifications, setNotifications] = useState([]);
     const [open, setOpen] = useState(false);
-    const isAdmin = user?.role === 'admin';
 
     useEffect(() => {
         let cancelled = false;
@@ -17,25 +17,22 @@ const NotificationBell = ({ user }) => {
             try {
                 const list = await notificationService.getAll();
                 if (!cancelled && Array.isArray(list)) {
-                    const filtered = isAdmin ? list : list.filter((n) => !n.admin_only);
-                    setNotifications(filtered);
+                    setNotifications(list);
                 }
             } catch {
                 if (!cancelled) setNotifications([]);
             }
         };
 
-        // Initial load (and when route changes)
         fetchNotifications();
 
-        // Poll every 15 seconds for near real-time updates
         const intervalId = setInterval(fetchNotifications, 15000);
 
         return () => {
             cancelled = true;
             clearInterval(intervalId);
         };
-    }, [location.pathname, isAdmin]);
+    }, [location.pathname, user?.role]);
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -61,13 +58,13 @@ const NotificationBell = ({ user }) => {
             <button
                 type="button"
                 onClick={() => setOpen((o) => !o)}
-                className="p-2.5 rounded-xl text-[var(--text-muted)] hover:bg-[color-mix(in_srgb,var(--background-subtle)_50%,transparent)] hover:text-[var(--text)] transition-all duration-300 ease-out relative group"
+                className="p-2.5 rounded-xl text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] transition-colors duration-200 relative"
                 aria-label="Notifications"
                 aria-expanded={open}
             >
                 <MdNotifications className="w-6 h-6 group-hover:scale-110 transition-transform duration-300" />
                 {unreadCount > 0 && (
-                    <span className="absolute top-2 right-2 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 border-2 border-[var(--background)] shadow-sm">
+                    <span className="absolute top-2 right-2 min-w-[18px] h-[18px] rounded-full bg-[var(--destructive)] text-[var(--destructive-foreground)] text-[10px] font-bold flex items-center justify-center px-1 border-2 border-[var(--background)] shadow-sm">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
@@ -75,27 +72,27 @@ const NotificationBell = ({ user }) => {
             {open && (
                 <>
                     <div className="fixed inset-0 z-[9998]" aria-hidden onClick={() => setOpen(false)} />
-                    <div className="absolute right-0 top-full mt-3 z-[9999] w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300" role="dialog" aria-label="Notifications">
-                        <div className="px-5 py-4 border-b border-[var(--border-light)] flex items-center justify-between bg-[color-mix(in_srgb,var(--background-subtle)_30%,transparent)]">
+                    <div className="absolute right-0 top-full mt-2 z-[9999] w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-xl)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" role="dialog" aria-label="Notifications">
+                        <div className="px-4 py-3 border-b border-[var(--border-light)] flex items-center justify-between bg-[var(--background-subtle)]/50">
                             <div>
-                                <h3 className="text-sm font-bold text-[var(--text)]">Notifications</h3>
+                                <h3 className="text-sm font-semibold text-[var(--text)] m-0">Notifications</h3>
                                 {unreadCount > 0 && (
-                                    <p className="text-[10px] text-[var(--primary)] font-semibold uppercase tracking-wider mt-0.5">
-                                        {unreadCount} UNREAD
+                                    <p className="text-[10px] text-[var(--primary)] font-medium uppercase tracking-wide mt-0.5 m-0">
+                                        {unreadCount} unread
                                     </p>
                                 )}
                             </div>
                             {unreadCount > 0 && (
-                                <button type="button" onClick={markAllRead} className="text-xs font-semibold text-[var(--primary)] hover:text-[var(--primary-hover)] transition-colors px-2 py-1 rounded-md hover:bg-[color-mix(in_srgb,var(--primary-muted)_20%,transparent)]">
+                                <button type="button" onClick={markAllRead} className="btn-ghost text-xs py-1.5 px-2">
                                     Mark all read
                                 </button>
                             )}
                         </div>
-                        <div className="max-h-80 overflow-y-auto scrollbar-thin">
+                        <div className="max-h-80 overflow-y-auto custom-scrollbar">
                             {notifications.length === 0 ? (
                                 <div className="p-10 text-center">
-                                    <MdNotifications className="w-10 h-10 text-[var(--border)] mx-auto mb-3" />
-                                    <p className="text-sm text-[var(--text-muted)] font-medium">No notifications yet</p>
+                                    <MdNotifications className="w-10 h-10 text-[var(--text-subtle)] mx-auto mb-3 opacity-70" aria-hidden />
+                                    <p className="text-sm text-[var(--text-muted)] font-medium m-0">No notifications yet</p>
                                 </div>
                             ) : (
                                 <ul className="divide-y divide-[var(--border-light)]">
@@ -113,9 +110,10 @@ const NotificationBell = ({ user }) => {
                                                     {n.message}
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-2">
-                                                    <p className="text-[10px] font-medium text-[var(--text-subtle)] uppercase tracking-wider">
-                                                        {n.created_at ? new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                                                    </p>
+                                                    <span className="text-[10px] text-[var(--text-muted)] font-medium mt-1 inline-flex items-center gap-1">
+                                                        <MdAccessTime className="w-3 h-3" />
+                                                        {n.created_at ? formatDisplayDateTime(n.created_at) : ''}
+                                                    </span>
                                                     {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] shadow-[0_0_8px_var(--primary)]" />}
                                                 </div>
                                             </button>
@@ -123,11 +121,6 @@ const NotificationBell = ({ user }) => {
                                     ))}
                                 </ul>
                             )}
-                        </div>
-                        <div className="p-3 bg-[color-mix(in_srgb,var(--background-subtle)_30%,transparent)] border-t border-[var(--border-light)] text-center">
-                            <button className="text-[11px] font-bold text-[var(--text-subtle)] hover:text-[var(--primary)] transition-colors uppercase tracking-widest">
-                                View all history
-                            </button>
                         </div>
                     </div>
                 </>

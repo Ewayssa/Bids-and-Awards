@@ -17,7 +17,7 @@ export default {
         'break-words', 'truncate',
         'scale-105', 'scale-110', 'active:scale-95', 'active:scale-[0.98]',
         'page-header', 'page-title', 'page-title-lg', 'page-subtitle', 'card', 'card-elevated',
-        'btn-primary', 'btn-secondary', 'input-field', 'label', 'table-header', 'table-th', 'table-td', 'table-td-muted', 'empty-state', 'loading-state',
+        'btn-primary', 'btn-secondary', 'btn-danger', 'btn-ghost', 'btn-lg', 'btn-outline-primary', 'btn-compact', 'btn-compact-primary', 'btn-compact-muted', 'bg-primary-600', 'text-primary-600', 'input-field', 'input-file', 'label', 'table-header', 'table-th', 'table-td', 'table-td-muted', 'empty-state', 'loading-state',
         'grid', 'grid-cols-1', 'grid-cols-2', 'grid-cols-4', 'grid-cols-7', 'sm:grid-cols-2', 'lg:grid-cols-4', 'lg:grid-cols-2',
     ],
     theme: {

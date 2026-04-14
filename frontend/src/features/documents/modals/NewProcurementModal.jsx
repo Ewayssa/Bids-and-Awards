@@ -7,6 +7,7 @@ import {
 } from 'react-icons/md';
 import { DOC_TYPES } from '../../../constants/docTypes';
 import Modal from '../../../components/Modal';
+import { DatePicker } from '../../../utils/helpers.jsx';
 
 const ICON_MAP = {
     initial: MdFolderOpen,
@@ -60,8 +61,8 @@ const NewProcurementModal = ({
                 <div className="absolute top-4 left-0 right-0 h-0.5 flex items-center px-24 pointer-events-none">
                     {STEPS.map((_, idx) => idx < STEPS.length - 1 && (
                         <div key={`line-${idx}`} className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700 mx-3 relative overflow-hidden">
-                            <div 
-                                className="absolute inset-y-0 left-0 bg-blue-600 transition-all duration-1000 ease-in-out" 
+                            <div
+                                className="absolute inset-y-0 left-0 bg-[var(--primary)] transition-all duration-1000 ease-in-out"
                                 style={{ width: idx < stepIndex ? '100%' : '0%' }}
                             />
                         </div>
@@ -78,10 +79,10 @@ const NewProcurementModal = ({
                             {/* Indicator Circle */}
                             <div 
                                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-700 shadow-sm mb-3 border-2 ${
-                                    isCompleted 
-                                        ? 'bg-blue-600 text-white border-blue-600 rotate-[360deg]' 
-                                        : isActive 
-                                            ? 'bg-blue-600 text-white border-blue-600 scale-110 shadow-blue-500/20' 
+                                    isCompleted
+                                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)] rotate-[360deg]'
+                                        : isActive
+                                            ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)] scale-110 shadow-md'
                                             : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600'
                                 }`}
                             >
@@ -95,7 +96,7 @@ const NewProcurementModal = ({
                             {/* Label & Description */}
                             <div className="flex flex-col items-center text-center">
                                 <span className={`text-[8px] font-black uppercase tracking-[0.2em] mb-0.5 font-mono ${
-                                    isActive ? 'text-blue-600 dark:text-blue-400' : isCompleted ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'
+                                    isActive || isCompleted ? 'text-[var(--primary)]' : 'text-slate-400'
                                 }`}>
                                     Step 0{idx + 1}
                                 </span>
@@ -138,11 +139,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -156,11 +157,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -174,11 +175,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -192,11 +193,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -215,7 +216,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Deadline</label>
-                        <input type="datetime-local" value={form.deadline} onChange={(e) => updateFormField('deadline', e.target.value)} className="input-field" />
+                        <DatePicker value={form.deadline} onChange={(val) => updateFormField('deadline', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Service Providers</label>
@@ -259,11 +260,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -282,7 +283,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Deadline</label>
-                        <input type="datetime-local" value={form.deadline} onChange={(e) => updateFormField('deadline', e.target.value)} className="input-field" />
+                        <DatePicker value={form.deadline} onChange={(val) => updateFormField('deadline', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Service Providers</label>
@@ -326,11 +327,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -348,7 +349,7 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Total Amount</label>
@@ -377,7 +378,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -421,7 +422,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -457,7 +458,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -513,7 +514,7 @@ const NewProcurementModal = ({
                     )}
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -546,11 +547,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Period From</label>
-                            <input type="date" value={form.market_period_from} onChange={(e) => updateFormField('market_period_from', e.target.value)} className="input-field" />
+                            <DatePicker value={form.market_period_from} onChange={(val) => updateFormField('market_period_from', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Period To</label>
-                            <input type="date" value={form.market_period_to} onChange={(e) => updateFormField('market_period_to', e.target.value)} className="input-field" />
+                            <DatePicker value={form.market_period_to} onChange={(val) => updateFormField('market_period_to', val)} />
                         </div>
                     </div>
                     <div className="field-group">
@@ -563,7 +564,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -588,11 +589,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date || ''} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -620,11 +621,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -642,11 +643,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -664,11 +665,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                     <div className="field-group">
@@ -704,11 +705,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -751,7 +752,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Date of Adoption</label>
-                        <input type="date" value={form.date_of_adoption || ''} onChange={(e) => updateFormField('date_of_adoption', e.target.value)} className="input-field" />
+                        <DatePicker value={form.date_of_adoption} onChange={(val) => updateFormField('date_of_adoption', val)} />
                     </div>
                     <div className="field-group sm:col-span-2 lg:col-span-3">
                         <input type="text" value={form.resolution_no} onChange={(e) => updateFormField('resolution_no', e.target.value)} className="input-field" placeholder="Enter resolution number" />
@@ -763,11 +764,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                 </div>
@@ -781,11 +782,11 @@ const NewProcurementModal = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="field-group">
                             <label className="label">Date</label>
-                            <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                            <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                         </div>
                         <div className="field-group">
                             <label className="label">Upload File</label>
-                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                            <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                         </div>
                     </div>
                     <div className="field-group">
@@ -873,8 +874,7 @@ const NewProcurementModal = ({
             return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
                     <div className="field-group">
-                        <label className="label">Date</label>
-                        <input type="date" value={form.contract_date || ''} onChange={(e) => updateFormField('contract_date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.contract_date || ''} onChange={(val) => updateFormField('contract_date', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Received by COA?</label>
@@ -899,12 +899,11 @@ const NewProcurementModal = ({
                         <input type="text" value={form.notarized_place} onChange={(e) => updateFormField('notarized_place', e.target.value)} className="input-field" placeholder="e.g. Manila" />
                     </div>
                     <div className="field-group sm:col-span-1">
-                        <label className="label">Notarization Date</label>
-                        <input type="date" value={form.notarized_date} onChange={(e) => updateFormField('notarized_date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.notarized_date} onChange={(val) => updateFormField('notarized_date', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -915,12 +914,11 @@ const NewProcurementModal = ({
             return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
                     <div className="field-group">
-                        <label className="label">NTP Date</label>
-                        <input type="date" value={form.ntp_date || ''} onChange={(e) => updateFormField('ntp_date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.ntp_date || ''} onChange={(val) => updateFormField('ntp_date', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -932,11 +930,10 @@ const NewProcurementModal = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-2">
                     <div className="field-group">
                         <label className="label">Date</label>
-                        <input type="date" value={form.date} onChange={(e) => updateFormField('date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.date} onChange={(val) => updateFormField('date', val)} />
                     </div>
                     <div className="field-group">
-                        <label className="label">Date Received</label>
-                        <input type="date" value={form.date_received} onChange={(e) => updateFormField('date_received', e.target.value)} className="input-field" />
+                        <DatePicker value={form.date_received} onChange={(val) => updateFormField('date_received', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
@@ -944,7 +941,7 @@ const NewProcurementModal = ({
                             <input
                                 type="file"
                                 onChange={(e) => { updateFormField('file', e.target.files[0]); if (newFormErrors.file) setManualErrors((p) => ({ ...p, file: '' })); }}
-                                className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase transition-all cursor-pointer"
+                                className="input-file"
                                 accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
                             />
                         </div>
@@ -1008,8 +1005,7 @@ const NewProcurementModal = ({
                         <input type="text" value={form.notice_award_service_provider} onChange={(e) => updateFormField('notice_award_service_provider', toLettersOnly(e.target.value))} className="input-field" placeholder="Provider name" />
                     </div>
                     <div className="field-group">
-                        <label className="label">Date</label>
-                        <input type="date" value={form.notice_award_date || ''} onChange={(e) => updateFormField('notice_award_date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.notice_award_date || ''} onChange={(val) => updateFormField('notice_award_date', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Authorized Rep/Owner</label>
@@ -1021,7 +1017,7 @@ const NewProcurementModal = ({
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -1040,12 +1036,11 @@ const NewProcurementModal = ({
                         <input type="text" value={form.secretary_owner_rep} onChange={(e) => updateFormField('secretary_owner_rep', toLettersOnly(e.target.value))} className="input-field" placeholder="Name" />
                     </div>
                     <div className="field-group">
-                        <label className="label">Date</label>
-                        <input type="date" value={form.secretary_date || ''} onChange={(e) => updateFormField('secretary_date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.secretary_date || ''} onChange={(val) => updateFormField('secretary_date', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
-                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
+                        <input type="file" onChange={(e) => updateFormField('file', e.target.files[0])} className="input-file" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
                     </div>
                 </div>
             );
@@ -1056,15 +1051,14 @@ const NewProcurementModal = ({
             return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2">
                     <div className="field-group">
-                        <label className="label">Posting Date</label>
-                        <input type="date" value={form.philgeps_posting_date || ''} onChange={(e) => updateFormField('philgeps_posting_date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.philgeps_posting_date || ''} onChange={(val) => updateFormField('philgeps_posting_date', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
                         <input
                             type="file"
                             onChange={(e) => { updateFormField('file', e.target.files[0]); if (newFormErrors.file) setManualErrors((p) => ({ ...p, file: '' })); }}
-                            className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase transition-all cursor-pointer"
+                            className="input-file"
                             accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
                         />
                     </div>
@@ -1076,15 +1070,14 @@ const NewProcurementModal = ({
             return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2">
                     <div className="field-group">
-                        <label className="label">Posting Date</label>
-                        <input type="date" value={form.dilg_posting_date || ''} onChange={(e) => updateFormField('dilg_posting_date', e.target.value)} className="input-field" />
+                        <DatePicker value={form.dilg_posting_date || ''} onChange={(val) => updateFormField('dilg_posting_date', val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Upload File</label>
                         <input
                             type="file"
                             onChange={(e) => { updateFormField('file', e.target.files[0]); if (newFormErrors.file) setManualErrors((p) => ({ ...p, file: '' })); }}
-                            className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase transition-all cursor-pointer"
+                            className="input-file"
                             accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
                         />
                     </div>
@@ -1099,15 +1092,14 @@ const NewProcurementModal = ({
             return (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2">
                     <div className="field-group">
-                        <label className="label">Posting Date</label>
-                        <input type="date" value={form[dateField] || ''} onChange={(e) => updateFormField(dateField, e.target.value)} className="input-field" />
+                        <DatePicker value={form[dateField] || ''} onChange={(val) => updateFormField(dateField, val)} />
                     </div>
                     <div className="field-group">
                         <label className="label">Upload Proof of Posting</label>
                         <input
                             type="file"
                             onChange={(e) => { updateFormField('file', e.target.files[0]); if (newFormErrors.file) setManualErrors((p) => ({ ...p, file: '' })); }}
-                            className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase transition-all cursor-pointer"
+                            className="input-file"
                             accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
                         />
                     </div>
@@ -1141,7 +1133,7 @@ const NewProcurementModal = ({
                         return (
                             <React.Fragment key={step.id}>
                                 <div className={`flex items-center gap-1.5 shrink-0 ${isCurrent ? 'bg-white dark:bg-slate-800 px-2 py-1 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700' : ''}`}>
-                                    <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black ${isPast || isCurrent ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}`}>
+                                    <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black ${isPast || isCurrent ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}`}>
                                         {isPast ? <MdCheckCircle className="w-3.5 h-3.5" /> : idx + 1}
                                     </div>
                                     <span className={`text-[10px] font-bold uppercase tracking-tight ${isCurrent ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400'}`}>
@@ -1442,18 +1434,18 @@ const NewProcurementModal = ({
                              </div>
                         )}
 
-                        <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
-                            <button 
-                                type="button" 
-                                onClick={() => setNewStep('subDoc')} 
-                                className="flex-1 h-11 px-8 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-[0.98] inline-flex items-center justify-center gap-2 order-2 sm:order-1"
+                        <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-[var(--border-light)]">
+                            <button
+                                type="button"
+                                onClick={() => setNewStep('subDoc')}
+                                className="btn-secondary flex-1 order-2 sm:order-1 inline-flex items-center justify-center gap-2"
                             >
                                 <MdChevronLeft className="w-5 h-5" /> Go Back
                             </button>
-                            <button 
+                            <button
                                 type="submit"
                                 disabled={newSubmitting}
-                                className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-emerald-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:grayscale disabled:scale-100 order-1 sm:order-2"
+                                className="btn-primary flex-1 order-1 sm:order-2 inline-flex items-center justify-center gap-2.5 disabled:grayscale"
                             >
                                 {newSubmitting ? <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdCheckCircle className="w-6 h-6" />}
                                 <span>Submit Procurement</span>

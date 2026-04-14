@@ -68,6 +68,9 @@ function AppContent() {
             if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 setUser(null);
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
                 setLoginInfoMessage('Your session has ended due to inactivity. Please sign in again.');
                 navigate('/');
             }, timeoutMs);

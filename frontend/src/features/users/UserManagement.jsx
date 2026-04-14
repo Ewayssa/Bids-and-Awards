@@ -228,9 +228,9 @@ const Personnel = ({ user }) => {
 
             <section className="content-section overflow-hidden rounded-xl p-0">
                 {successMessage && (
-                    <div className="flex items-center gap-3 px-5 py-3 rounded-t-xl bg-green-50 border-b border-green-200 text-green-800 text-sm font-medium" role="alert">
-                        <MdCheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
-                        <span>{successMessage}</span>
+                    <div className="alert-success rounded-none rounded-t-[var(--radius-lg)] border-x-0 border-t-0" role="alert">
+                        <MdCheckCircle className="w-5 h-5 flex-shrink-0 text-emerald-600" aria-hidden />
+                        <span className="font-medium">{successMessage}</span>
                     </div>
                 )}
                 <div className={`section-header ${successMessage ? 'section-header--nested' : ''}`}>
@@ -240,7 +240,7 @@ const Personnel = ({ user }) => {
                             <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">All registered users and their roles</p>
                         </div>
                         {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && (
-                            <button type="button" onClick={openAddModal} className="px-6 py-2.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center gap-2">
+                            <button type="button" onClick={openAddModal} className="btn-primary inline-flex items-center gap-2">
                                 <MdPersonAdd className="w-5 h-5" /> Add user
                             </button>
                         )}
@@ -252,7 +252,7 @@ const Personnel = ({ user }) => {
                             placeholder="Search by name, email, position, department, role, or status..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="input-field w-full pl-10 rounded-lg"
+                            className="input-field w-full pl-10"
                             aria-label="Search users"
                         />
                     </div>
@@ -312,7 +312,7 @@ const Personnel = ({ user }) => {
                                                     <button
                                                         type="button"
                                                         onClick={() => openEditModal(u)}
-                                                        className="px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all"
+                                                        className="btn-compact-primary"
                                                         title="Edit user"
                                                     >
                                                         Edit
@@ -395,9 +395,9 @@ const Personnel = ({ user }) => {
                                 </div>
                             ))}
                         </div>
-                        <div className="flex gap-2 justify-end pt-2">
-                            <button type="button" onClick={() => setShowConfirmAdd(false)} className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Back</button>
-                            <button type="button" onClick={confirmAddUser} className="px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-emerald-500/20" disabled={submitting}>
+                        <div className="flex gap-2 justify-end pt-2 flex-wrap">
+                            <button type="button" onClick={() => setShowConfirmAdd(false)} className="btn-secondary" disabled={submitting}>Back</button>
+                            <button type="button" onClick={confirmAddUser} className="btn-primary" disabled={submitting}>
                                 {submitting ? 'Creating…' : 'Add user'}
                             </button>
                         </div>
@@ -503,9 +503,9 @@ const Personnel = ({ user }) => {
                             </div>
                         </div>
 
-                        <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
-                            <button type="button" onClick={closeAddModal} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Cancel</button>
-                            <button type="submit" className="px-10 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 disabled:opacity-50" disabled={submitting}>Submit</button>
+                        <div className="flex gap-3 justify-end pt-4 border-t border-[var(--border-light)] flex-wrap">
+                            <button type="button" onClick={closeAddModal} className="btn-secondary" disabled={submitting}>Cancel</button>
+                            <button type="submit" className="btn-primary" disabled={submitting}>Submit</button>
                         </div>
                     </form>
                 )}
@@ -531,10 +531,10 @@ const Personnel = ({ user }) => {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex gap-2 justify-center">
-                            <button type="button" onClick={() => setShowConfirmEdit(false)} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Back</button>
-                            <button type="button" onClick={confirmEditUser} className="px-10 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 disabled:opacity-50" disabled={submitting}>
-                                {submitting ? 'Saving…' : 'Save Changes'}
+                        <div className="flex gap-2 justify-center flex-wrap">
+                            <button type="button" onClick={() => setShowConfirmEdit(false)} className="btn-secondary" disabled={submitting}>Back</button>
+                            <button type="button" onClick={confirmEditUser} className="btn-primary" disabled={submitting}>
+                                {submitting ? 'Saving…' : 'Save changes'}
                             </button>
                         </div>
                     </div>
@@ -593,10 +593,10 @@ const Personnel = ({ user }) => {
                                 </button>
                             </div>
                         </div>
-                        <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
-                            <button type="button" onClick={closeEditModal} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-xs" disabled={submitting}>Cancel</button>
-                            <button type="submit" className="px-10 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 disabled:opacity-50" disabled={submitting}>
-                                Update Account
+                        <div className="flex gap-3 justify-end pt-4 border-t border-[var(--border-light)] flex-wrap">
+                            <button type="button" onClick={closeEditModal} className="btn-secondary" disabled={submitting}>Cancel</button>
+                            <button type="submit" className="btn-primary" disabled={submitting}>
+                                Update account
                             </button>
                         </div>
                     </form>

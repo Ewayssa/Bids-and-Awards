@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatNumber } from '../../utils/helpers';
+import { formatNumber } from '../../utils/helpers.jsx';
 import { MdPostAdd } from 'react-icons/md';
 
 export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProgress, loading }) => {

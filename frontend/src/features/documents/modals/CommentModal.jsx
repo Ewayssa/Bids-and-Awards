@@ -1,6 +1,7 @@
 import React from 'react';
 import { MdComment, MdSend } from 'react-icons/md';
 import Modal from '../../../components/Modal';
+import { formatDisplayDateTime } from '../../../utils/helpers.jsx';
 
 const CommentModal = ({ doc, comments, text, setText, onAdd, onClose, loading }) => {
     return (
@@ -12,9 +13,9 @@ const CommentModal = ({ doc, comments, text, setText, onAdd, onClose, loading })
         >
             <div className="flex flex-col max-h-[70vh]">
                 {doc && (
-                    <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1">Document Reference</p>
-                        <p className="text-sm font-bold text-[var(--text)] line-clamp-1">{doc.title || 'Untitled Document'}</p>
+                    <div className="mb-6 p-4 rounded-xl border border-[var(--border)] bg-[var(--background-subtle)]/50">
+                        <p className="text-xs font-semibold text-[var(--text-muted)] m-0 mb-1">Document</p>
+                        <p className="text-sm font-semibold text-[var(--text)] line-clamp-1 m-0">{doc.title || 'Untitled Document'}</p>
                     </div>
                 )}
 
@@ -22,16 +23,16 @@ const CommentModal = ({ doc, comments, text, setText, onAdd, onClose, loading })
                     {doc && comments[doc.id]?.length > 0 ? (
                         <div className="space-y-4">
                             {comments[doc.id].map((comment, idx) => (
-                                <div key={idx} className="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group">
+                                <div key={idx} className="bg-[var(--surface)] border border-[var(--border-light)] rounded-xl p-4 shadow-sm hover:shadow-[var(--shadow-sm)] transition-shadow group">
                                     <div className="flex items-start justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold text-xs">
+                                            <div className="w-8 h-8 rounded-full bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] font-semibold text-xs">
                                                 {comment.author?.charAt(0).toUpperCase()}
                                             </div>
-                                            <p className="font-bold text-sm text-[var(--text)]">{comment.author}</p>
+                                            <p className="font-semibold text-sm text-[var(--text)] m-0">{comment.author}</p>
                                         </div>
-                                        <p className="text-[10px] uppercase font-bold text-[var(--text-muted)] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                                            {new Date(comment.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                        <p className="text-[10px] font-medium text-[var(--text-muted)]">
+                                            {formatDisplayDateTime(comment.date)}
                                         </p>
                                     </div>
                                     <p className="text-sm text-[var(--text-muted)] whitespace-pre-wrap leading-relaxed pl-10">{comment.text}</p>
@@ -40,11 +41,11 @@ const CommentModal = ({ doc, comments, text, setText, onAdd, onClose, loading })
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 text-[var(--text-muted)]">
-                            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 opacity-50">
-                                <MdComment className="w-8 h-8" />
+                            <div className="w-14 h-14 rounded-full bg-[var(--background-subtle)] border border-[var(--border-light)] flex items-center justify-center mb-4 text-[var(--text-subtle)]">
+                                <MdComment className="w-7 h-7" aria-hidden />
                             </div>
-                            <p className="font-bold">No comments yet</p>
-                            <p className="text-sm opacity-60">Be the first to add a note to this document.</p>
+                            <p className="font-semibold m-0">No comments yet</p>
+                            <p className="text-sm mt-1 m-0 opacity-80">Be the first to add a note.</p>
                         </div>
                     )}
                 </div>
@@ -55,23 +56,19 @@ const CommentModal = ({ doc, comments, text, setText, onAdd, onClose, loading })
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             placeholder="Type your comment or note here..."
-                            className="input-field w-full min-h-[120px] resize-none pr-4 pt-3 pb-3 rounded-2xl bg-white dark:bg-slate-900 shadow-inner focus:ring-4 focus:ring-emerald-500/10 transition-all border-slate-200 dark:border-slate-700"
+                            className="input-field w-full min-h-[120px] resize-none"
                             rows="3"
                         />
                     </div>
-                    <div className="flex justify-end gap-3">
-                        <button 
-                            type="button" 
-                            onClick={onClose} 
-                            className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
-                        >
+                    <div className="flex justify-end gap-2 flex-wrap">
+                        <button type="button" onClick={onClose} className="btn-ghost">
                             Cancel
                         </button>
                         <button
                             type="button"
                             onClick={onAdd}
                             disabled={!text.trim() || loading}
-                            className="btn-primary px-8 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:shadow-none"
+                            className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
                         >
                             {loading ? (
                                 <span className="flex items-center gap-2">

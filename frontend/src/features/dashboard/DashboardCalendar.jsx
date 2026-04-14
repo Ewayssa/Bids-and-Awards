@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MdChevronLeft, MdChevronRight, MdTimeline } from 'react-icons/md';
+import { formatDisplayDate } from '../../utils/helpers.jsx';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -48,18 +49,21 @@ export const DashboardCalendar = ({ events, isAdmin, onOpenAddEvent, onOpenEditE
         calendarCells.push({ day: r, current: false });
     }
 
-    const hasEvent = (dateStr) => sortedEvents.some((e) => e.date === dateStr);
+    // Only highlight events that are today or upcoming.
+    // Past events (already "done") should not keep the red highlight.
+    const hasUpcomingEvent = (dateStr) =>
+        (dateStr || '') >= todayStr && sortedEvents.some((e) => e.date === dateStr);
 
     return (
         <section className="overflow-visible min-w-0 dashboard-section border-b lg:border-b-0 lg:border-r border-[var(--border-light)]" style={{ animationDelay: '0.15s' }}>
-            <div className="px-6 py-5 border-b border-[var(--border-light)] bg-white/50">
-                <h2 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
-                    <MdTimeline className="w-4 h-4 text-[var(--primary)]" />
+            <div className="px-6 py-5 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/40">
+                <h2 className="text-sm font-semibold text-[var(--text)] uppercase tracking-wide flex items-center gap-2 m-0">
+                    <MdTimeline className="w-4 h-4 text-[var(--primary)]" aria-hidden />
                     Calendar of Activities
                 </h2>
-                <p className="text-[11px] text-[var(--text-subtle)] mt-1 font-medium">Bids and Awards Committee Schedule</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1 font-medium m-0">Bids and Awards Committee schedule</p>
             </div>
-            <div className="p-6 flex flex-col xl:flex-row gap-8 min-w-0 overflow-visible bg-white">
+            <div className="p-6 flex flex-col xl:flex-row gap-8 min-w-0 overflow-visible bg-[var(--surface)]">
                 <div className="flex-1 min-w-0 flex flex-col gap-5">
                     <div className="flex items-center justify-between gap-4 px-2">
                         <button
@@ -102,15 +106,15 @@ export const DashboardCalendar = ({ events, isAdmin, onOpenAddEvent, onOpenEditE
                                         ? ''
                                         : cell.isToday
                                         ? 'bg-[var(--primary)] text-white shadow-lg shadow-[color-mix(in_srgb,var(--primary)_30%,transparent)] z-10'
-                                        : cell.current && hasEvent(cell.date)
+                                        : cell.current && hasUpcomingEvent(cell.date)
                                         ? 'bg-red-50 text-red-600 ring-1 ring-red-100 hover:bg-red-100 hover:ring-red-200'
                                         : 'text-[var(--text-muted)] hover:bg-[var(--background-subtle)] border border-transparent hover:border-[var(--border)]'
                                 }`}
-                                aria-label={cell.current && isAdmin ? `Add event on ${cell.date}` : undefined}
+                                aria-label={cell.current && isAdmin ? `Add event on ${formatDisplayDate(cell.date)}` : undefined}
                             >
                                 <span className={cell.isToday ? 'scale-110' : ''}>{cell.day}</span>
-                                {cell.current && hasEvent(cell.date) && !cell.isToday && (
-                                    <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500 group-hover:scale-150 transition-transform duration-300" aria-hidden />
+                                {cell.current && hasUpcomingEvent(cell.date) && !cell.isToday && (
+                                    <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-[var(--primary)] group-hover:scale-150 transition-transform duration-300" aria-hidden />
                                 )}
                             </button>
                         ))}
@@ -118,7 +122,7 @@ export const DashboardCalendar = ({ events, isAdmin, onOpenAddEvent, onOpenEditE
                 </div>
                 <div className="flex-shrink-0 min-w-0 w-full xl:w-48 xl:min-w-[12rem] border-t xl:border-t-0 xl:border-l border-[var(--border-light)] pt-6 xl:pt-0 xl:pl-6 overflow-visible space-y-6">
                     <EventList title="TODAY" events={todaysEvents} isAdmin={isAdmin} onEdit={onOpenEditEvent} iconColor="var(--primary)" />
-                    <EventList title="UPCOMING" events={upcomingEvents} isAdmin={isAdmin} onEdit={onOpenEditEvent} iconColor="orange" />
+                    <EventList title="UPCOMING" events={upcomingEvents} isAdmin={isAdmin} onEdit={onOpenEditEvent} iconColor="var(--chart-2)" />
                 </div>
             </div>
         </section>
@@ -143,7 +147,7 @@ const EventList = ({ title, events, isAdmin, onEdit, iconColor = 'var(--primary)
                             className={`w-full text-left p-3 rounded-xl border border-transparent transition-all duration-300 ${isAdmin ? 'hover:border-[var(--border)] hover:bg-[var(--background-subtle)] hover:shadow-sm' : 'cursor-default'}`}
                         >
                             <p className="text-xs font-bold text-[var(--text)] leading-snug group-hover:text-[var(--primary)] transition-colors">{ev.title}</p>
-                            <p className="text-[10px] font-semibold text-[var(--text-subtle)] mt-1 uppercase tracking-wider">{ev.date}</p>
+                            <p className="text-[10px] font-semibold text-[var(--text-subtle)] mt-1 uppercase tracking-wider">{formatDisplayDate(ev.date)}</p>
                         </button>
                     </li>
                 ))}

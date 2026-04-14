@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
 import { auditLogService } from '../../services/api';
 import { MdHistory, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { formatDisplayDateTime } from '../../utils/helpers.jsx';
 
 const TABLE_PAGE_SIZE = 10;
 
@@ -27,18 +28,7 @@ const ACTION_LABELS = {
     restore_completed: 'Restore',
 };
 
-const formatDate = (iso) => {
-    if (!iso) return '—';
-    try {
-        const d = new Date(iso);
-        return d.toLocaleString(undefined, {
-            dateStyle: 'short',
-            timeStyle: 'short',
-        });
-    } catch {
-        return iso;
-    }
-};
+const formatDate = (iso) => formatDisplayDateTime(iso) || '—';
 
 const AuditTrail = () => {
     const [logs, setLogs] = useState([]);
@@ -87,25 +77,25 @@ const AuditTrail = () => {
                 titleSize="default"
             />
 
-            <section className="content-section overflow-hidden rounded-xl p-0">
+            <section className="content-section overflow-hidden rounded-[var(--radius-lg)] p-0">
                 {error && (
-                    <div className="rounded-t-xl border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700">
+                    <div className={`alert-error rounded-none ${!loading ? 'rounded-t-[var(--radius-lg)]' : ''} border-x-0 border-t-0`} role="alert">
                         {error}
                     </div>
                 )}
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-16">
-                        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--primary)] border-t-transparent" />
-                        <p className="text-sm text-[var(--text-muted)] mt-4">Loading activity logs…</p>
+                    <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
+                        <div className="h-10 w-10 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin" aria-hidden />
+                        <p className="text-sm mt-4 m-0">Loading activity logs…</p>
                     </div>
                 ) : (
                     <>
                         <div className={`section-header flex flex-wrap items-center justify-between gap-3 ${error ? 'section-header--nested' : ''}`}>
-                        <div>
-                            <h2 className="text-base sm:text-lg font-bold text-[var(--text)]">Activity Logs</h2>
-                            <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded. Auto-updates in real time.</p>
+                            <div>
+                                <h2 className="text-base sm:text-lg font-semibold text-[var(--text)] m-0">Activity Logs</h2>
+                                <p className="text-xs text-[var(--text-muted)] mt-0.5 m-0">Only significant events are recorded. Refreshes automatically.</p>
+                            </div>
                         </div>
-                    </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full w-full divide-y divide-[var(--border)]" style={{ tableLayout: 'fixed' }}>
                             <thead className="table-header">
@@ -127,11 +117,11 @@ const AuditTrail = () => {
                                     paginatedLogs.map((entry) => (
                                         <tr
                                             key={entry.id != null ? String(entry.id) : entry.created_at + (entry.actor || '')}
-                                            className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group"
+                                            className="hover:bg-[var(--background-subtle)]/50 transition-colors duration-200 group"
                                         >
                                             <td className="table-td">{entry.actor || '—'}</td>
                                             <td className="table-td text-center">
-                                                <span className="inline-flex justify-center items-center px-2.5 py-1 rounded-lg bg-[var(--background-subtle)]/70 text-[var(--text)] text-[11px] font-bold uppercase tracking-wider border border-[var(--border-light)] group-hover:border-[var(--primary-light)] transition-all duration-300">
+                                                <span className="inline-flex justify-center items-center px-2.5 py-1 rounded-lg bg-[var(--background-subtle)] text-[var(--text)] text-xs font-semibold border border-[var(--border-light)] max-w-full group-hover:border-[color-mix(in_srgb,var(--primary)_25%,var(--border))] transition-colors">
                                                     {ACTION_LABELS[entry.action] || entry.action}
                                                 </span>
                                             </td>

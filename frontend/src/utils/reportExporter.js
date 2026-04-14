@@ -11,12 +11,8 @@ export const exportToExcel = async (encodedRows, filteredReports) => {
     if (!hasEncoded && !hasUploaded) return;
 
     const today = new Date();
-    const reportDateLabel = today.toLocaleDateString('en-PH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    });
-    const reportDateUpper = reportDateLabel.toUpperCase();
+    const reportDateLabel = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+    const reportDateUpper = reportDateLabel;
     const totalCols = REPORT_COLUMNS.length;
 
     const workbook = new ExcelJS.Workbook();
