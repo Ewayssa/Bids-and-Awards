@@ -19,20 +19,19 @@ const EncodeModal = ({
         <Modal
             isOpen={true}
             onClose={onClose}
-            title="Procurement Monitoring Interface"
             size="full"
             showCloseButton={true}
+            bodyClassName="!p-3 !pt-2"
         >
-            <div className="flex flex-col h-full space-y-6">
+            <div className="flex flex-col h-full space-y-3">
                 {/* Information Banner */}
-                <div className="p-6 bg-emerald-50 dark:bg-emerald-500/5 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
                     <div className="flex items-center gap-5">
                         <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm text-emerald-600 shrink-0">
                             <MdTableChart className="w-8 h-8" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Standardized Monitoring</p>
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Record Encoding Protocol</h3>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Procurement Monitoring</h3>
                         </div>
                     </div>
                     
@@ -69,23 +68,23 @@ const EncodeModal = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-h-0 overflow-auto p-4 bg-[var(--background)]">
+                <div className="flex-1 min-h-0 overflow-auto px-2 pb-2 pt-0 bg-[var(--background)]">
                     <div className="bg-[var(--surface)] rounded-lg border border-[var(--border)] shadow-sm" style={{ width: 'max-content', minWidth: '100%' }}>
                         {/* Static Report Header */}
-                        <div className="border-b border-[var(--border-light)] px-3 py-2.5 flex items-center justify-between bg-[var(--surface)]">
+                        <div className="border-b border-[var(--border-light)] px-3 py-2 flex items-center justify-between bg-[var(--surface)]">
                             <span className="text-sm font-semibold text-[var(--text)] flex-1">DEPARTMENT OF THE INTERIOR AND LOCAL GOVERNMENT - REGION 1</span>
                             <span className="text-base font-bold text-[var(--text)] shrink-0 px-4">Procurement Monitoring Report</span>
                             <span className="flex-1" />
                         </div>
-                        <div className="border-b border-[var(--border-light)] px-3 py-2 bg-[var(--background-subtle)]">
+                        <div className="border-b border-[var(--border-light)] px-3 py-1.5 bg-[var(--background-subtle)]">
                             <span className="text-sm font-bold text-[var(--text)]">
                                 Monitoring Report as of {new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
                             </span>
                         </div>
-                        <div className="bg-[var(--primary)] border-b border-[var(--primary-dark)] px-3 py-2">
+                        <div className="bg-[var(--primary)] border-b border-[var(--primary-dark)] px-3 py-1.5">
                             <span className="text-sm font-semibold text-white">COMPLETED PROCUREMENT ACTIVITIES</span>
                         </div>
-                        <div className="bg-[var(--background-subtle)] border-b border-[var(--border-light)] h-4" />
+                        <div className="bg-[var(--background-subtle)] border-b border-[var(--border-light)] h-3" />
 
                         {/* Excel-like Table */}
                         <table className="border-collapse text-[var(--text)] bg-[var(--surface)]" style={{ minWidth: '2600px', width: '100%' }}>
