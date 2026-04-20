@@ -7,6 +7,7 @@ import Modal from '../../components/Modal';
 import { userService } from '../../services/api';
 
 const LEFT_PANEL_IMAGE = '/dilg-logo.png';
+const BAGONG_PILIPINAS_LOGO = '/bagong-pilipinas-logo.png';
 
 const Login = ({ onLogin, infoMessage }) => {
     const [email, setEmail] = useState('');
@@ -170,11 +171,18 @@ const Login = ({ onLogin, infoMessage }) => {
                 
                 <div className="relative z-10 animate-entry">
                     <div className="flex items-center gap-6 mb-12">
-                        <img
-                            src={LEFT_PANEL_IMAGE}
-                            alt="DILG Logo"
-                            className="w-32 h-32 object-contain logo-glow"
-                        />
+                        <div className="flex items-center gap-0">
+                            <img
+                                src={LEFT_PANEL_IMAGE}
+                                alt="DILG Logo"
+                                className="w-24 h-24 object-contain logo-glow"
+                            />
+                            <img
+                                src={BAGONG_PILIPINAS_LOGO}
+                                alt="Bagong Pilipinas Logo"
+                                className="w-24 h-24 object-contain logo-glow"
+                            />
+                        </div>
                         <div className="space-y-1">
                             <p className="text-emerald-100/60 text-sm font-bold tracking-widest uppercase">
                                 Republic of the Philippines
@@ -187,7 +195,7 @@ const Login = ({ onLogin, infoMessage }) => {
 
                     <h1 className="branding-title">
                         Bids and <span className="text-gradient-emerald">Awards</span> <br /> 
-                        Tracking System
+                        Tracking Management System
                     </h1>
                     <p className="branding-subtitle italic font-serif">
                         "Matino, Mahusay at Maaasahan"
@@ -198,18 +206,25 @@ const Login = ({ onLogin, infoMessage }) => {
 
             {/* Form Side */}
             <div className="login-form-side">
-                <div
-                    className={`w-full max-w-md rounded-2xl glass-card p-8 sm:p-10 animate-entry border border-[var(--border)] shadow-[var(--shadow-md)] ${isFocused ? 'glass-card-glow' : ''}`}
+                <div 
+                    className={`w-full max-w-md rounded-3xl glass-card p-8 sm:p-10 animate-entry ${isFocused ? 'glass-card-glow' : ''}`}
                     style={{ animationDelay: '200ms' }}
                 >
                     {/* Compact Header for Form Side (Mobile Logo) */}
                     <div className="flex flex-col items-center lg:items-start mb-8">
                         <div className="lg:hidden flex items-center gap-4 mb-6">
-                            <img
-                                src={LEFT_PANEL_IMAGE}
-                                alt=""
-                                className="w-20 h-20 object-contain animate-entry logo-glow"
-                            />
+                            <div className="flex items-center gap-0">
+                                <img
+                                    src={LEFT_PANEL_IMAGE}
+                                    alt=""
+                                    className="w-14 h-14 object-contain animate-entry logo-glow"
+                                />
+                                <img
+                                    src={BAGONG_PILIPINAS_LOGO}
+                                    alt=""
+                                    className="w-14 h-14 object-contain animate-entry logo-glow"
+                                />
+                            </div>
                             <div className="text-left">
                                 <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-widest uppercase">
                                     Republic of the Philippines
@@ -282,7 +297,7 @@ const Login = ({ onLogin, infoMessage }) => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary btn-lg w-full text-base"
+                            className="btn-primary w-full py-4 rounded-2xl text-lg font-bold btn-magnetic shadow-lg shadow-emerald-500/20"
                         >
                             {loading ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -396,11 +411,11 @@ const Login = ({ onLogin, infoMessage }) => {
                             </label>
                         </div>
 
-                        <div className="flex gap-3 justify-end pt-2 flex-wrap">
+                        <div className="flex gap-3 justify-end pt-2">
                             <button
                                 type="button"
                                 onClick={closeForgotModal}
-                                className="btn-ghost"
+                                className="px-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                                 disabled={forgotLoading}
                             >
                                 Cancel

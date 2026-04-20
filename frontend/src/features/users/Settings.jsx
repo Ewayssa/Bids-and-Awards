@@ -73,48 +73,47 @@ const Settings = ({ user }) => {
             {(message || error) && (
                 <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-top-4 duration-500">
                     {message && (
-                        <div className="alert-success" role="status">
-                            <MdCheckCircle className="w-5 h-5 shrink-0 text-emerald-600" aria-hidden />
-                            <p className="text-sm font-medium m-0">{message}</p>
+                        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-4 text-emerald-700 dark:text-emerald-400">
+                            <MdCheckCircle className="w-6 h-6 shrink-0" />
+                            <p className="text-sm font-bold uppercase tracking-tight">{message}</p>
                         </div>
                     )}
                     {error && (
-                        <div className={`alert-error ${message ? 'mt-4' : ''}`} role="alert">
-                            <MdWarning className="w-5 h-5 shrink-0" aria-hidden />
-                            <p className="text-sm font-medium m-0">{error}</p>
+                        <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center gap-4 text-red-700 dark:text-red-400 mt-4">
+                            <MdWarning className="w-6 h-6 shrink-0" />
+                            <p className="text-sm font-bold uppercase tracking-tight">{error}</p>
                         </div>
                     )}
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
                 {/* Backup Card */}
-                <div className="card p-8 group">
-                    <div className="w-14 h-14 rounded-xl bg-[var(--background-subtle)] border border-[var(--border-light)] flex items-center justify-center text-[var(--primary)] mb-5">
-                        <MdBackup className="w-7 h-7" />
+                <div className="group relative p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-blue-500/5">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform duration-500">
+                        <MdBackup className="w-8 h-8" />
                     </div>
-                    <h2 className="text-xl font-semibold text-[var(--text)] tracking-tight mb-2">System backup</h2>
-                    <p className="text-sm text-[var(--text-muted)] mb-8 leading-relaxed">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">System Backup</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
                         Export all database records, user profiles, and document metadata into a standardized JSON file for offline storage.
                     </p>
                     <button
-                        type="button"
                         onClick={() => setConfirmBackup(true)}
                         disabled={backingUp}
-                        className="btn-primary btn-lg w-full inline-flex items-center justify-center gap-3"
+                        className="w-full py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all flex items-center justify-center gap-3 active:scale-95"
                     >
-                        {backingUp ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden /> : <MdBackup className="w-5 h-5" />}
-                        Create backup
+                        {backingUp ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdBackup className="w-5 h-5" />}
+                        Create Backup
                     </button>
                 </div>
 
                 {/* Restore Card */}
-                <div className="card p-8 group">
-                    <div className="w-14 h-14 rounded-xl bg-[var(--primary-muted)] border border-[color-mix(in_srgb,var(--primary)_20%,var(--border))] flex items-center justify-center text-[var(--primary)] mb-5">
-                        <MdRestore className="w-7 h-7" />
+                <div className="group relative p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-emerald-500/5">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 mb-6 group-hover:scale-110 transition-transform duration-500">
+                        <MdRestore className="w-8 h-8" />
                     </div>
-                    <h2 className="text-xl font-semibold text-[var(--text)] tracking-tight mb-2">System restore</h2>
-                    <p className="text-sm text-[var(--text-muted)] mb-8 leading-relaxed">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">System Restore</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
                         Import system archives to restore operational state. This process will synchronize metadata and user permissions with the archived snapshot.
                     </p>
                     <input
@@ -125,13 +124,12 @@ const Settings = ({ user }) => {
                         className="hidden"
                     />
                     <button
-                        type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={restoring}
-                        className="btn-primary btn-lg w-full inline-flex items-center justify-center gap-3"
+                        className="w-full py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all flex items-center justify-center gap-3 active:scale-95"
                     >
-                        {restoring ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden /> : <MdRestore className="w-5 h-5" />}
-                        Restore backup
+                        {restoring ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <MdRestore className="w-5 h-5" />}
+                        Restore Backup
                     </button>
                 </div>
             </div>
@@ -143,19 +141,19 @@ const Settings = ({ user }) => {
                 title="Backup Confirmation"
                 size="md"
             >
-                <div className="space-y-6">
-                    <div className="alert-info">
-                        <MdBackup className="w-5 h-5 shrink-0 text-blue-600" aria-hidden />
-                        <p className="text-sm font-medium m-0">
+                <div className="p-2 space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 dark:bg-blue-500/5 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                        <MdBackup className="w-8 h-8 text-blue-600 shrink-0" />
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                             Download a full metadata snapshot of all procurement activities and user records?
                         </p>
                     </div>
-                    <div className="modal-footer !p-0 !border-0 flex gap-3">
-                        <button type="button" onClick={() => setConfirmBackup(false)} className="btn-secondary flex-1 justify-center">
+                    <div className="flex gap-3">
+                        <button onClick={() => setConfirmBackup(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">
                             Cancel
                         </button>
-                        <button type="button" onClick={performBackup} className="btn-primary flex-1 justify-center">
-                            Download backup
+                        <button onClick={performBackup} className="flex-1 py-3.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95">
+                            Download Backup
                         </button>
                     </div>
                 </div>
@@ -168,22 +166,22 @@ const Settings = ({ user }) => {
                 title="Recovery Warning"
                 size="md"
             >
-                <div className="space-y-6">
-                    <div className="alert-error">
-                        <MdWarning className="w-6 h-6 shrink-0" aria-hidden />
+                <div className="p-2 space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-500/5 rounded-2xl border border-red-200 dark:border-red-500/20 text-red-600">
+                        <MdWarning className="w-10 h-10 shrink-0" />
                         <div>
-                            <p className="text-sm font-semibold m-0">Destructive action</p>
-                            <p className="text-xs text-red-800/90 mt-1.5 m-0">
-                                Restoring from &quot;{confirmRestore?.file?.name}&quot; will synchronize the current database with the archive.
+                            <p className="text-sm font-black uppercase tracking-tight">Destructive Action</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase mt-1">
+                                Restoring from "{confirmRestore?.file?.name}" will synchronize the current database with the archive.
                             </p>
                         </div>
                     </div>
-                    <div className="modal-footer !p-0 !border-0 flex gap-3">
-                        <button type="button" onClick={() => setConfirmRestore(null)} className="btn-secondary flex-1 justify-center">
+                    <div className="flex gap-3">
+                        <button onClick={() => setConfirmRestore(null)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px]">
                             Cancel
                         </button>
-                        <button type="button" onClick={performRestore} className="btn-danger flex-1 justify-center">
-                            Restore data
+                        <button onClick={performRestore} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-red-600/20">
+                            Restore Data
                         </button>
                     </div>
                 </div>

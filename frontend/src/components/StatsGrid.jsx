@@ -1,38 +1,38 @@
 import { Link } from 'react-router-dom';
 import { MdCheckCircle, MdSchedule, MdWarning } from 'react-icons/md';
-import { formatNumber } from '../utils/helpers.jsx';
+import { formatNumber } from '../utils/helpers';
 
 export const StatsGrid = ({ loading, stats }) => {
     const { pieData = [0, 0, 0, 0] } = stats;
     const [total, completed, ongoing, pending] = pieData.map(Number);
 
     const statCards = [
-        {
-            value: completed,
-            label: 'Completed Documents',
+        { 
+            value: completed, 
+            label: 'Completed Documents', 
             icon: MdCheckCircle,
-            iconBg: 'bg-[var(--primary-muted)]',
-            iconColor: 'text-[var(--primary)]',
+            iconBg: 'bg-green-500/10', 
+            iconColor: 'text-green-600', 
             link: '/encode?status=complete',
-            accentClass: 'stat-card--complete',
+            accentClass: 'stat-card--complete'
         },
-        {
-            value: ongoing,
-            label: 'Ongoing',
+        { 
+            value: ongoing, 
+            label: 'On going', 
             icon: MdSchedule,
-            iconBg: 'bg-amber-500/10',
-            iconColor: 'text-amber-700 dark:text-amber-400',
+            iconBg: 'bg-orange-500/10', 
+            iconColor: 'text-orange-600', 
             link: '/encode?status=ongoing',
-            accentClass: 'stat-card--ongoing',
+            accentClass: 'stat-card--ongoing'
         },
-        {
-            value: pending,
-            label: 'Pending',
+        { 
+            value: pending, 
+            label: 'Pending', 
             icon: MdWarning,
-            iconBg: 'bg-rose-500/10',
-            iconColor: 'text-rose-600 dark:text-rose-400',
+            iconBg: 'bg-rose-500/10', 
+            iconColor: 'text-rose-600', 
             link: '/encode?status=pending',
-            accentClass: 'stat-card--pending',
+            accentClass: 'stat-card--pending'
         },
     ];
 
@@ -42,7 +42,7 @@ export const StatsGrid = ({ loading, stats }) => {
                 <card.icon className="w-6 h-6" />
             </div>
             <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-0.5">{card.label}</p>
+                <p className="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-0.5">{card.label}</p>
                 <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl sm:text-3xl font-extrabold text-[var(--text)] tabular-nums tracking-tight">
                         {loading ? '—' : formatNumber(card.value)}
@@ -58,7 +58,7 @@ export const StatsGrid = ({ loading, stats }) => {
                 <Link 
                     key={card.label} 
                     to={card.link} 
-                    className={`card stat-card ${card.accentClass} group relative p-5 sm:p-6 bg-[var(--surface)] overflow-hidden`} 
+                    className={`card stat-card ${card.accentClass} group relative p-5 sm:p-6 bg-white overflow-hidden`} 
                     style={{ animationDelay: `${i * 0.08}s` }}
                 >
                     {renderCardContent(card)}

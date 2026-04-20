@@ -4,6 +4,8 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'users', views.UserViewSet)
+router.register(r'procurement-records', views.ProcurementRecordViewSet)
+router.register(r'procurement-stage-statuses', views.ProcurementStageStatusViewSet)
 router.register(r'upload', views.DocumentViewSet, basename='upload')
 router.register(r'reports', views.ReportViewSet, basename='report')
 router.register(r'calendar-events', views.CalendarEventViewSet, basename='calendar-event')

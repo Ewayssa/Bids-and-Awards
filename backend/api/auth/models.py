@@ -6,7 +6,7 @@ class UserManager(AuthUserManager):
     def create_superuser(self, username, email=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'admin')
+        extra_fields.setdefault('role', 'bac_secretariat')
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
@@ -15,15 +15,16 @@ class UserManager(AuthUserManager):
 
 class User(AbstractUser):
     ROLE_CHOICES = (
-        ('admin', 'Admin'),
-        ('user', 'User'),
+        ('bac_secretariat', 'BAC Secretariat (Admin)'),
+        ('bac_chair', 'BAC Chair'),
+        ('bac_member', 'BAC Member'),
     )
     POSITION_CHOICES = (
         ('BAC Chairperson', 'BAC Chairperson'),
         ('BAC Secretariat', 'BAC Secretariat'),
         ('BAC Member', 'BAC Member'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='bac_member')
     fullName = models.CharField(max_length=255, blank=True)
     position = models.CharField(max_length=255, blank=True, choices=POSITION_CHOICES, help_text='Position or designation')
     office = models.CharField(max_length=255, blank=True, help_text='Department')

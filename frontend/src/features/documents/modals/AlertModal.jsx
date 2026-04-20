@@ -11,16 +11,22 @@ const AlertModal = ({ message, onClose }) => {
             size="sm"
             showCloseButton={true}
         >
-            <div className="text-center py-2 space-y-5">
-                <div className="flex justify-center">
-                    <div className="w-14 h-14 rounded-full bg-[var(--primary-muted)] border border-[color-mix(in_srgb,var(--primary)_20%,var(--border))] flex items-center justify-center text-[var(--primary)]">
-                        <MdCheckCircle className="h-8 w-8" aria-hidden />
+            <div className="text-center py-2">
+                <div className="flex justify-center mb-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center animate-bounce">
+                        <MdCheckCircle className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
                     </div>
                 </div>
-                <p className="text-[var(--text)] font-medium text-base leading-relaxed m-0">{message}</p>
-                <button type="button" onClick={onClose} className="btn-primary w-full justify-center">
-                    Great, thanks!
-                </button>
+                <p className="text-[var(--text)] font-bold text-lg leading-relaxed">{message}</p>
+                <div className="mt-8">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="btn-primary w-full py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/20"
+                    >
+                        Great, thanks!
+                    </button>
+                </div>
             </div>
         </Modal>
     );

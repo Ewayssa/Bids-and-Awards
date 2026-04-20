@@ -1,121 +1,161 @@
 import React from 'react';
-import { MdDescription } from 'react-icons/md';
+import { 
+    MdTimeline, 
+    MdCheckCircle, 
+    MdRadioButtonUnchecked, 
+    MdErrorOutline,
+    MdInfo
+} from 'react-icons/md';
+import { PROCUREMENT_STAGES, REQUIRED_DOCS_BY_TYPE } from '../../constants/docTypes';
 
-const WorkflowVisualization = ({ prNo, documents }) => {
-    const workflowDocs = documents.filter(doc => doc.prNo === prNo);
+const WorkflowVisualization = ({ prNo, documents = [], procurementType }) => {
+    // 1. Determine procurement type: prop priority, then detection from docs
+    const pType = procurementType || documents[0]?.procurement_type || 'small_value';
+    const methodDisplay = documents[0]?.procurement_method_display || (pType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
     
-    const stages = [
-        { id: 'initial', name: 'Initial Documents' },
-        { id: 'afq', name: 'AFQ Concerns' },
-        { id: 'meeting', name: 'BAC Meeting Documents' },
-        { id: 'award', name: 'Award Documents' },
-        { id: 'posting', name: 'Award Posting' },
-    ];
+    // 2. Get the specific requirements for this type
+    const requiredDocsList = REQUIRED_DOCS_BY_TYPE[pType] || [];
+    
+    // 3. Filter stages to only show those that have required documents
+    // and enrich with uploaded status
+    const enrichedStages = PROCUREMENT_STAGES.map(stage => {
+        // Find which required documents belong to this stage's categories or subDocs list
+        // We match by name against the stage's subDocs list for precision
+        const docsInStage = stage.subDocs.filter(subName => requiredDocsList.includes(subName));
+        
+        // If this stage doesn't have any required documents for this procurement type, 
+        // we might still want to show it if documents WERE uploaded to it (edge cases)
+        const uploadedDocs = documents.filter(doc => 
+            stage.subDocs.includes(doc.subDoc) || 
+            stage.categories.includes(doc.category)
+        );
 
-    const getStageDocs = (stageName) => {
-        return workflowDocs.filter(doc => doc.category === stageName);
-    };
+        if (docsInStage.length === 0 && uploadedDocs.length === 0) return null;
 
-    const getStageStatus = (stageName) => {
-        const stageDocs = getStageDocs(stageName);
-        if (stageDocs.length === 0) return 'not-started';
-        const allComplete = stageDocs.every(doc => doc.status === 'complete');
-        const anyOngoing = stageDocs.some(doc => doc.status === 'ongoing');
-        if (allComplete) return 'complete';
-        if (anyOngoing) return 'ongoing';
-        return 'pending';
+        // Map requirements to their upload status
+        const requirementProgress = docsInStage.map(reqName => {
+            const uploaded = uploadedDocs.find(d => d.subDoc === reqName);
+            return {
+                name: reqName,
+                status: uploaded ? uploaded.status : 'missing',
+                id: uploaded ? uploaded.id : `missing-${reqName}`,
+                isMissing: !uploaded
+            };
+        });
+
+        // Determine stage status
+        let stageStatus = 'not-started';
+        if (uploadedDocs.length > 0) {
+            const allRequiredUploaded = requirementProgress.every(r => !r.isMissing);
+            const allComplete = uploadedDocs.every(d => d.status === 'complete') && allRequiredUploaded;
+            const anyOngoing = uploadedDocs.some(d => d.status === 'ongoing');
+            
+            if (allComplete) stageStatus = 'complete';
+            else if (anyOngoing || uploadedDocs.length > 0) stageStatus = 'ongoing';
+        }
+
+        return {
+            ...stage,
+            status: stageStatus,
+            requirements: requirementProgress,
+            uploadedCount: uploadedDocs.length,
+            requiredCount: docsInStage.length
+        };
+    }).filter(stage => {
+        if (!stage) return false;
+        // SPECIAL LOGIC: Hide RFQ Concerns for Lease of Venue
+        if (pType === 'lease_of_venue' && stage.id === 'afq') return false;
+        return true;
+    });
+
+    const statusColors = {
+        complete: 'bg-[var(--primary)] text-white shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]',
+        ongoing: 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]',
+        pending: 'bg-[var(--destructive)] text-white shadow-[0_0_15px_rgba(var(--destructive-rgb),0.3)]',
+        'not-started': 'bg-[var(--background-subtle)] text-[var(--text-muted)] border border-[var(--border)]',
     };
 
     return (
-        <div className="space-y-6">
-            {/* Timeline */}
-            <div className="relative">
-                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-[var(--border)]" />
-                {stages.map((stage, idx) => {
-                    const status = getStageStatus(stage.name);
-                    const stageDocs = getStageDocs(stage.name);
-                    const statusColors = {
-                        complete: 'bg-primary-600',
-                        ongoing: 'bg-amber-500',
-                        pending: 'bg-rose-500',
-                        'not-started': 'bg-slate-300 dark:bg-slate-600',
-                    };
-                    
-                    return (
-                        <div key={stage.id} className="relative flex items-start gap-4 mb-6">
-                            <div className={`relative z-10 w-16 h-16 rounded-full ${statusColors[status]} flex items-center justify-center font-bold text-sm flex-shrink-0 ${status === 'not-started' ? 'text-slate-700 dark:text-slate-100' : 'text-white'}`}>
-                                {idx + 1}
-                            </div>
-                            <div className="flex-1 pt-2">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="font-semibold text-[var(--text)]">{stage.name}</h3>
-                                    <span
-                                        className={
-                                            status === 'complete' ? 'status-badge status-badge--complete' :
-                                            status === 'ongoing' ? 'status-badge status-badge--ongoing' :
-                                            status === 'pending' ? 'status-badge status-badge--pending' :
-                                            'inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-[var(--background-subtle)] text-[var(--text-muted)] border border-[var(--border)]'
-                                        }
-                                    >
-                                        {status === 'complete' ? 'Complete' :
-                                            status === 'ongoing' ? 'Ongoing' :
-                                            status === 'pending' ? 'Pending' : 'Not Started'}
-                                    </span>
-                                </div>
-                                {stageDocs.length > 0 ? (
-                                    <div className="space-y-2 mt-2">
-                                        {stageDocs.map(doc => (
-                                            <div key={doc.id} className="bg-[var(--background-subtle)] rounded-lg p-3 text-sm">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="font-medium text-[var(--text)]">{doc.subDoc || doc.title}</span>
-                                                    <span className={`status-badge !text-[10px] !py-0.5 !px-2 ${
-                                                        doc.status === 'complete' ? 'status-badge--complete' :
-                                                        doc.status === 'ongoing' ? 'status-badge--ongoing' :
-                                                        'status-badge--pending'
-                                                    }`}>
-                                                        {doc.status || 'pending'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-[var(--text-muted)] italic mt-2">No documents uploaded yet</p>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Summary */}
-            <div className="mt-8 p-4 bg-[var(--background-subtle)] rounded-xl border border-[var(--border-light)]">
-                <h4 className="font-semibold text-[var(--text)] mb-3">Summary</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                    <div>
-                        <p className="text-[var(--text-muted)]">Total Documents</p>
-                        <p className="text-xl font-bold text-[var(--text)] tabular-nums">{workflowDocs.length}</p>
+        <div className="space-y-8">
+            <div className="flex items-center justify-between p-4 bg-[var(--primary-muted)]/10 rounded-2xl border border-[var(--primary)]/10">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center text-white shadow-lg">
+                        <MdTimeline className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-[var(--text-muted)]">Complete</p>
-                        <p className="text-xl font-bold text-primary-600 tabular-nums">
-                            {workflowDocs.filter(d => d.status === 'complete').length}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-[var(--text-muted)]">Ongoing</p>
-                        <p className="text-xl font-bold text-amber-600 tabular-nums">
-                            {workflowDocs.filter(d => d.status === 'ongoing').length}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-[var(--text-muted)]">Pending</p>
-                        <p className="text-xl font-bold text-rose-600 tabular-nums">
-                            {workflowDocs.filter(d => d.status === 'pending').length}
-                        </p>
+                        <p className="text-[10px] font-black text-[var(--primary)] uppercase tracking-[0.2em] mb-0.5">Methodology</p>
+                        <h3 className="text-sm font-bold text-[var(--text)]">{methodDisplay}</h3>
                     </div>
                 </div>
+                <div className="text-right">
+                    <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-0.5">Folder No.</p>
+                    <p className="text-xs font-bold text-[var(--text)]">{prNo}</p>
+                </div>
             </div>
+
+            <div className="relative pl-4 overflow-hidden">
+                {/* Visual Line */}
+                <div className="absolute left-[31px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-[var(--primary)] via-[var(--border)] to-[var(--border-light)] opacity-30" />
+                
+                <div className="space-y-12">
+                    {enrichedStages.map((stage, idx) => (
+                        <div key={stage.id} className="relative flex gap-8 group">
+                            {/* Stage Circle */}
+                            <div className={`relative z-10 w-10 h-10 rounded-full ${statusColors[stage.status]} flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-500 group-hover:scale-110`}>
+                                {stage.status === 'complete' ? <MdCheckCircle className="w-6 h-6" /> : (idx + 1)}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h4 className="font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors">{stage.name}</h4>
+                                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest mt-0.5">
+                                            {stage.uploadedCount} of {stage.requiredCount} Requirement{stage.requiredCount !== 1 ? 's' : ''}
+                                        </p>
+                                    </div>
+                                    <span className={`status-badge !text-[9px] ${
+                                        stage.status === 'complete' ? 'status-badge--complete' :
+                                        stage.status === 'ongoing' ? 'status-badge--ongoing' :
+                                        '!bg-[var(--background-subtle)] !text-[var(--text-muted)] !border-[var(--border)]'
+                                    }`}>
+                                        {stage.status === 'complete' ? 'Done' : stage.status === 'ongoing' ? 'In Progress' : 'Pending'}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {stage.requirements.map(req => (
+                                        <div 
+                                            key={req.id} 
+                                            className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                                                req.isMissing 
+                                                ? 'bg-red-50/30 dark:bg-red-500/5 border-red-100 dark:border-red-500/10 grayscale-[0.5] opacity-60' 
+                                                : 'bg-white dark:bg-[var(--surface)] border-[var(--border-light)] hover:border-[var(--primary)]/30 hover:shadow-md'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                {req.isMissing ? (
+                                                    <MdRadioButtonUnchecked className="w-4 h-4 text-red-300 shrink-0" />
+                                                ) : (
+                                                    <MdCheckCircle className={`w-4 h-4 shrink-0 ${
+                                                        req.status === 'complete' ? 'text-[var(--primary)]' : 'text-amber-500'
+                                                    }`} />
+                                                )}
+                                                <span className={`text-[11px] font-medium truncate ${req.isMissing ? 'text-red-800/60 dark:text-red-400/60' : 'text-[var(--text)]'}`} title={req.name}>
+                                                    {req.name}
+                                                </span>
+                                            </div>
+                                            {req.isMissing && (
+                                                <span className="text-[8px] font-black text-red-500/50 uppercase tracking-tighter shrink-0 ml-2">Missing</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
         </div>
     );
 };

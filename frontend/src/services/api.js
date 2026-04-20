@@ -67,7 +67,10 @@ export const documentService = {
         return response.data.next_transaction_number;
     },
 
-    async create(formData) {
+    async create(formData, procurementRecordId = null) {
+        if (procurementRecordId) {
+            formData.append('procurement_record', procurementRecordId);
+        }
         const response = await api.post(`/upload/`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -178,14 +181,72 @@ export const calendarEventService = {
 export const backupRestoreService = {
     async backup(username = '') {
         const params = username ? { username } : undefined;
-        const response = await api.get(`/backup/`, { responseType: 'json', params });
+        const response = await api.get(`/backup/`, { responseType: 'blob', params });
         return response.data;
     },
-    async restore(data, username = '') {
-        const payload = username ? { ...(data || {}), username } : data;
-        const response = await api.post(`/restore/`, payload, {
-            headers: { 'Content-Type': 'application/json' },
+    async restore(file, username = '') {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (username) formData.append('username', username);
+        const response = await api.post(`/restore/`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
         });
+        return response.data;
+    },
+};
+
+export const procurementRecordService = {
+    async getAll() {
+        let all = [];
+        let nextUrl = `/procurement-records/`;
+        while (nextUrl) {
+            const response = await api.get(nextUrl);
+            const body = response.data;
+            const page = Array.isArray(body) ? body : (body?.results ?? []);
+            all = all.concat(page);
+            const next = body?.next;
+            if (!next) break;
+            nextUrl = next.includes(API_BASE_URL)
+                ? next.split(API_BASE_URL)[1]
+                : (next.startsWith('http') ? new URL(next).pathname + new URL(next).search : next);
+        }
+        return all;
+    },
+
+    async getById(id) {
+        const response = await api.get(`/procurement-records/${id}/`);
+        return response.data;
+    },
+
+    async create(data) {
+        const response = await api.post(`/procurement-records/`, data);
+        return response.data;
+    },
+
+    async update(id, data) {
+        const response = await api.patch(`/procurement-records/${id}/`, data);
+        return response.data;
+    },
+
+    async delete(id) {
+        const response = await api.delete(`/procurement-records/${id}/`);
+        return response.data;
+    },
+
+    async getDocuments(id) {
+        const response = await api.get(`/procurement-records/${id}/documents/`);
+        return response.data;
+    },
+
+    async getDocumentsByStage(id, stageId) {
+        const response = await api.get(`/procurement-records/${id}/documents/`, {
+            params: { stage: stageId }
+        });
+        return response.data;
+    },
+
+    async recalculateStatus(id) {
+        const response = await api.post(`/procurement-records/${id}/recalculate_status/`);
         return response.data;
     },
 };

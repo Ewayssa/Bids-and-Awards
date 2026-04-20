@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MdChevronLeft, MdChevronRight, MdTimeline } from 'react-icons/md';
-import { formatDisplayDate } from '../../utils/helpers.jsx';
+import { formatDisplayDate, formatDisplayTime } from '../../utils/helpers.jsx';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -147,7 +147,15 @@ const EventList = ({ title, events, isAdmin, onEdit, iconColor = 'var(--primary)
                             className={`w-full text-left p-3 rounded-xl border border-transparent transition-all duration-300 ${isAdmin ? 'hover:border-[var(--border)] hover:bg-[var(--background-subtle)] hover:shadow-sm' : 'cursor-default'}`}
                         >
                             <p className="text-xs font-bold text-[var(--text)] leading-snug group-hover:text-[var(--primary)] transition-colors">{ev.title}</p>
-                            <p className="text-[10px] font-semibold text-[var(--text-subtle)] mt-1 uppercase tracking-wider">{formatDisplayDate(ev.date)}</p>
+                            <p className="text-[10px] font-semibold text-[var(--text-subtle)] mt-1 uppercase tracking-wider">
+                                {formatDisplayDate(ev.date)}
+                                {ev.start_time && (
+                                    <span className="ml-2 text-[var(--primary)]">
+                                        • {formatDisplayTime(ev.start_time)}
+                                        {ev.end_time && ` - ${formatDisplayTime(ev.end_time)}`}
+                                    </span>
+                                )}
+                            </p>
                         </button>
                     </li>
                 ))}

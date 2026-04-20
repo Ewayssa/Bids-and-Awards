@@ -19,29 +19,29 @@ const EncodeModal = ({
         <Modal
             isOpen={true}
             onClose={onClose}
+            title="Procurement Monitoring Interface"
             size="full"
             showCloseButton={true}
-            bodyClassName="!p-3 !pt-2"
         >
-            <div className="flex flex-col h-full space-y-3">
+            <div className="flex flex-col h-full space-y-6">
                 {/* Information Banner */}
-                <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--primary-muted)]/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 min-w-0">
-                        <div className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--border-light)] text-[var(--primary)] shrink-0 shadow-sm">
-                            <MdTableChart className="w-7 h-7" />
+                <div className="p-6 bg-emerald-50 dark:bg-emerald-500/5 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all">
+                    <div className="flex items-center gap-5">
+                        <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm text-emerald-600 shrink-0">
+                            <MdTableChart className="w-8 h-8" />
                         </div>
-                        <div className="min-w-0">
-                            <h3 className="text-base font-semibold text-[var(--text)] m-0">Procurement monitoring</h3>
-                            <p className="text-xs text-[var(--text-muted)] m-0 mt-0.5">Encode rows, export to Excel, then save when complete.</p>
+                        <div>
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Standardized Monitoring</p>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Procurement Monitoring Report</h3>
                         </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    
+                    <div className="flex items-center gap-3">
                         <button
                             type="button"
                             onClick={exportExcel}
                             disabled={encodedRows.length === 0}
-                            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm py-2 px-4 flex-1 md:flex-none min-w-[8rem]"
+                            className="flex-1 md:flex-none px-6 py-3 bg-white dark:bg-slate-900 text-slate-600 rounded-2xl font-bold uppercase tracking-widest text-[10px] border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all flex items-center justify-center gap-2"
                         >
                             <MdDownload className="w-4 h-4" /> Export Excel
                         </button>
@@ -49,15 +49,19 @@ const EncodeModal = ({
                             type="button"
                             onClick={addRow}
                             disabled={isFinalized}
-                            className="btn-primary inline-flex items-center justify-center gap-2 text-sm py-2 px-4 flex-1 md:flex-none min-w-[8rem]"
+                            className="flex-1 md:flex-none px-6 py-3 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                            <MdAdd className="w-4 h-4" /> Add row
+                            <MdAdd className="w-4 h-4" /> Add Row
                         </button>
                         <button
                             type="button"
                             onClick={() => setIsFinalized(!isFinalized)}
                             disabled={encodedRows.length === 0}
-                            className={`inline-flex items-center justify-center gap-2 text-sm py-2 px-5 flex-1 md:flex-none min-w-[8rem] disabled:opacity-50 ${isFinalized ? 'btn-secondary' : 'btn-primary'}`}
+                            className={`flex-1 md:flex-none px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 ${
+                                isFinalized 
+                                ? 'bg-slate-900 dark:bg-slate-800 text-white shadow-slate-900/20 hover:bg-black font-black' 
+                                : 'bg-emerald-600/90 hover:bg-emerald-700 text-white shadow-emerald-500/20 backdrop-blur-md font-black'
+                            }`}
                         >
                             {isFinalized ? <><MdEdit className="w-4 h-4" /> Edit</> : <><MdSave className="w-4 h-4" /> Save</>}
                         </button>
@@ -65,26 +69,23 @@ const EncodeModal = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-h-0 overflow-auto px-2 pb-2 pt-0 bg-[var(--background)]">
+                <div className="flex-1 min-h-0 overflow-auto p-4 bg-[var(--background)]">
                     <div className="bg-[var(--surface)] rounded-lg border border-[var(--border)] shadow-sm" style={{ width: 'max-content', minWidth: '100%' }}>
                         {/* Static Report Header */}
-                        <div className="border-b border-[var(--border-light)] px-3 py-2 flex items-center justify-between bg-[var(--surface)]">
+                        <div className="border-b border-[var(--border-light)] px-3 py-2.5 flex items-center justify-between bg-[var(--surface)]">
                             <span className="text-sm font-semibold text-[var(--text)] flex-1">DEPARTMENT OF THE INTERIOR AND LOCAL GOVERNMENT - REGION 1</span>
                             <span className="text-base font-bold text-[var(--text)] shrink-0 px-4">Procurement Monitoring Report</span>
                             <span className="flex-1" />
                         </div>
-                        <div className="border-b border-[var(--border-light)] px-3 py-1.5 bg-[var(--background-subtle)]">
+                        <div className="border-b border-[var(--border-light)] px-3 py-2 bg-[var(--background-subtle)]">
                             <span className="text-sm font-bold text-[var(--text)]">
-                                Monitoring Report as of {(() => {
-                                    const d = new Date();
-                                    return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-                                })()}
+                                Monitoring Report as of {new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
                             </span>
                         </div>
-                        <div className="bg-[var(--primary)] border-b border-[var(--primary-dark)] px-3 py-1.5">
+                        <div className="bg-[var(--primary)] border-b border-[var(--primary-dark)] px-3 py-2">
                             <span className="text-sm font-semibold text-white">COMPLETED PROCUREMENT ACTIVITIES</span>
                         </div>
-                        <div className="bg-[var(--background-subtle)] border-b border-[var(--border-light)] h-3" />
+                        <div className="bg-[var(--background-subtle)] border-b border-[var(--border-light)] h-4" />
 
                         {/* Excel-like Table */}
                         <table className="border-collapse text-[var(--text)] bg-[var(--surface)]" style={{ minWidth: '2600px', width: '100%' }}>

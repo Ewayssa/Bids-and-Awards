@@ -219,7 +219,7 @@ export function formatNumber(value, decimals = 0) {
  * Get missing required fields for a document
  */
 export function getMissingFields(doc) {
-    const required = ['title', 'category', 'subDoc', 'date', 'file'];
+    const required = ['category', 'subDoc', 'date', 'file'];
     const missing = [];
     required.forEach(field => {
         const value = doc[field];

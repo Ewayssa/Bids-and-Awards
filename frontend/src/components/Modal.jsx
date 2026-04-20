@@ -6,13 +6,12 @@ import { MdClose } from 'react-icons/md';
  * Standard Modal Component
  * @param {boolean} isOpen - Whether the modal is visible
  * @param {function} onClose - Function to close the modal
- * @param {string} [title] - Header title (omit for a compact header with only the close control)
+ * @param {string} title - Header title
  * @param {string} size - size class: 'sm', 'md', 'lg', 'xl', '2xl', 'full'
  * @param {React.ReactNode} footer - Optional footer buttons/content
  * @param {boolean} glass - Whether to use glassmorphism effect (default: true)
  * @param {string} containerClassName - Custom class for the modal container
  * @param {string} bodyClassName - Custom class for the modal body
- * @param {boolean} showCloseButton - Show the header close button (default: true)
  */
 const Modal = ({
     isOpen,
@@ -24,7 +23,7 @@ const Modal = ({
     glass = true,
     containerClassName = '',
     bodyClassName = '',
-    showCloseButton = true,
+    header = null,
 }) => {
     // Body scroll lock
     useEffect(() => {
@@ -50,7 +49,6 @@ const Modal = ({
     };
     const sizeCls = sizeClasses[size] || sizeClasses.md;
     const glassClass = glass ? 'glass-modal' : 'bg-[var(--surface)]';
-    const hasTitle = title != null && String(title).trim() !== '';
 
     return createPortal(
         <div 
@@ -66,21 +64,17 @@ const Modal = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                {(hasTitle || showCloseButton) && (
-                    <div
-                        className={`modal-header ${!hasTitle ? '!py-2 !px-3 justify-end' : ''}`}
-                    >
-                        {hasTitle ? <h2 className="modal-title">{title}</h2> : <span className="sr-only">Dialog</span>}
-                        {showCloseButton && (
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-xl transition-all duration-200 active:scale-90 shrink-0"
-                                aria-label="Close"
-                            >
-                                <MdClose className="w-6 h-6" />
-                            </button>
-                        )}
+                {header ? header : (
+                    <div className="modal-header">
+                        <h2 className="modal-title">{title}</h2>
+                        <button 
+                            type="button" 
+                            onClick={onClose}
+                            className="p-2 text-[var(--text-muted)] hover:bg-[var(--background-subtle)] hover:text-[var(--text)] rounded-xl transition-all duration-200 active:scale-90"
+                            aria-label="Close"
+                        >
+                            <MdClose className="w-6 h-6" />
+                        </button>
                     </div>
                 )}
 

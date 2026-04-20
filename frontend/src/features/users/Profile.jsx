@@ -14,8 +14,8 @@ import {
     MdCheckCircle,
     MdInfo,
 } from 'react-icons/md';
-import { getRoleDisplayName, ROLES } from '../../utils/auth';
-import Modal from '../../components/Modal';
+import { getRoleDisplayName, isBACSecretariat } from '../../utils/auth';
+import Modal from '../shared/Modal';
 
 const STORAGE_KEY_PHOTO = (username) => `bac_profile_photo_${username}`;
 const MAX_PHOTO_SIZE = 150 * 1024; // 150KB for localStorage
@@ -64,7 +64,7 @@ const Profile = ({ user, onUserUpdated }) => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [toast, setToast] = useState(null);
 
-    const isAdmin = user?.role === ROLES.ADMIN;
+    const isAdmin = isBACSecretariat(user?.role);
 
     const showToast = useCallback((message, type = 'success') => {
         setToast({ message, type });
@@ -404,7 +404,7 @@ const Profile = ({ user, onUserUpdated }) => {
                 </div>
 
                 <div className="lg:col-span-12 text-center py-10 opacity-30">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">BAC Documents Tracking System • Registry Phase 2.0</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">Procurement Management System • Registry Phase 2.0</p>
                 </div>
             </div>
 

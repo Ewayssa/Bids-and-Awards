@@ -3,7 +3,7 @@ import { documentService } from '../services/api';
 import { parseApiError } from '../utils/errors';
 import { CHECKLIST_ITEMS } from '../utils/constants';
 import { isValidDateFormat } from '../utils/validation';
-import { toBackendDateFormat } from '../utils/helpers.jsx';
+import { toBackendDateFormat } from '../utils/helpers';
 
 /**
  * Custom hook for managing document form state, operations, and validation.

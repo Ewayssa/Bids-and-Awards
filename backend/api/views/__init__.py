@@ -11,8 +11,17 @@ from django.http import FileResponse, HttpResponse, JsonResponse
 from django.conf import settings as django_settings
 import mimetypes
 
-from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog
-from ..permissions import IsAdminRole
+from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog, ProcurementRecord, ProcurementStageStatus
+from ..permissions import (
+    IsBACSecretariat, 
+    IsBACSecretariatOrReadOnly, 
+    CanManageUsers,
+    CanEditProcurementRecords,
+    CanDeleteRecords,
+    CanViewAuditLog,
+    is_bac_secretariat,
+    is_bac_chair,
+)
 from ..serializers import (
     UserSerializer,
     RegisterSerializer,
@@ -21,15 +30,20 @@ from ..serializers import (
     CalendarEventSerializer,
     NotificationSerializer,
     AuditLogSerializer,
+    ProcurementRecordSerializer,
+    ProcurementStageStatusSerializer,
 )
 from ..services.dashboard_service import DashboardService
 from ..services.backup_service import BackupService
+from ..utils.workflow_logic import is_stage_ready_to_advance
+from ..models import AuditLog
+import logging
 from ..constants import DEFAULT_USER_PASSWORD
 from ..utils.document_helpers import get_next_transaction_number
 
 # --- Helper Functions ---
 
-def _create_notification(message, link='/encode', admin_only=False):
+def _create_notification(message, link='/procurement', admin_only=False):
     Notification.objects.create(message=message, link=link, admin_only=admin_only)
 
 def _log_audit(action, actor='System', target_type='', target_id='', description=''):
@@ -71,6 +85,8 @@ def login(request):
             'position': getattr(user, 'position', '') or '',
             'office': user.office or '',
             'must_change_password': getattr(user, 'must_change_password', False),
+            'is_bac_secretariat': is_bac_secretariat(user),
+            'is_bac_chair': is_bac_chair(user),
         })
     return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -206,6 +222,126 @@ def forgot_password(request):
 
 # --- ViewSets ---
 
+class ProcurementRecordViewSet(viewsets.ModelViewSet):
+    queryset = ProcurementRecord.objects.all().order_by('-created_at')
+    serializer_class = ProcurementRecordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = self.request.query_params.get('status', '').strip()
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data['created_by'] = request.user.fullName or request.user.username
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        record = serializer.save()
+        _log_audit('procurement_record_created', request.user.username, 'procurement_record', str(record.id), f'{record.pr_no} - {record.title}')
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _log_audit('procurement_record_updated', self.request.user.username, 'procurement_record', str(instance.id), f'{instance.pr_no} - {instance.title}')
+
+    @action(detail=True, methods=['get'])
+    def documents(self, request, pk=None):
+        record = self.get_object()
+        docs = record.documents.all()
+        
+        stage = request.query_params.get('stage', '').strip()
+        if stage:
+            stage_config = {
+                'initial': ['Initial Documents'],
+                'pre_procurement': ['Pre-Procurement'],
+                'rfq': ['RFQ Concerns'],
+                'bac_meeting': ['BAC Meeting Documents'],
+                'award': ['Award Documents'],
+                'posting': ['Award Posting'],
+                'post_award': ['Post-Award'],
+            }
+            categories = stage_config.get(stage, [])
+            if categories:
+                from django.db.models import Q
+                q = Q()
+                for cat in categories:
+                    q |= Q(category__icontains=cat)
+                docs = docs.filter(q)
+        
+        return Response(DocumentSerializer(docs, many=True).data)
+
+    @action(detail=True, methods=['post'])
+    def recalculate_status(self, request, pk=None):
+        record = self.get_object()
+        new_status = record.calculate_status()
+        if record.status != new_status:
+            record.status = new_status
+            record.save(update_fields=['status', 'updated_at'])
+        return Response({'status': new_status})
+
+    @action(detail=True, methods=['post'])
+    def next_stage(self, request, pk=None):
+        record = self.get_object()
+        
+        # Validation: Check if the current stage is complete
+        ready, missing = is_stage_ready_to_advance(record)
+        if not ready and not is_bac_secretariat(request.user): # Allow admin to bypass?
+            return Response({
+                'error': f'Cannot advance stage. Missing required documents: {", ".join(missing)}',
+                'missing': missing
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        if record.current_stage < 12:
+            record.current_stage += 1
+            # Update status based on the new stage
+            stage_status_map = {
+                2: 'preparing',
+                3: 'under_review',
+                4: 'approved', # or for_revision
+                5: 'for_input',
+                6: 'for_posting',
+                7: 'for_float',
+                8: 'for_schedule',
+                9: 'under_evaluation',
+                10: 'for_award',
+                11: 'awarded',
+                12: 'for_liquidation'
+            }
+            new_status = stage_status_map.get(record.current_stage)
+            if new_status:
+                record.status = new_status
+            record.save(update_fields=['current_stage', 'status', 'updated_at'])
+            _log_audit('stage_advanced', request.user.username, 'procurement_record', str(record.id), f'{record.pr_no} moved to stage {record.current_stage}')
+        return Response(ProcurementRecordSerializer(record).data)
+
+    @action(detail=True, methods=['post'])
+    def set_stage(self, request, pk=None):
+        record = self.get_object()
+        stage = request.data.get('stage')
+        status_val = request.data.get('status')
+        if stage is not None:
+            record.current_stage = int(stage)
+        if status_val:
+            record.status = status_val
+        record.save()
+        _log_audit('stage_set', request.user.username, 'procurement_record', str(record.id), f'{record.pr_no} set to stage {record.current_stage}, status {record.status}')
+        return Response(ProcurementRecordSerializer(record).data)
+
+
+class ProcurementStageStatusViewSet(viewsets.ModelViewSet):
+    queryset = ProcurementStageStatus.objects.all()
+    serializer_class = ProcurementStageStatusSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        _log_audit('stage_status_updated', self.request.user.username, 'stage_status', str(instance.id), 
+                   f'Stage {instance.stage_number} for {instance.procurement_record.pr_no} - Completed: {instance.is_completed}')
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
@@ -213,7 +349,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'bac_members':
             return [IsAuthenticated()]
-        return [IsAuthenticated(), IsAdminRole()]
+        return [IsAuthenticated(), IsBACSecretariat()]
 
     @action(detail=False, methods=['get'])
     def bac_members(self, request):
@@ -247,6 +383,16 @@ class UserViewSet(viewsets.ModelViewSet):
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all().order_by('-uploaded_at')
     serializer_class = DocumentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated()]
+        elif self.action in ['create']:
+            return [IsAuthenticated()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsBACSecretariat()]
+        return [IsAuthenticated()]
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
@@ -259,15 +405,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        doc_by = (instance.uploadedBy or '').strip().lower()
-        if (user.role or '').lower() != 'admin':
-            uname = (user.username or '').strip().lower()
-            fname = (user.fullName or '').strip().lower()
-            if doc_by != uname and doc_by != fname:
-                return Response(
-                    {'detail': 'Unauthorized uploader. Only the original uploader or an Admin can edit this document.'},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+        if not is_bac_secretariat(user):
+            return Response(
+                {'detail': 'Only BAC Secretariat can edit documents.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         return super().partial_update(request, *args, **kwargs)
 
@@ -277,18 +419,17 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        doc_by = (instance.uploadedBy or '').strip().lower()
-        if (user.role or '').lower() != 'admin':
-            uname = (user.username or '').strip().lower()
-            fname = (user.fullName or '').strip().lower()
-            if doc_by != uname and doc_by != fname:
-                return Response(
-                    {'detail': 'Unauthorized. Only the original uploader or an Admin can delete this document.'},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+        if not is_bac_secretariat(user):
+            return Response(
+                {'detail': 'Only BAC Secretariat can delete documents.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         return super().destroy(request, *args, **kwargs)
 
     def perform_create(self, serializer):
+        # Auto-assign uploadedBy from current user if not provided
+        if not serializer.validated_data.get('uploadedBy'):
+            serializer.validated_data['uploadedBy'] = self.request.user.fullName or self.request.user.username
         doc = serializer.save()
         title = (doc.title or doc.prNo or 'Document')[:80]
         _log_audit('document_created', doc.uploadedBy or 'Unknown', 'document', str(doc.id), title)
@@ -318,6 +459,9 @@ class ReportViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         report = serializer.save()
+        if not report.title:
+            report.title = report.file.name if report.file else 'Untitled Report'
+            report.save()
         _log_audit('report_created', report.uploadedBy or 'Unknown', 'report', str(report.id), report.title[:80])
 
     @action(detail=True, methods=['get'], url_path='preview')
@@ -339,6 +483,14 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
     queryset = CalendarEvent.objects.all().order_by('-created_at')
     serializer_class = CalendarEventSerializer
 
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f'Calendar event create error: {e}')
+            raise
+
     def perform_create(self, serializer):
         event = serializer.save()
         actor = self.request.data.get('created_by') or 'Unknown'
@@ -350,6 +502,12 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
             link='/',
             admin_only=True,
         )
+        try:
+            from .services.notification_service import EmailNotificationService
+            EmailNotificationService.send_calendar_event_notification(event)
+        except Exception as email_err:
+            import logging
+            logging.getLogger(__name__).error(f'Email notification failed: {email_err}')
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Notification.objects.all().order_by('-created_at')
@@ -358,9 +516,10 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def _ensure_upcoming_calendar_notifications(self):
         """
         Create user-facing reminders for calendar events occurring tomorrow.
+        Also triggers email reminders if not already sent.
 
-        This runs opportunistically during `get_queryset()` (idempotent via message match)
-        so we don't need a background scheduler.
+        This runs opportunistically during `get_queryset()` (idempotent via message match for system notifications
+        and via reminder_sent field for emails).
         """
         today = timezone.now().date()
         reminder_date = today + timedelta(days=1)
@@ -368,18 +527,29 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
         events = CalendarEvent.objects.filter(date=reminder_date)
         for e in events:
+            # 1. System notification
             title_short = (e.title or 'Activity')[:200]
             msg = f'Incoming BAC activity: {title_short} — {reminder_date_str}'
             if not Notification.objects.filter(message=msg, admin_only=False).exists():
                 _create_notification(msg, link='/', admin_only=False)
+            
+            # 2. Email notification (if not already sent by management command or previous run)
+            if not e.reminder_sent:
+                try:
+                    from ..services.notification_service import EmailNotificationService
+                    if EmailNotificationService.send_upcoming_reminder(e):
+                        e.reminder_sent = True
+                        e.save(update_fields=['reminder_sent'])
+                except Exception as err:
+                    import logging
+                    logging.getLogger(__name__).error(f'Opportunistic email reminder failed for "{e.title}": {err}')
 
     def get_queryset(self):
         qs = Notification.objects.all().order_by('-created_at')
         user = self.request.user
         if not user.is_authenticated:
             return Notification.objects.none()
-        role = (getattr(user, 'role', None) or '').strip().lower()
-        is_admin = role == 'admin' or getattr(user, 'is_superuser', False)
+        is_admin = is_bac_secretariat(user)
         if not is_admin:
             self._ensure_upcoming_calendar_notifications()
             qs = qs.filter(admin_only=False)
@@ -400,6 +570,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.all().order_by('-created_at')
     serializer_class = AuditLogSerializer
+    permission_classes = [IsAuthenticated, IsBACSecretariat]
 
 # --- Custom Business Logic Views ---
 
@@ -412,13 +583,15 @@ def next_transaction_number(request):
 def get_dashboard_data(request):
     uploaded_by = request.query_params.get('uploadedBy', '').strip()
     user = request.user
-    role = (getattr(user, 'role', None) or '').strip().lower()
-    is_admin = role == 'admin' or getattr(user, 'is_superuser', False)
+    is_admin = is_bac_secretariat(user)
     data = DashboardService.get_dashboard_data(uploaded_by=uploaded_by, is_admin=is_admin)
+    data['user_role'] = user.role
+    data['is_bac_secretariat'] = is_admin
+    data['is_bac_chair'] = is_bac_chair(user)
     return Response(data, headers={'Cache-Control': 'no-store, no-cache, must-revalidate'})
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsBACSecretariat])
 def backup_data(request):
     zip_buffer = BackupService.create_zip_backup()
     username = (request.query_params.get('username') or 'System').strip()
@@ -430,9 +603,9 @@ def backup_data(request):
     return response
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsBACSecretariat])
 def restore_data(request):
-    username = request.user.username
+    username = (request.query_params.get('username') or request.user.username or 'System').strip()
     
     if 'file' not in request.FILES:
         return Response({'detail': 'A .zip backup file is required.'}, status=status.HTTP_400_BAD_REQUEST)

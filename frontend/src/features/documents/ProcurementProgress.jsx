@@ -52,6 +52,7 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
         { label: 'Lease of Venue', key: 'Lease of Venue', color: '#22c55e', gradient: 'linear-gradient(90deg, #4ade80 0%, #22c55e 100%)' },
         { label: 'Small Value Procurement', key: 'Small Value Procurement', color: '#3b82f6', gradient: 'linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)' },
         { label: 'Public Bidding', key: 'Public Bidding', color: '#8b5cf6', gradient: 'linear-gradient(90deg, #a78bfa 0%, #8b5cf6 100%)' },
+        { label: 'Negotiated Procurement', key: 'Negotiated Procurement', color: '#f59e0b', gradient: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' },
     ];
 
     const barValues = barSeries.map((s) => Number(procurementMethodCounts?.[s.key]) || 0);
@@ -143,48 +144,36 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                         <span className="text-[10px] font-bold text-[var(--text-subtle)] bg-[var(--background-subtle)] px-2.5 py-1 rounded-full border border-[var(--border-light)] uppercase tracking-wider">Top Types</span>
                     </div>
                     <div className="space-y-10">
-                        {(completed + ongoing + pending) === 0 ? (
-                                    <div className="py-12 px-6 rounded-2xl bg-[var(--background-subtle)]/30 border-2 border-dashed border-[var(--border-light)] text-center">
-                                <p className="text-sm font-bold text-[var(--text-muted)]">No data available yet</p>
-                                <p className="text-xs text-[var(--text-subtle)] mt-2 font-medium">Once documents are submitted, their classification will appear here.</p>
-                            </div>
-                        ) : barTotal === 0 ? (
-                            <div className="py-12 px-6 rounded-2xl bg-[var(--background-subtle)]/30 border-2 border-dashed border-[var(--border-light)] text-center">
-                                <p className="text-sm font-bold text-[var(--text-muted)]">No classified data</p>
-                                <p className="text-xs text-[var(--text-subtle)] mt-2 font-medium">Sub-documents like SVP or Public Bidding are required for metrics.</p>
-                            </div>
-                        ) : (
-                            barSeries.map((series, i) => {
-                                const value = Number(procurementMethodCounts?.[series.key]) || 0;
-                                const pctOfTotal = barTotal > 0 ? (value / barTotal) * 100 : 0;
-                                const pctOfMax = barMax > 0 ? (value / barMax) * 100 : 0;
-                                const barWidthPct = value > 0 ? Math.max(pctOfMax, 4) : 0;
-                                return (
-                                    <div key={series.key} className="group min-w-0" style={{ animationDelay: `${0.25 + i * 0.08}s` }}>
-                                        <div className="flex justify-between items-end mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: series.color }} />
-                                                <span className="text-base font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors tracking-tight">{series.label}</span>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-2xl font-black text-[var(--text)] tabular-nums">{value}</span>
-                                                <span className="text-[10px] font-bold text-[var(--text-subtle)] ml-1">({formatNumber(pctOfTotal, 0)}%)</span>
-                                            </div>
+                        {barSeries.map((series, i) => {
+                            const value = Number(procurementMethodCounts?.[series.key]) || 0;
+                            const pctOfTotal = barTotal > 0 ? (value / barTotal) * 100 : 0;
+                            const pctOfMax = barMax > 0 ? (value / barMax) * 100 : 0;
+                            const barWidthPct = value > 0 ? Math.max(pctOfMax, 4) : 0;
+                            return (
+                                <div key={series.key} className="group min-w-0" style={{ animationDelay: `${0.25 + i * 0.08}s` }}>
+                                    <div className="flex justify-between items-end mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: series.color }} />
+                                            <span className="text-base font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors tracking-tight">{series.label}</span>
                                         </div>
-                                        <div className="h-6 w-full rounded-full bg-[var(--background-subtle)]/40 backdrop-blur-sm overflow-hidden border border-[var(--border-light)] relative shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] group-hover:shadow-[inset_0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300">
-                                            <div
-                                                className="h-full rounded-full transition-all duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)] relative animate-shimmer"
-                                                style={{ 
-                                                    width: `${barWidthPct}%`, 
-                                                    background: series.gradient,
-                                                    boxShadow: hoveredSlice === series.key || hoveredSlice === null ? `0 4px 12px ${series.color}40` : 'none'
-                                                }}
-                                            />
+                                        <div className="text-right">
+                                            <span className="text-2xl font-black text-[var(--text)] tabular-nums">{value}</span>
+                                            <span className="text-[10px] font-bold text-[var(--text-subtle)] ml-1">({formatNumber(pctOfTotal, 0)}%)</span>
                                         </div>
                                     </div>
-                                );
-                            })
-                        )}
+                                    <div className="h-6 w-full rounded-full bg-[var(--background-subtle)]/40 backdrop-blur-sm overflow-hidden border border-[var(--border-light)] relative shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] group-hover:shadow-[inset_0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300">
+                                        <div
+                                            className="h-full rounded-full transition-all duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)] relative animate-shimmer"
+                                            style={{ 
+                                                width: `${barWidthPct}%`, 
+                                                background: series.gradient,
+                                                boxShadow: hoveredSlice === series.key || hoveredSlice === null ? `0 4px 12px ${series.color}40` : 'none'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

@@ -12,9 +12,10 @@ if not User.objects.filter(username='admin').exists():
         username='admin',
         email='',
         password='admin123',
-        role='admin',
-        fullName='Administrator',
+        role='bac_secretariat',
+        fullName='BAC Secretariat',
+        position='BAC Secretariat',
     )
-    print('Superuser created: username=admin, password=admin123')
+    print('Superuser created: username=admin, password=admin123, role=bac_secretariat')
 else:
     print('Superuser already exists.')

@@ -119,6 +119,17 @@ class Document(models.Model):
     oss_authorized_rep = models.CharField(max_length=255, blank=True, help_text='Authorized Representative/Owner (for OSS)')
     secretary_service_provider = models.CharField(max_length=255, blank=True, help_text="Service Provider (for Secretary's Certificate)")
     secretary_owner_rep = models.CharField(max_length=255, blank=True, help_text="Owner/Authorized Representative (for Secretary's Certificate)")
+    
+    # Link to the structured procurement record
+    procurement_record = models.ForeignKey(
+        'ProcurementRecord',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='documents',
+        help_text='Link to procurement record'
+    )
+    
     uploadedBy = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=255)
     subDoc = models.CharField(max_length=255)
@@ -198,6 +209,7 @@ class CalendarEvent(models.Model):
     title = models.CharField(max_length=255)
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
+    reminder_sent = models.BooleanField(default=False, help_text='Has an upcoming reminder been sent for this event?')
 
     def __str__(self):
         return f"{self.title} ({self.date})"
@@ -234,3 +246,67 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.actor}: {self.action} at {self.created_at}"
+
+class ProcurementRecord(models.Model):
+    PROCUREMENT_TYPE_CHOICES = [
+        ('lease_of_venue', 'Lease of Venue'),
+        ('small_value', 'Small Value Procurement'),
+        ('public_bidding', 'Public Bidding'),
+        ('negotiated', 'Negotiated Procurement'),
+        ('supplies', 'CSE / Supplies'),
+    ]
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('preparing', 'Preparing Documents'),
+        ('under_review', 'Under Review'),
+        ('for_revision', 'For Revision'),
+        ('approved', 'Approved for Input'),
+        ('for_input', 'For Input'),
+        ('for_posting', 'For Posting'),
+        ('for_float', 'For Float'),
+        ('for_schedule', 'For Schedule'),
+        ('under_evaluation', 'Under Evaluation'),
+        ('for_award', 'For Award'),
+        ('awarded', 'Awarded'),
+        ('for_liquidation', 'For Liquidation'),
+        ('closed', 'Closed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pr_no = models.CharField(max_length=100, unique=True, help_text='BAC Folder No.')
+    user_pr_no = models.CharField(max_length=100, blank=True, help_text='PR No.')
+    rfq_no = models.CharField(max_length=100, blank=True, help_text='RFQ No.')
+    title = models.CharField(max_length=255, help_text='Title / Purpose')
+    procurement_type = models.CharField(max_length=50, choices=PROCUREMENT_TYPE_CHOICES, blank=True, help_text='Type of procurement')
+    mode_of_procurement = models.CharField(max_length=100, blank=True, default='', help_text='Mode of Procurement')
+    source_of_fund = models.CharField(max_length=255, blank=True, help_text='Fund Source')
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='ABC / Total Amount')
+    end_user_office = models.CharField(max_length=255, blank=True, help_text='End-User / Office')
+    current_stage = models.IntegerField(default=1, help_text='Current workflow stage (1-12)')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='draft')
+    remarks = models.TextField(blank=True, help_text='General Remarks')
+    created_by = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.pr_no} - {self.title}"
+
+
+class ProcurementStageStatus(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    procurement_record = models.ForeignKey(ProcurementRecord, on_delete=models.CASCADE, related_name='stage_statuses')
+    stage_number = models.IntegerField()
+    stage_name = models.CharField(max_length=100)
+    is_completed = models.BooleanField(default=False)
+    approved_by = models.CharField(max_length=255, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    remarks = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('procurement_record', 'stage_number')
+        ordering = ['stage_number']
+
+    def __str__(self):
+        return f"Stage {self.stage_number} - {self.procurement_record.pr_no}"

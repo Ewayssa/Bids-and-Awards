@@ -1,4 +1,4 @@
-# BAC Documents Tracking System – Design System
+# Procurement Management System – Design System
 
 This design system is derived from your existing codebase. It documents tokens, patterns, and guidelines to keep the UI consistent.
 
@@ -6,7 +6,7 @@ This design system is derived from your existing codebase. It documents tokens, 
 
 ## Brand & Context
 
-- **Product:** BAC Documents Tracking System (Bids and Awards Committee)
+- **Product:** Procurement Management System
 - **Context:** Government / DILG (Department of the Interior and Local Government)
 - **Primary users:** BAC staff, administrators, personnel
 - **Tone:** Professional, trustworthy, clear, government-ready

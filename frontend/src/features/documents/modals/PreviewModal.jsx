@@ -59,8 +59,8 @@ const PreviewModal = ({ doc, onClose }) => {
         }
 
         return (
-                <div className="flex flex-col items-center justify-center py-32 text-[var(--text-muted)] bg-[var(--background-subtle)]/50 rounded-xl border border-[var(--border-light)]">
-                <div className="w-12 h-12 rounded-full border-2 border-[var(--border)] border-t-[var(--primary)] animate-spin mb-4" aria-hidden />
+            <div className="flex flex-col items-center justify-center py-32 text-[var(--text-muted)] bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                <div className="w-12 h-12 rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-emerald-500 animate-spin mb-4" />
                 <p className="font-bold">Loading Preview</p>
                 <p className="text-sm opacity-60">Preparing your document for viewing...</p>
             </div>
@@ -76,13 +76,13 @@ const PreviewModal = ({ doc, onClose }) => {
             showCloseButton={true}
         >
             <div className="space-y-6">
-                <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--background-subtle)]/60">
-                    <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border-light)] text-[var(--primary)] shadow-sm">
-                        <MdFilePresent className="w-5 h-5" aria-hidden />
+                <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                    <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm text-blue-600 dark:text-blue-400">
+                        <MdFilePresent className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
-                        <p className="text-xs font-semibold text-[var(--text-muted)] m-0">Preview</p>
-                        <p className="text-sm font-semibold text-[var(--text)] truncate m-0 mt-0.5">{doc.title}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Previewing Attachment</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{doc.title}</p>
                     </div>
                 </div>
 

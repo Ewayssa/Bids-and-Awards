@@ -1,4 +1,4 @@
-# How to Run the BAC Project
+# How to Run the Procurement Management System
 
 **If you see "Connection failed"** → Use **http://localhost:5173** (Vite dev server). Run `start-project.ps1` to start both backend and frontend.
 

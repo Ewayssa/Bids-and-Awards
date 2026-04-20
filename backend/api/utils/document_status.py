@@ -39,30 +39,29 @@ class DocumentStatusCalculator:
         return True
 
     # A mapping of sub-document types to their required fields for 'complete' status.
-    # This replaces the large if/elif block in _has_subdoc_specific_fields for maintainability.
-    # It can contain a list of field names or a lambda for more complex validation.
+    # Updated with official BAC checklist names.
     REQUIRED_FIELDS_BY_SUBDOC = {
+        'Purchase Request (with # and received by FAD Records Section)': ['total_amount', 'user_pr_no'],
+        'Purchase Request': ['total_amount', 'user_pr_no'],
+        'Activity Design': ['source_of_fund'],
+        'Project Procurement Management Plan/Supplemental PPMP': ['ppmp_no'],
         'Annual Procurement Plan': lambda doc, is_filled: (
             is_filled(doc.app_type) and
             (not doc.certified_true_copy or is_filled(doc.certified_signed_by))
         ),
-        'Market Scopping': ['market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3'],
-        'Requisition and Issue Slip': ['office_division', 'received_by'],
-        'Invitation to COA': ['date_received'],
-        'Attendance Sheet': lambda doc, is_filled: (
-            len(json.loads(doc.attendance_members or '[]')) > 0 and
-            any(m.get('present') for m in json.loads(doc.attendance_members or '[]'))
-        ),
-        'BAC Resolution': ['resolution_no', 'winning_bidder', 'resolution_option', 'office_division', 'venue'],
+        'Market Scoping': ['market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3'],
+        'Market Scoping / Canvass': ['market_budget', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3'],
+        'BAC Resolution': ['resolution_no', 'winning_bidder', 'resolution_option', 'venue'],
         'Abstract of Quotation': lambda doc, is_filled: (
             is_filled(doc.aoq_no) and len(json.loads(doc.abstract_bidders or '[]')) >= 3
         ),
-        'Lease of Venue: Table Rating Factor': ['table_rating_service_provider', 'table_rating_address', 'table_rating_factor_value'],
+        'Table of Rating Factor (for Lease of Venue)': ['table_rating_service_provider', 'table_rating_address', 'table_rating_factor_value'],
         'Notice of Award': ['notice_award_service_provider', 'notice_award_authorized_rep', 'notice_award_conforme'],
-        'Contract Services/Purchase Order': ['contract_amount', 'notarized_place', 'notarized_date'],
+        'Contract of Services/Purchase Order': ['contract_amount', 'total_amount', 'notarized_place', 'notarized_date'],
+        'Contract': ['contract_amount', 'total_amount', 'notarized_place', 'notarized_date'],
         'Notice to Proceed': ['ntp_service_provider', 'ntp_authorized_rep', 'ntp_received_by'],
+        'Omnibus Sworn Statement': ['oss_service_provider', 'oss_authorized_rep'],
         'OSS': ['oss_service_provider', 'oss_authorized_rep'],
-        "Applicable: Secretary's Certificate and Special Power of Attorney": ['secretary_service_provider', 'secretary_owner_rep'],
     }
 
     @classmethod

@@ -1,0 +1,147 @@
+import React, { useState } from 'react';
+import { MdVisibility, MdVisibilityOff, MdCheck, MdRadioButtonUnchecked } from 'react-icons/md';
+
+/** Default rules: backend enforces 8+ chars only */
+export const DEFAULT_PASSWORD_RULES = [
+    { test: (v) => v.length >= 8, label: 'At least 8 characters' },
+];
+
+
+const PasswordInput = ({
+    id,
+    label,
+    value,
+    onChange,
+    placeholder = 'Enter password',
+    autoComplete = 'current-password',
+    required = false,
+    disabled = false,
+    error,
+    requirements,
+    rules = DEFAULT_PASSWORD_RULES,
+    showRequirementsChecklist = false,
+    variant = 'underline',
+    floating = false,
+    className = '',
+    inputClassName = '',
+    showToggle = true,
+    'aria-describedby': ariaDescribedby,
+    ...rest
+}) => {
+    const [visible, setVisible] = useState(false);
+    const showChecklist = showRequirementsChecklist && rules && rules.length > 0;
+
+    const containerClass = variant === 'rounded'
+        ? 'rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all'
+        : 'border-b border-gray-300 dark:border-gray-600 focus-within:border-emerald-500 transition-colors';
+    const inputBaseClass = variant === 'rounded'
+        ? 'px-4 py-3 rounded-xl'
+        : 'pl-0 py-2.5';
+
+    return (
+        <div className={className}>
+            {!floating && label && (
+                <label
+                    htmlFor={id}
+                    className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5"
+                >
+                    {label}
+                </label>
+            )}
+            <div
+                className={`relative ${containerClass} ${floating ? 'floating-label-group' : ''} ${
+                    error ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/20' : ''
+                }`}
+            >
+                <input
+                    id={id}
+                    type={visible ? 'text' : 'password'}
+                    className={`w-full ${inputBaseClass} ${floating ? 'floating-input' : ''} bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none border-0 focus:ring-0 disabled:opacity-60 disabled:cursor-not-allowed text-[15px] ${
+                        showToggle ? 'pr-11' : 'pr-4'
+                    } ${inputClassName}`}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={floating ? ' ' : placeholder}
+                    autoComplete={autoComplete}
+                    required={required}
+                    disabled={disabled}
+                    aria-invalid={!!error}
+                    aria-describedby={
+                        [error && `${id}-error`, showChecklist && `${id}-requirements`, ariaDescribedby]
+                            .filter(Boolean)
+                            .join(' ') || undefined
+                    }
+                    {...rest}
+                />
+                {floating && label && (
+                    <label htmlFor={id} className="floating-label">
+                        {label}
+                    </label>
+                )}
+                {showToggle && (
+                    <button
+                        type="button"
+                        tabIndex={-1}
+                        onPointerDown={(e) => {
+                            // Using pointer down instead of click guarantees it runs before focus loss
+                            e.preventDefault();
+                            setVisible((v) => !v);
+                        }}
+                        className={`absolute top-1/2 -translate-y-1/2 p-2 z-[20] flex items-center justify-center text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all cursor-pointer ${
+                            variant === 'rounded' ? 'right-1.5' : 'right-0'
+                        }`}
+                        aria-label={visible ? 'Hide password' : 'Show password'}
+                        disabled={disabled}
+                    >
+                        {visible ? (
+                            <MdVisibility className="w-5 h-5 pointer-events-none" aria-hidden="true" />
+                        ) : (
+                            <MdVisibilityOff className="w-5 h-5 pointer-events-none" aria-hidden="true" />
+                        )}
+                    </button>
+                )}
+            </div>
+
+            {/* Live requirements checklist (21st.dev style) */}
+            {showChecklist && (
+                <div id={`${id}-requirements`} className="mt-3 space-y-1.5" role="list" aria-label="Password requirements">
+                    <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Password must contain:</p>
+                    {rules.map((rule, i) => {
+                        const met = rule.test(value || '');
+                        return (
+                            <div
+                                key={i}
+                                className={`flex items-center gap-2 text-sm transition-colors ${
+                                    met ? 'text-green-600' : 'text-[var(--text-subtle)]'
+                                }`}
+                                role="listitem"
+                            >
+                                {met ? (
+                                    <MdCheck className="w-4 h-4 flex-shrink-0" aria-hidden />
+                                ) : (
+                                    <MdRadioButtonUnchecked className="w-4 h-4 flex-shrink-0 opacity-60" aria-hidden />
+                                )}
+                                <span>{rule.label}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Legacy: simple requirements text */}
+            {!showChecklist && requirements && (Array.isArray(requirements) ? requirements.length > 0 : true) && (
+                <p className="mt-2 text-xs text-[var(--text-muted)]" id={id ? `${id}-requirements` : undefined}>
+                    Password must contain: {Array.isArray(requirements) ? requirements.join('; ') : requirements}.
+                </p>
+            )}
+
+            {error && (
+                <p id={`${id}-error`} className="mt-2 text-sm text-red-600" role="alert">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+};
+
+export default PasswordInput;

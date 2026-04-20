@@ -35,23 +35,25 @@ const ChangePassword = ({ user, onPasswordChanged }) => {
         }
     };
 
-       return (
+    return (
         <div
-            className="relative min-h-screen flex items-center justify-center p-4"
+            className="min-h-screen flex items-center justify-center p-4"
             style={{ background: 'var(--page-bg-gradient)' }}
         >
             {/* Subtle dot grid overlay */}
             <div
-                className="absolute inset-0 pointer-events-none z-0"
+                className="absolute inset-0 pointer-events-none"
                 style={{
                     backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, var(--page-dot) 1.5px, transparent 0)',
                     backgroundSize: '28px 28px',
                 }}
             />
 
-            <div className="relative z-10 w-full max-w-md">
-                <div className="content-section overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] border border-[var(--border)]">
-                    <div className="h-1 w-full bg-[var(--primary)]" aria-hidden />
+            <div className="relative w-full max-w-md">
+                {/* Card */}
+                <div className="card-elevated rounded-3xl overflow-hidden shadow-2xl border-0">
+                    {/* Top accent bar */}
+                    <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)' }} />
 
                     <div className="p-8 sm:p-10">
                         {/* Icon + Title */}
@@ -133,7 +135,7 @@ const ChangePassword = ({ user, onPasswordChanged }) => {
                                     window.location.href = '/login';
                                 }}
                                 disabled={loading}
-                                className="btn-ghost w-full justify-center"
+                                className="w-full py-3 text-sm font-bold text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                             >
                                 Sign out to try again
                             </button>

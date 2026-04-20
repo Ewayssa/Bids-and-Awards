@@ -18,7 +18,12 @@ function AppContent() {
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
             try {
-                return JSON.parse(savedUser);
+                const parsed = JSON.parse(savedUser);
+                if (parsed && parsed.role) {
+                    // Normalize the role immediately upon loading
+                    parsed.role = mapOldRoleToNew(parsed.role);
+                }
+                return parsed;
             } catch (e) {
                 console.error('Failed to parse saved user:', e);
                 return null;
@@ -68,9 +73,6 @@ function AppContent() {
             if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 setUser(null);
-                localStorage.removeItem('user');
-                localStorage.removeItem('token');
-                localStorage.removeItem('refreshToken');
                 setLoginInfoMessage('Your session has ended due to inactivity. Please sign in again.');
                 navigate('/');
             }, timeoutMs);

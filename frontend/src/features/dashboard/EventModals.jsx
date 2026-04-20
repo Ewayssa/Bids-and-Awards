@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MdAdd, MdClose, MdEdit, MdEvent, MdDelete, MdInfo, MdCheckCircle, MdUpdate } from 'react-icons/md';
 import { calendarEventService } from '../../services/api';
-import { formatDisplayDate, DatePicker } from '../../utils/helpers.jsx';
+import { formatDisplayDate, formatDisplayTime, DatePicker } from '../../utils/helpers.jsx';
 import Modal from '../../components/Modal';
 
 export const EventModals = ({ 
@@ -12,12 +12,16 @@ export const EventModals = ({
     onRefresh 
 }) => {
     const [eventTitle, setEventTitle] = useState('');
+    const [eventStartTime, setEventStartTime] = useState('');
+    const [eventEndTime, setEventEndTime] = useState('');
     const [eventSubmitting, setEventSubmitting] = useState(false);
     const [eventError, setEventError] = useState('');
     const [confirmAddEvent, setConfirmAddEvent] = useState(null);
 
     const [editEventTitle, setEditEventTitle] = useState('');
     const [editEventDate, setEditEventDate] = useState('');
+    const [editEventStartTime, setEditEventStartTime] = useState('');
+    const [editEventEndTime, setEditEventEndTime] = useState('');
     const [editEventSubmitting, setEditEventSubmitting] = useState(false);
     const [editEventError, setEditEventError] = useState('');
     const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(null);
@@ -28,6 +32,8 @@ export const EventModals = ({
         if (editEventModal?.ev) {
             setEditEventTitle(editEventModal.ev.title || '');
             setEditEventDate(editEventModal.ev.date || '');
+            setEditEventStartTime(editEventModal.ev.start_time || '');
+            setEditEventEndTime(editEventModal.ev.end_time || '');
             setEditEventError('');
         }
     }, [editEventModal]);
@@ -40,12 +46,16 @@ export const EventModals = ({
             await calendarEventService.create({
                 title: eventTitle.trim(),
                 date: eventModal.date,
+                start_time: eventStartTime || null,
+                end_time: eventEndTime || null,
             });
             await onRefresh();
             // Notify other open dashboard instances to refresh immediately.
             window.dispatchEvent(new Event('calendarChanged'));
             setEventModal(null);
             setEventTitle('');
+            setEventStartTime('');
+            setEventEndTime('');
         } catch (err) {
             const data = err.response?.data;
             setEventError(data?.detail || 'Failed to add event.');
@@ -59,7 +69,7 @@ export const EventModals = ({
         const ev = editEventModal?.ev;
         if (!ev?.id) return;
         if (!editEventTitle.trim() || !editEventDate.trim()) {
-            setEditEventError('Event title and date are required.');
+            setEditEventError('Agenda/Activity Title and Meeting Date are required.');
             return;
         }
         setEditEventSubmitting(true);
@@ -68,6 +78,8 @@ export const EventModals = ({
             await calendarEventService.update(ev.id, {
                 title: editEventTitle.trim(),
                 date: editEventDate.trim(),
+                start_time: editEventStartTime || null,
+                end_time: editEventEndTime || null,
             });
             await onRefresh();
             window.dispatchEvent(new Event('calendarChanged'));
@@ -108,7 +120,7 @@ export const EventModals = ({
                 <form onSubmit={(e) => { 
                     e.preventDefault(); 
                     if (!eventTitle.trim()) {
-                        setEventError('Event title is required.');
+                        setEventError('Agenda/Activity Title is required.');
                         return;
                     }
                     setEventError('');
@@ -119,13 +131,21 @@ export const EventModals = ({
                             <MdEvent className="w-6 h-6" aria-hidden />
                         </div>
                         <div>
-                            <p className="text-xs font-semibold text-[var(--text)] m-0 mb-0.5">Selected date</p>
-                            <p className="text-sm font-medium m-0">{formatDisplayDate(eventModal?.date)}</p>
+                            <p className="text-xs font-semibold text-[var(--text)] m-0 mb-0.5">Meeting Date</p>
+                            <p className="text-sm font-medium m-0">
+                                {formatDisplayDate(eventModal?.date)}
+                                {eventStartTime && (
+                                    <span className="text-[var(--primary)] ml-2">
+                                        • {formatDisplayTime(eventStartTime)}
+                                        {eventEndTime && ` - ${formatDisplayTime(eventEndTime)}`}
+                                    </span>
+                                )}
+                            </p>
                         </div>
                     </div>
 
                     <div className="field-group">
-                        <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="event-title-input">Event title</label>
+                        <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="event-title-input">Agenda/Activity Title</label>
                         <input
                             id="event-title-input"
                             type="text"
@@ -140,6 +160,29 @@ export const EventModals = ({
                             autoFocus
                         />
                         {eventError && <p className="text-xs font-medium text-red-600 mt-1">{eventError}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="field-group">
+                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="event-start-time">Start time</label>
+                            <input
+                                id="event-start-time"
+                                type="time"
+                                value={eventStartTime}
+                                onChange={(e) => setEventStartTime(e.target.value)}
+                                className="input-field w-full"
+                            />
+                        </div>
+                        <div className="field-group">
+                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="event-end-time">End time</label>
+                            <input
+                                id="event-end-time"
+                                type="time"
+                                value={eventEndTime}
+                                onChange={(e) => setEventEndTime(e.target.value)}
+                                className="input-field w-full"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex gap-3 pt-2 flex-wrap">
@@ -163,7 +206,7 @@ export const EventModals = ({
                 <div className="space-y-6">
                     <div className="space-y-4">
                         <div className="field-group">
-                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-title">Event title</label>
+                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-title">Agenda/Activity Title</label>
                             <input
                                 id="edit-event-title"
                                 type="text"
@@ -177,7 +220,7 @@ export const EventModals = ({
                             />
                         </div>
                         <div className="field-group">
-                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-date">Event date</label>
+                            <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-date">Meeting Date</label>
                             <DatePicker
                                 value={editEventDate}
                                 onChange={(val) => {
@@ -185,6 +228,29 @@ export const EventModals = ({
                                     if (editEventError) setEditEventError('');
                                 }}
                             />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="field-group">
+                                <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-start-time">Start time</label>
+                                <input
+                                    id="edit-event-start-time"
+                                    type="time"
+                                    value={editEventStartTime}
+                                    onChange={(e) => setEditEventStartTime(e.target.value)}
+                                    className="input-field w-full"
+                                />
+                            </div>
+                            <div className="field-group">
+                                <label className="label !normal-case !tracking-normal !text-xs !font-semibold !opacity-100" htmlFor="edit-event-end-time">End time</label>
+                                <input
+                                    id="edit-event-end-time"
+                                    type="time"
+                                    value={editEventEndTime}
+                                    onChange={(e) => setEditEventEndTime(e.target.value)}
+                                    className="input-field w-full"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -227,8 +293,15 @@ export const EventModals = ({
                     <div className="alert-success">
                         <MdCheckCircle className="w-8 h-8 shrink-0 text-emerald-600" aria-hidden />
                         <div>
-                            <p className="text-xs font-semibold text-[var(--text)] m-0 mb-1">Confirm</p>
-                            <p className="text-sm font-medium m-0">Add this event to the calendar?</p>
+                            <p className="text-xs font-semibold text-[var(--text)] m-0 mb-1">Confirm Action</p>
+                            <p className="text-sm font-medium m-0 mb-3 text-[var(--text-muted)]">Are you sure you want to add this event?</p>
+                            <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100/50 space-y-1">
+                                <p className="text-xs font-bold text-emerald-900 line-clamp-1">{eventTitle || 'Untitled Event'}</p>
+                                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                                    {formatDisplayDate(eventModal?.date)}
+                                    {eventStartTime && ` • ${formatDisplayTime(eventStartTime)}${eventEndTime ? ` - ${formatDisplayTime(eventEndTime)}` : ''}`}
+                                </p>
+                            </div>
                         </div>
                     </div>
                     <div className="modal-footer !p-0 !border-0 flex gap-3">

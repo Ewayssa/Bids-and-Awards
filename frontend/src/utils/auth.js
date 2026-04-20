@@ -43,9 +43,9 @@ const ROLE_PERMISSIONS = {
 };
 
 export const NAV_ACCESS_RULES = {
-    '/': [ROLES.ADMIN, ROLES.USER],
-    '/encode': [ROLES.ADMIN, ROLES.USER],
-    '/reports': [ROLES.ADMIN, ROLES.USER],
+    '/': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER, ROLES.VIEWER],
+    '/encode': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
+    '/reports': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER, ROLES.VIEWER],
     '/personnel': [ROLES.ADMIN],
     '/settings': [ROLES.ADMIN],
     '/audit-trail': [ROLES.ADMIN],
@@ -56,9 +56,12 @@ export const NAV_ACCESS_RULES = {
  */
 export const canAccessRoute = (userRole, route) => {
     if (!userRole || !route) return false;
-    if (userRole === ROLES.ADMIN) return true;
+    // Normalize string and trim for safety
+    const normalizedRole = String(userRole).toLowerCase().trim();
+    if (normalizedRole === ROLES.ADMIN) return true;
+    
     const allowed = NAV_ACCESS_RULES[route] || [];
-    return allowed.includes(userRole);
+    return allowed.includes(normalizedRole);
 };
 
 const ROUTES_ORDER = ['/', '/encode', '/reports', '/personnel', '/audit-trail', '/settings'];
@@ -105,7 +108,16 @@ export const getAvailableRoles = () => [
 export const mapOldRoleToNew = (oldRole) => {
     if (!oldRole) return ROLES.USER;
     const r = String(oldRole).toLowerCase().trim();
+    
+    // Admin variants
     if (r === 'admin' || r === 'administrator') return ROLES.ADMIN;
+    
+    // Encoder / Secretariat variants
+    if (r.includes('encoder') || r.includes('secretariat') || r.includes('editor')) return ROLES.ENCODER;
+    
+    // Viewer / Member variants
+    if (r.includes('viewer') || r.includes('guest') || r.includes('member')) return ROLES.VIEWER;
+    
     return ROLES.USER;
 };
 
