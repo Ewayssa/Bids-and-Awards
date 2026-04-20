@@ -1,0 +1,262 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    MdSave, MdInfo, MdLabel, MdAdd, MdDelete, MdReceipt
+} from 'react-icons/md';
+import Modal from '../../../components/Modal';
+
+const CreatePRModal = ({
+    show,
+    isOpen,
+    onClose,
+    onSuccess
+}) => {
+    const isModalOpen = show || isOpen;
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState('');
+    const [errors, setErrors] = useState({});
+
+    const [items, setItems] = useState([
+        { id: Date.now(), unit: '', description: '', quantity: 1, unit_cost: 0 }
+    ]);
+
+    useEffect(() => {
+        if (isModalOpen) {
+            setItems([{ id: Date.now(), unit: '', description: '', quantity: 1, unit_cost: 0 }]);
+            setError('');
+            setErrors({});
+        }
+    }, [isModalOpen]);
+
+    const handleAddItem = () => {
+        setItems(prev => [...prev, { id: Date.now(), unit: '', description: '', quantity: 1, unit_cost: 0 }]);
+    };
+
+    const handleRemoveItem = (idToRemove) => {
+        if (items.length > 1) {
+            setItems(prev => prev.filter(item => item.id !== idToRemove));
+        }
+    };
+
+    const handleItemChange = (id, field, value) => {
+        setItems(prev => prev.map(item => {
+            if (item.id === id) {
+                return { ...item, [field]: value };
+            }
+            return item;
+        }));
+    };
+
+    const calculateTotal = () => {
+        return items.reduce((acc, item) => acc + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)), 0);
+    };
+
+    const validateForm = () => {
+        const errs = {};
+        
+        const hasEmptyItems = items.some(item => !item.description.trim() || !item.unit.trim() || item.quantity <= 0 || item.unit_cost <= 0);
+        if (hasEmptyItems) {
+            errs.items = 'Please ensure all line items have valid descriptions, units, quantities, and costs.';
+        }
+
+        setErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
+
+    const handleSubmit = async () => {
+        if (!validateForm()) return;
+
+        setSubmitting(true);
+        setError('');
+
+        try {
+            // TODO: API connection logic
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            if (onSuccess) {
+                onSuccess({ items, total: calculateTotal() });
+            }
+            onClose();
+        } catch (err) {
+            console.error('Submission error:', err);
+            setError('Failed to create PR. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const formatCurrency = (val) => {
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
+    };
+
+    const renderFooter = () => (
+        <div className="flex items-center justify-between w-full">
+            <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Grand Total</span>
+                <span className="text-xl font-black text-emerald-600">{formatCurrency(calculateTotal())}</span>
+            </div>
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={submitting}
+                    className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="btn-primary flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 px-8 py-2.5"
+                >
+                    {submitting ? 'Saving...' : 'Save PR'}
+                    <MdSave className="w-4 h-4" />
+                </button>
+            </div>
+        </div>
+    );
+
+    if (!isModalOpen) return null;
+
+    return (
+        <Modal
+            isOpen={isModalOpen}
+            onClose={onClose}
+            title="Create Purchase Request"
+            size="auto"
+            containerClassName="w-[min(95vw,900px)] h-[min(90vh,750px)] flex flex-col !rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-slate-900"
+            bodyClassName="flex-1 overflow-y-auto custom-scrollbar p-0"
+            footer={renderFooter()}
+        >
+            <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="p-6 sm:p-8 space-y-6">
+                    {error && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl flex items-center gap-3"
+                        >
+                            <MdInfo className="w-5 h-5 text-red-500 shrink-0" />
+                            <p className="text-sm font-semibold text-red-600 dark:text-red-400">{error}</p>
+                        </motion.div>
+                    )}
+
+                    {/* Table Section */}
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                            <h4 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                <MdLabel className="w-5 h-5 text-[var(--primary)]" /> Line Items
+                            </h4>
+                            <button
+                                type="button"
+                                onClick={handleAddItem}
+                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-[var(--primary)]/10 text-[var(--primary)] rounded-lg hover:bg-[var(--primary)]/20 transition-all"
+                            >
+                                <MdAdd className="w-4 h-4" /> Add Row
+                            </button>
+                        </div>
+
+                        {errors.items && (
+                            <div className="px-6 py-3 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-800">
+                                <p className="text-xs font-bold text-red-500">{errors.items}</p>
+                            </div>
+                        )}
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-slate-50 dark:bg-slate-800">
+                                    <tr>
+                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap w-24">Unit</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[200px]">Description</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap w-24">Quantity</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap w-32">Unit Cost</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap w-32">Total Cost</th>
+                                        <th className="px-4 py-3 w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                    <AnimatePresence>
+                                        {items.map((item, index) => {
+                                            const rowTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0);
+                                            return (
+                                                <motion.tr 
+                                                    key={item.id}
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="group hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors"
+                                                >
+                                                    <td className="p-2 align-top">
+                                                        <input
+                                                            type="text"
+                                                            value={item.unit}
+                                                            onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
+                                                            className="w-full p-2 text-sm bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all"
+                                                            placeholder="e.g. pc"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 align-top">
+                                                        <textarea
+                                                            value={item.description}
+                                                            onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                                                            rows={1}
+                                                            className="w-full p-2 text-sm bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all resize-none min-h-[40px] overflow-hidden"
+                                                            placeholder="Item details..."
+                                                            onInput={(e) => {
+                                                                e.target.style.height = 'auto';
+                                                                e.target.style.height = (e.target.scrollHeight) + 'px';
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 align-top">
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            value={item.quantity}
+                                                            onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
+                                                            className="w-full p-2 text-sm text-right font-mono bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 align-top">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={item.unit_cost}
+                                                            onChange={(e) => handleItemChange(item.id, 'unit_cost', e.target.value)}
+                                                            className="w-full p-2 text-sm text-right font-mono bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 align-top text-right">
+                                                        <div className="w-full p-2 text-sm font-bold font-mono text-slate-700 dark:text-slate-300">
+                                                            {formatCurrency(rowTotal)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-2 align-middle text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveItem(item.id)}
+                                                            disabled={items.length === 1}
+                                                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-300"
+                                                            title="Remove Row"
+                                                        >
+                                                            <MdDelete className="w-5 h-5" />
+                                                        </button>
+                                                    </td>
+                                                </motion.tr>
+                                            );
+                                        })}
+                                    </AnimatePresence>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+export default CreatePRModal;

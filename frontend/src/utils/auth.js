@@ -45,6 +45,9 @@ const ROLE_PERMISSIONS = {
 export const NAV_ACCESS_RULES = {
     '/': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER, ROLES.VIEWER],
     '/encode': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
+    '/ppmp': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
+    '/app': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
+    '/pr': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
     '/reports': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER, ROLES.VIEWER],
     '/personnel': [ROLES.ADMIN],
     '/settings': [ROLES.ADMIN],
@@ -64,7 +67,7 @@ export const canAccessRoute = (userRole, route) => {
     return allowed.includes(normalizedRole);
 };
 
-const ROUTES_ORDER = ['/', '/encode', '/reports', '/personnel', '/audit-trail', '/settings'];
+const ROUTES_ORDER = ['/', '/encode', '/ppmp', '/app', '/pr', '/reports', '/personnel', '/audit-trail', '/settings'];
 
 /**
  * Get the default landing page for a role

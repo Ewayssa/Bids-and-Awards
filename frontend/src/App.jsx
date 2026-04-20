@@ -4,6 +4,9 @@ import Login from './features/auth/Login';
 import ChangePassword from './features/auth/ChangePassword';
 import Dashboard from './features/dashboard/Dashboard';
 import Encode from './features/documents/Encode';
+import PPMP from './features/documents/PPMP';
+import APP from './features/documents/APP';
+import PR from './features/documents/PR';
 import Reports from './features/reports/ReportsPage';
 import Personnel from './features/users/UserManagement';
 import Settings from './features/users/Settings';
@@ -105,6 +108,9 @@ function AppContent() {
                             <Routes>
                                 <Route path="/" element={canAccessRoute(userRole, '/') ? <Dashboard user={user} sidebarOpen={true} onLogout={handleLogout} /> : <Navigate to={defaultRoute} replace />} />
                                 <Route path="/encode" element={canAccessRoute(userRole, '/encode') ? <Encode user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/ppmp" element={canAccessRoute(userRole, '/ppmp') ? <PPMP user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/app" element={canAccessRoute(userRole, '/app') ? <APP user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                <Route path="/pr" element={canAccessRoute(userRole, '/pr') ? <PR user={user} /> : <Navigate to={defaultRoute} replace />} />
                                 <Route path="/reports" element={canAccessRoute(userRole, '/reports') ? <Reports user={user} /> : <Navigate to={defaultRoute} replace />} />
                                 <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
                                 <Route path="/audit-trail" element={canAccessRoute(userRole, '/audit-trail') ? <AuditTrail user={user} /> : <Navigate to={defaultRoute} replace />} />

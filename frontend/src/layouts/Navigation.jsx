@@ -9,6 +9,9 @@ import {
     MdMenu,
     MdClose,
     MdHistoryToggleOff,
+    MdAssignment,
+    MdDateRange,
+    MdReceipt,
 } from 'react-icons/md';
 import { canAccessRoute, ROLES } from '../utils/auth';
 import NotificationBell from '../features/notifications/NotificationBell';
@@ -16,6 +19,9 @@ import NotificationBell from '../features/notifications/NotificationBell';
 const NAV_ITEMS = [
     { path: '/', label: 'Dashboard', icon: MdSpaceDashboard },
     { path: '/encode', label: 'Procurement', icon: MdDescription },
+    { path: '/ppmp', label: 'PPMP', icon: MdAssignment },
+    { path: '/app', label: 'APP', icon: MdDateRange },
+    { path: '/pr', label: 'Purchase Request', icon: MdReceipt },
     { path: '/reports', label: 'Reports', icon: MdTableChart },
     { path: '/personnel', label: 'User Management', icon: MdGroup },
     { path: '/audit-trail', label: 'Activity Logs', icon: MdHistoryToggleOff },
