@@ -28,9 +28,9 @@ This document describes the **intended UI** of the system (based on the referenc
 
 ---
 
-## Encode (Document Encoding)
+## Encode (Procurement Records)
 
-- **Title:** Document Encoding  
+- **Title:** Procurement Records  
 - **Subtitle:** View all documents uploaded by users. Status is set automatically from document completeness. View or download files.
 - **Section:** "All Uploaded Documents"
 - **Controls:** Search (placeholder: "Search by title, PR No, category, sub-document, or uploaded by..."), **Group View**, **Export**, **Filters**.

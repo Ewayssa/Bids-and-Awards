@@ -40,10 +40,22 @@ api.interceptors.response.use(
 );
 
 export const documentService = {
-    async getAll() {
+    async getAll(params = {}) {
         const url = `/uploaded-documents/`;
         let all = [];
         let nextUrl = url;
+        
+        // Build query string from params object
+        const queryParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value) queryParams.append(key, value);
+        });
+        
+        const queryString = queryParams.toString();
+        if (queryString) {
+            nextUrl += `?${queryString}`;
+        }
+
         while (nextUrl) {
             const response = await api.get(nextUrl);
             const body = response.data;

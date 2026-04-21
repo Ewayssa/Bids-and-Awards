@@ -1,43 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
-import { MdDateRange, MdUpload, MdVisibility } from 'react-icons/md';
+import { MdDateRange, MdUpload, MdVisibility, MdDelete } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import UploadAPPModal from './modals/UploadAPPModal';
 import PreviewModal from './modals/PreviewModal';
+import { documentService } from '../../services/api';
 
 const APP = ({ user }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [apps, setApps] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [previewDoc, setPreviewDoc] = useState(null);
+
+    const fetchAPPs = async () => {
+        setLoading(true);
+        try {
+            const data = await documentService.getAll({ 
+                subDoc: 'Annual Procurement Plan'
+            });
+            setApps(data);
+        } catch (err) {
+            console.error('Failed to fetch APPs:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this APP?')) return;
+        
+        try {
+            await documentService.delete(id);
+            fetchAPPs();
+        } catch (err) {
+            console.error('Failed to delete APP:', err);
+            alert('Failed to delete APP. Please try again.');
+        }
+    };
+
+    useEffect(() => {
+        fetchAPPs();
+    }, []);
 
     return (
         <div className="min-h-full pb-12">
             <PageHeader
                 title="Annual Procurement Plan"
                 subtitle="Manage and track APP records."
-            />
-            <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0 shadow-lg shadow-slate-200/50">
+            >
                 {user?.role !== ROLES.VIEWER && (
-                    <div className="p-6 sm:p-8 border-b border-[var(--border-light)] bg-white/50 backdrop-blur-sm">
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-white border border-[var(--border-light)] shadow-xl shadow-slate-100/50">
-                                <div className="absolute top-0 left-0 w-1.5 h-full bg-[var(--primary)] rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
-                                <div className="min-w-0 flex-1 text-center sm:text-left">
-                                    <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Add New APP</h3>
-                                    <p className="text-xs text-[var(--text-subtle)] mt-1 font-medium">Upload a new Annual Procurement Plan and link it to an existing PPMP.</p>
-                                </div>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowUploadModal(true)} 
-                                    className="px-8 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 w-full sm:w-auto"
-                                >
-                                    <MdUpload className="w-5 h-5 transition-transform group-hover:scale-110" />
-                                    <span>Upload APP</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <button 
+                        type="button" 
+                        onClick={() => setShowUploadModal(true)} 
+                        className="px-6 py-2.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-sm transition-all active:scale-95 flex items-center gap-2"
+                    >
+                        <MdUpload className="w-5 h-5" />
+                        <span>Upload APP</span>
+                    </button>
                 )}
+            </PageHeader>
+
+            <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0 shadow-lg shadow-slate-200/50">
+
                 
                 {apps.length > 0 ? (
                     <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
@@ -66,20 +90,31 @@ const APP = ({ user }) => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-5 align-middle text-center">
-                                            <span className="text-sm font-medium text-slate-500">{item.date}</span>
+                                            <span className="text-sm font-medium text-slate-500">
+                                                {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString() : item.date}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-5 align-middle text-right">
-                                            <button 
-                                                onClick={() => setPreviewDoc({
-                                                    title: item.ppmp_no,
-                                                    previewBlobUrl: item.file ? URL.createObjectURL(item.file) : null,
-                                                    previewBlobType: item.file?.type
-                                                })}
-                                                className="p-2 text-slate-400 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 rounded-xl transition-all"
-                                                title="View Document"
-                                            >
-                                                <MdVisibility className="w-5 h-5" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button 
+                                                    onClick={() => setPreviewDoc({
+                                                        title: item.ppmp_no,
+                                                        previewBlobUrl: item.file ? (item.file instanceof File ? URL.createObjectURL(item.file) : item.file) : null,
+                                                        previewBlobType: item.file?.type
+                                                    })}
+                                                    className="p-2 text-slate-400 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 rounded-xl transition-all"
+                                                    title="View Document"
+                                                >
+                                                    <MdVisibility className="w-5 h-5" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                    title="Delete APP"
+                                                >
+                                                    <MdDelete className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -101,11 +136,7 @@ const APP = ({ user }) => {
                 isOpen={showUploadModal}
                 onClose={() => setShowUploadModal(false)}
                 onSuccess={(data) => {
-                    const newAPP = {
-                        ...data,
-                        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                    };
-                    setApps(prev => [newAPP, ...prev]);
+                    fetchAPPs();
                     setShowUploadModal(false);
                 }}
             />

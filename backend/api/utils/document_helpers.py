@@ -7,9 +7,9 @@ from .document_status import DocumentStatusCalculator
 
 def get_next_transaction_number(date=None):
     """
-    Generate a unique sequence number in format: YYYY-00M-MM-NNNN.
-    Example: 2026-004-04-0001
+    Example: 2026-004-04
     """
+    prefix = ""
     try:
         if date is None:
             now = timezone.now()
@@ -43,31 +43,9 @@ def get_next_transaction_number(date=None):
                         year = now.year
                         month = now.month
 
-        # Consistent prefix for lookup
-        prefix = f"{year}-{month:02d}-{month:02d}"
-        
-        # Find the highest existing sequence number for this prefix to avoid collisions
-        last_record = ProcurementRecord.objects.filter(pr_no__startswith=prefix).aggregate(Max('pr_no'))['pr_no__max']
-        
-        if last_record:
-            try:
-                # Extract the last 4 digits after the last hyphen
-                seq_str = last_record.split('-')[-1]
-                next_sequence = int(seq_str) + 1
-            except (ValueError, IndexError):
-                # Fallback to count if format is weird
-                next_sequence = ProcurementRecord.objects.filter(pr_no__startswith=prefix).count() + 1
-        else:
-            next_sequence = 1
-            
-        final_no = f"{prefix}-{next_sequence:04d}"
-        
-        # Final safety check for uniqueness
-        while ProcurementRecord.objects.filter(pr_no=final_no).exists():
-            next_sequence += 1
-            final_no = f"{prefix}-{next_sequence:04d}"
-            
-        return final_no
+        # Format: YYYY-00M-MM (e.g. 2026-004-04)
+        prefix = f"{year}-{month:03d}-{month:02d}"
+        return prefix
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Error generating transaction number: {e}")

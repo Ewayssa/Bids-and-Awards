@@ -80,6 +80,8 @@ class Document(models.Model):
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Total amount (for Purchase Request)')
     source_of_fund = models.CharField(max_length=255, blank=True, help_text='Source of Fund (for Activity Design, PPMP)')
     ppmp_no = models.CharField(max_length=100, blank=True, help_text='PPMP No. (user-entered, for Project Procurement Management Plan/Supplemental PPMP)')
+    year = models.CharField(max_length=4, blank=True, help_text='Year (e.g. 2024)')
+    quarter = models.CharField(max_length=10, blank=True, help_text='Quarter (e.g. Q1, Q2)')
     app_no = models.CharField(max_length=100, blank=True, help_text='APP No. (for Annual Procurement Plan)')
     app_type = models.CharField(max_length=20, blank=True, help_text='APP type: Final or Updated (for Annual Procurement Plan)')
     certified_true_copy = models.BooleanField(default=False, help_text='Certified True Copy? (for Annual Procurement Plan)')
@@ -274,7 +276,8 @@ class ProcurementRecord(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    pr_no = models.CharField(max_length=100, unique=True, help_text='BAC Folder No.')
+    pr_no = models.CharField(max_length=100, help_text='BAC Folder No.')
+    ppmp_no = models.CharField(max_length=100, blank=True, help_text='Associated PPMP No. for grouping')
     user_pr_no = models.CharField(max_length=100, blank=True, help_text='PR No.')
     rfq_no = models.CharField(max_length=100, blank=True, help_text='RFQ No.')
     title = models.CharField(max_length=255, help_text='Title / Purpose')

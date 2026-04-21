@@ -4,6 +4,7 @@ import {
     MdClose, MdSave, MdInfo, MdLabel, MdEvent, MdDateRange, MdFileUpload, MdDescription as MdFileShortcut
 } from 'react-icons/md';
 import Modal from '../../../components/Modal';
+import { documentService } from '../../../services/api';
 
 const UploadPPMPModal = ({
     show,
@@ -69,12 +70,25 @@ const UploadPPMPModal = ({
         setError('');
 
         try {
-            // TODO: Implement actual backend submission to documentService
-            // For now, simulate success
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 1. Prepare the form data for the document upload
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('category', 'Initial Documents');
+            formData.append('subDoc', 'Project Procurement Management Plan/Supplemental PPMP');
+            formData.append('title', `PPMP ${form.ppmp_no} (${form.year})`);
+            formData.append('ppmp_no', form.ppmp_no);
+            formData.append('year', form.year);
+            formData.append('quarter', form.quarter);
+            // prNo is now automatically handled by backend based on ppmp_no grouping
+            
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            formData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
+
+            // 2. Save to backend
+            const response = await documentService.create(formData);
             
             if (onSuccess) {
-                onSuccess({ ...form, file });
+                onSuccess({ ...form, ...response });
             }
             onClose();
         } catch (err) {

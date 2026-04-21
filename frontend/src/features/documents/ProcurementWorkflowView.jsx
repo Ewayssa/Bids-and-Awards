@@ -39,8 +39,9 @@ const ProcurementWorkflowView = ({
         });
         
         const allRequiredMet = results.filter(r => r.required).every(r => r.isMet);
-        return { items: results, allRequiredMet };
-    }, [recordDocs, config]);
+        const hasOfficialPR = !!record?.user_pr_no;
+        return { items: results, allRequiredMet, hasOfficialPR };
+    }, [recordDocs, config, record?.user_pr_no]);
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
@@ -88,7 +89,7 @@ const ProcurementWorkflowView = ({
     };
 
     const handleComplete = async () => {
-        if (!requirements.allRequiredMet || isClosed || completing) return;
+        if (!requirements.allRequiredMet || !requirements.hasOfficialPR || isClosed || completing) return;
         
         if (!window.confirm('Are you sure you want to mark this procurement as COMPLETED? This will lock the record and include it in final reports.')) {
             return;
@@ -152,11 +153,24 @@ const ProcurementWorkflowView = ({
                                 </motion.span>
                             )}
                         </div>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-2">
-                            <span>Folder PR: {record?.pr_no}</span>
-                            <span className="w-1 h-1 rounded-full bg-slate-300" />
-                            <span>{config.name}</span>
-                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-3">
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2">
+                                <span>Folder: {record?.pr_no}</span>
+                                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                <span>{config.name}</span>
+                            </p>
+                            {requirements.hasOfficialPR ? (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
+                                    <MdLabel className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-black uppercase tracking-tight">PR: {record.user_pr_no}</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg border border-amber-100 animate-pulse">
+                                    <MdInfo className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-black uppercase tracking-tight">Pending FAD PR Assignment</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -343,15 +357,15 @@ const ProcurementWorkflowView = ({
 
                     <button
                         onClick={handleComplete}
-                        disabled={!requirements.allRequiredMet || completing}
+                        disabled={!requirements.allRequiredMet || !requirements.hasOfficialPR || completing}
                         className={`px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-3 ${
-                            requirements.allRequiredMet 
+                            requirements.allRequiredMet && requirements.hasOfficialPR 
                                 ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 hover:bg-emerald-700 active:scale-95' 
                                 : 'bg-slate-100 text-slate-400 cursor-not-allowed grayscale'
                         }`}
                     >
                         {completing ? 'Processing...' : 'Mark as Completed'}
-                        {!completing && requirements.allRequiredMet && <MdCheckCircle className="w-5 h-5" />}
+                        {!completing && requirements.allRequiredMet && requirements.hasOfficialPR && <MdCheckCircle className="w-5 h-5" />}
                     </button>
                 </div>
             )}

@@ -4,6 +4,7 @@ import {
     MdSave, MdInfo, MdLabel, MdEvent, MdDateRange, MdFileUpload, MdDescription as MdFileShortcut
 } from 'react-icons/md';
 import Modal from '../../../components/Modal';
+import { documentService } from '../../../services/api';
 
 const UploadAPPModal = ({
     show,
@@ -22,6 +23,7 @@ const UploadAPPModal = ({
 
     const [form, setForm] = useState({
         ppmp_no: '',
+        prNo: '', // The associated BAC folder No.
         year: new Date().getFullYear().toString(),
         quarter: 'Q1'
     });
@@ -39,16 +41,29 @@ const UploadAPPModal = ({
             setError('');
             setErrors({});
 
-            // Simulating a fetch of existing PPMPs for the dropdown
+            // Fetch existing PPMPs for the dropdown
             setLoadingPPMPs(true);
-            setTimeout(() => {
-                setAvailablePPMPs([
-                    { id: '1', ppmp_no: 'PPMP-2024-001' },
-                    { id: '2', ppmp_no: 'PPMP-2024-002' },
-                    { id: '3', ppmp_no: 'PPMP-2024-003' }
-                ]);
-                setLoadingPPMPs(false);
-            }, 600);
+            documentService.getAll({ 
+                subDoc: 'Project Procurement Management Plan/Supplemental PPMP' 
+            })
+            .then(data => {
+                // Ensure we only show unique PPMP numbers
+                const uniquePPMPs = [];
+                const seen = new Set();
+                data.forEach(item => {
+                    if (item.ppmp_no && !seen.has(item.ppmp_no)) {
+                        seen.add(item.ppmp_no);
+                        uniquePPMPs.push({ 
+                            ppmp_no: item.ppmp_no, 
+                            prNo: item.prNo,
+                            title: item.title 
+                        });
+                    }
+                });
+                setAvailablePPMPs(uniquePPMPs);
+            })
+            .catch(err => console.error('Failed to fetch PPMPs:', err))
+            .finally(() => setLoadingPPMPs(false));
         }
     }, [isModalOpen]);
 
@@ -64,7 +79,18 @@ const UploadAPPModal = ({
     };
 
     const updateField = (field, value) => {
-        setForm(prev => ({ ...prev, [field]: value }));
+        if (field === 'ppmp_no') {
+            // Find the associated prNo for the selected PPMP
+            const selectedPPMP = availablePPMPs.find(p => p.ppmp_no === value);
+            setForm(prev => ({ 
+                ...prev, 
+                ppmp_no: value,
+                prNo: selectedPPMP ? selectedPPMP.prNo : prev.prNo
+            }));
+        } else {
+            setForm(prev => ({ ...prev, [field]: value }));
+        }
+
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: null }));
         }
@@ -84,11 +110,25 @@ const UploadAPPModal = ({
         setError('');
 
         try {
-            // TODO: Implement actual backend submission to documentService
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('category', 'Initial Documents');
+            formData.append('subDoc', 'Annual Procurement Plan');
+            formData.append('title', `APP for PPMP ${form.ppmp_no}`);
+            formData.append('ppmp_no', form.ppmp_no);
+            formData.append('prNo', form.prNo); // Link to same folder
+            formData.append('year', form.year);
+            formData.append('quarter', form.quarter);
+            formData.append('app_no', `${form.ppmp_no}-APP-${form.year}`);
+            formData.append('app_type', 'Final');
+            
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            formData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
+
+            await documentService.create(formData);
             
             if (onSuccess) {
-                onSuccess({ ...form, file });
+                onSuccess(form);
             }
             onClose();
         } catch (err) {
@@ -160,11 +200,11 @@ const UploadAPPModal = ({
                             <option value="" disabled>
                                 {loadingPPMPs ? 'Loading available PPMPs...' : 'Select associated PPMP'}
                             </option>
-                            {availablePPMPs.map((ppmp) => (
-                                <option key={ppmp.id} value={ppmp.ppmp_no}>
-                                    {ppmp.ppmp_no}
-                                </option>
-                            ))}
+                             {availablePPMPs.map((ppmp, idx) => (
+                                 <option key={idx} value={ppmp.ppmp_no}>
+                                     {ppmp.ppmp_no} — {ppmp.title || 'Untitled PPMP'}
+                                 </option>
+                             ))}
                         </select>
                         {errors.ppmp_no && <span className="text-xs text-red-500 font-semibold">{errors.ppmp_no}</span>}
                     </div>

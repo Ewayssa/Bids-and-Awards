@@ -147,17 +147,6 @@ const NewProcurementModal = ({
             )}
 
             <div className="space-y-4">
-                <div className="field-group">
-                    <label className="label">PR No. <span className="text-red-500">*</span></label>
-                    <input
-                        type="text"
-                        value={form.user_pr_no || ''}
-                        onChange={(e) => updateFormField('user_pr_no', toNumbersOnly(e.target.value))}
-                        className={`input-field ${newFormErrors?.user_pr_no ? 'border-red-400' : ''}`}
-                        placeholder="Enter PR number"
-                    />
-                    {newFormErrors?.user_pr_no && <p className="text-xs text-red-500 mt-1">{newFormErrors.user_pr_no}</p>}
-                </div>
 
                 <div className="field-group">
                     <label className="label">Title / Purpose <span className="text-red-500">*</span></label>
@@ -220,10 +209,6 @@ const NewProcurementModal = ({
             <div className="p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
                 <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Summary</h4>
                 <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
-                        <span className="text-sm text-slate-500">PR No.</span>
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{form.user_pr_no || '-'}</span>
-                    </div>
                     <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
                         <span className="text-sm text-slate-500">Title / Purpose</span>
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-200 text-right max-w-[200px] truncate">{form.title || '-'}</span>
@@ -299,7 +284,7 @@ const NewProcurementModal = ({
                     <button
                         type="button"
                         onClick={() => setNewStep('form')}
-                        disabled={!selectedDocType || (!form.user_pr_no?.trim()) || (!form.title?.trim())}
+                        disabled={!selectedDocType || (!form.title?.trim())}
                         className="btn-primary flex items-center gap-2 ml-auto"
                     >
                         Next

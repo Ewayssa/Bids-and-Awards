@@ -18,7 +18,7 @@ import NotificationBell from '../features/notifications/NotificationBell';
 
 const NAV_ITEMS = [
     { path: '/', label: 'Dashboard', icon: MdSpaceDashboard },
-    { path: '/encode', label: 'Procurement', icon: MdDescription },
+    { path: '/encode', label: 'Procurement Records', icon: MdDescription },
     { path: '/ppmp', label: 'PPMP', icon: MdAssignment },
     { path: '/app', label: 'APP', icon: MdDateRange },
     { path: '/pr', label: 'Purchase Request', icon: MdReceipt },

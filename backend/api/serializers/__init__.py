@@ -103,7 +103,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         model = Document
         fields = (
             'id', 'prNo', 'title', 'user_pr_no', 'total_amount', 'source_of_fund', 
-            'ppmp_no', 'app_no', 'app_type', 'certified_true_copy', 'certified_signed_by', 
+            'ppmp_no', 'year', 'quarter', 'app_no', 'app_type', 'certified_true_copy', 'certified_signed_by', 
             'market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 
             'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3', 
             'office_division', 'received_by', 'date', 'date_received', 'attendance_members', 
@@ -124,6 +124,8 @@ class DocumentSerializer(serializers.ModelSerializer):
             'total_amount': {'required': False, 'allow_null': True},
             'source_of_fund': {'required': False, 'allow_blank': True},
             'ppmp_no': {'required': False, 'allow_blank': True},
+            'year': {'required': False, 'allow_blank': True},
+            'quarter': {'required': False, 'allow_blank': True},
             'app_no': {'required': False, 'allow_blank': True},
             'app_type': {'required': False, 'allow_blank': True},
             'certified_true_copy': {'required': False},
@@ -256,13 +258,54 @@ class DocumentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Remove status if provided (it will be auto-calculated)
         validated_data.pop('status', None)
-        # Auto-assign BAC Folder No. (prNo) from document date if blank
-        if not (validated_data.get('prNo') or str(validated_data.get('prNo', '')).strip()):
-            doc_date = validated_data.get('date')
-            validated_data['prNo'] = get_next_transaction_number(date=doc_date)
+        
+        ppmp_no = validated_data.get('ppmp_no', '').strip()
+        pr_no = validated_data.get('prNo', '').strip()
+        doc_date = validated_data.get('date')
+
+        # 1. Logic for grouping by PPMP No.
+        if ppmp_no:
+            # Try to find an existing folder for this PPMP No.
+            record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
+            if record:
+                # Use existing folder's number and link
+                validated_data['prNo'] = record.pr_no
+                validated_data['procurement_record'] = record
+            else:
+                # Create a NEW folder for this PPMP No.
+                if not pr_no:
+                    pr_no = get_next_transaction_number(date=doc_date)
+                
+                # Check for existing folder with same pr_no string (non-unique now)
+                # but we want to create a NEW record for this NEW ppmp_no
+                record = ProcurementRecord.objects.create(
+                    pr_no=pr_no,
+                    ppmp_no=ppmp_no,
+                    title=validated_data.get('title', f'Procurement for {ppmp_no}'),
+                    created_by=validated_data.get('uploadedBy', 'System')
+                )
+                validated_data['prNo'] = pr_no
+                validated_data['procurement_record'] = record
+        
+        # 2. Fallback for documents without PPMP No.
+        if not validated_data.get('procurement_record'):
+            if not pr_no:
+                pr_no = get_next_transaction_number(date=doc_date)
+            
+            # Find or create record by pr_no if no PPMP grouping
+            # (Note: pr_no is no longer unique, so we'll look for or create)
+            record = ProcurementRecord.objects.filter(pr_no=pr_no, ppmp_no='').first()
+            if not record:
+                record = ProcurementRecord.objects.create(
+                    pr_no=pr_no,
+                    title=validated_data.get('title', 'General Procurement'),
+                    created_by=validated_data.get('uploadedBy', 'System')
+                )
+            validated_data['prNo'] = pr_no
+            validated_data['procurement_record'] = record
+
         instance = super().create(validated_data)
         # Status is automatically set in model's save() method and signal
-        # Refresh to get the latest status after signal processing
         instance.refresh_from_db()
         return instance
 

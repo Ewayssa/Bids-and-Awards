@@ -565,32 +565,23 @@ const Encode = ({ user }) => {
     return (
         <div className="min-h-full pb-12">
             <PageHeader
-                title="Document Encoding"
+                title="Procurement Records"
                 subtitle="Create new procurement records and keep document details complete and updated."
-            />
+            >
+                {user?.role !== ROLES.VIEWER && (
+                    <button 
+                        type="button" 
+                        onClick={() => setShowNewRecordModal(true)} 
+                        className="px-6 py-2.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-sm transition-all active:scale-95 flex items-center gap-2"
+                    >
+                        <MdUpload className="w-5 h-5" />
+                        <span>New Procurement</span>
+                    </button>
+                )}
+            </PageHeader>
 
             <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0 shadow-lg shadow-slate-200/50">
-                {user?.role !== ROLES.VIEWER && (
-                    <div className="p-6 sm:p-8 border-b border-[var(--border-light)] bg-white/50 backdrop-blur-sm">
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="card relative flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8 hover:shadow-[var(--shadow-lg)] transition-all duration-300 group bg-white border border-[var(--border-light)] shadow-xl shadow-slate-100/50">
-                                <div className="absolute top-0 left-0 w-1.5 h-full bg-[var(--primary)] rounded-l-xl opacity-80 group-hover:opacity-100 transition-opacity" />
-                                <div className="min-w-0 flex-1 text-center sm:text-left">
-                                    <h3 className="text-lg sm:text-xl font-bold text-[var(--text)] tracking-tight">Add New Procurement</h3>
 
-                                </div>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowNewRecordModal(true)} 
-                                    className="px-8 py-4 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-2.5 w-full sm:w-auto"
-                                >
-                                    <MdUpload className="w-5 h-5 transition-transform group-hover:scale-110" />
-                                    <span>Add New Procurement</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Procurement Records Section */}
                 <div className="p-6 sm:p-8 bg-[var(--background-subtle)]/30">
@@ -601,7 +592,7 @@ const Encode = ({ user }) => {
                             </div>
                             <div>
                                 <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Active Procurement Projects</h3>
-                                <p className="text-xs text-slate-400 font-bold tracking-widest mt-0.5">FOLDER-CENTRIC WORKFLOW CONSOLE</p>
+                                <p className="text-xs text-slate-400 font-bold tracking-widest mt-0.5">FOLDER-CENTRIC WORKFLOW CONSOLE - Procurement Records</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">

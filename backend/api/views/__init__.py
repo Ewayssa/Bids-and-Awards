@@ -385,6 +385,31 @@ class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = Document.objects.all().order_by('-uploaded_at')
+        
+        # Filtering by category
+        category = self.request.query_params.get('category', '').strip()
+        if category:
+            queryset = queryset.filter(category__icontains=category)
+            
+        # Filtering by subDoc (specific document type)
+        sub_doc = self.request.query_params.get('subDoc', '').strip()
+        if sub_doc:
+            queryset = queryset.filter(subDoc__icontains=sub_doc)
+            
+        # Filtering by PPMP No (for linking APPs/PRs)
+        ppmp_no = self.request.query_params.get('ppmp_no', '').strip()
+        if ppmp_no:
+            queryset = queryset.filter(ppmp_no=ppmp_no)
+            
+        # Filtering by prNo (BAC Folder)
+        pr_no = self.request.query_params.get('prNo', '').strip()
+        if pr_no:
+            queryset = queryset.filter(prNo=pr_no)
+
+        return queryset
+
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [IsAuthenticated()]

@@ -4,6 +4,7 @@ import {
     MdSave, MdInfo, MdLabel, MdAdd, MdDelete, MdReceipt
 } from 'react-icons/md';
 import Modal from '../../../components/Modal';
+import { documentService } from '../../../services/api';
 
 const CreatePRModal = ({
     show,
@@ -19,12 +20,49 @@ const CreatePRModal = ({
     const [items, setItems] = useState([
         { id: Date.now(), unit: '', description: '', quantity: 1, unit_cost: 0 }
     ]);
+    
+    // Linking fields
+    const [availablePPMPs, setAvailablePPMPs] = useState([]);
+    const [loadingPPMPs, setLoadingPPMPs] = useState(false);
+    const [selectedPPMP, setSelectedPPMP] = useState(null);
+    const [form, setForm] = useState({
+        user_pr_no: '',
+        ppmp_no: '',
+        prNo: '',
+        title: ''
+    });
 
     useEffect(() => {
         if (isModalOpen) {
             setItems([{ id: Date.now(), unit: '', description: '', quantity: 1, unit_cost: 0 }]);
             setError('');
             setErrors({});
+            setSelectedPPMP(null);
+            setForm({ user_pr_no: '', ppmp_no: '', prNo: '', title: '' });
+
+            // Fetch PPMPs for dropdown
+            setLoadingPPMPs(true);
+            documentService.getAll({ 
+                subDoc: 'Project Procurement Management Plan/Supplemental PPMP' 
+            })
+            .then(data => {
+                const uniquePPMPs = [];
+                const seen = new Set();
+                data.forEach(item => {
+                    if (item.ppmp_no && !seen.has(item.ppmp_no)) {
+                        seen.add(item.ppmp_no);
+                        uniquePPMPs.push({ 
+                            ppmp_no: item.ppmp_no, 
+                            prNo: item.prNo,
+                            title: item.title,
+                            end_user_office: item.end_user_office
+                        });
+                    }
+                });
+                setAvailablePPMPs(uniquePPMPs);
+            })
+            .catch(err => console.error('Failed to fetch PPMPs:', err))
+            .finally(() => setLoadingPPMPs(false));
         }
     }, [isModalOpen]);
 
@@ -54,6 +92,8 @@ const CreatePRModal = ({
     const validateForm = () => {
         const errs = {};
         
+        if (!form.ppmp_no) errs.ppmp_no = 'Please select an associated PPMP';
+
         const hasEmptyItems = items.some(item => !item.description.trim() || !item.unit.trim() || item.quantity <= 0 || item.unit_cost <= 0);
         if (hasEmptyItems) {
             errs.items = 'Please ensure all line items have valid descriptions, units, quantities, and costs.';
@@ -70,8 +110,22 @@ const CreatePRModal = ({
         setError('');
 
         try {
-            // TODO: API connection logic
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const formData = new FormData();
+            formData.append('category', 'Initial Documents');
+            formData.append('subDoc', 'Purchase Request');
+            formData.append('title', form.title || `PR for ${form.ppmp_no}`);
+            formData.append('ppmp_no', form.ppmp_no);
+            formData.append('prNo', form.prNo);
+            formData.append('user_pr_no', form.user_pr_no);
+            formData.append('total_amount', calculateTotal());
+            
+            // In a real scenario, we might also send the line items as JSON
+            // formData.append('items_json', JSON.stringify(items));
+            
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            formData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
+
+            await documentService.create(formData);
             
             if (onSuccess) {
                 onSuccess({ items, total: calculateTotal() });
@@ -141,6 +195,43 @@ const CreatePRModal = ({
                             <p className="text-sm font-semibold text-red-600 dark:text-red-400">{error}</p>
                         </motion.div>
                     )}
+
+                    {/* Connection Section */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                                <MdLabel className="w-4 h-4" />
+                                Select PPMP No. <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={form.ppmp_no}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    const found = availablePPMPs.find(p => p.ppmp_no === val);
+                                    setForm(prev => ({ 
+                                        ...prev, 
+                                        ppmp_no: val, 
+                                        prNo: found ? found.prNo : '',
+                                        title: found ? found.title : prev.title
+                                    }));
+                                    if (errors.ppmp_no) setErrors(prev => ({ ...prev, ppmp_no: null }));
+                                }}
+                                disabled={loadingPPMPs}
+                                className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.ppmp_no ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all cursor-pointer`}
+                            >
+                                <option value="" disabled>
+                                    {loadingPPMPs ? 'Loading PPMPs...' : 'Select associated PPMP'}
+                                </option>
+                                {availablePPMPs.map((ppmp, idx) => (
+                                    <option key={idx} value={ppmp.ppmp_no}>
+                                        {ppmp.ppmp_no} — {ppmp.title || 'Untitled PPMP'}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.ppmp_no && <span className="text-xs text-red-500 font-semibold">{errors.ppmp_no}</span>}
+                        </div>
+
+                    </div>
 
                     {/* Table Section */}
                     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
