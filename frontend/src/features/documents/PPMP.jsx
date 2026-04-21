@@ -65,53 +65,53 @@ const PPMP = ({ user }) => {
 
                 {ppmps.length > 0 ? (
                     <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
-                        <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed' }}>
-                            <thead className="bg-[#F8FAFC] dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
+                        <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden">
+                            <colgroup>
+                                <col className="w-[18%]" />
+                                <col className="w-[18%]" />
+                                <col className="w-[18%]" />
+                                <col className="w-[28%]" />
+                                <col className="w-[18%]" />
+                            </colgroup>
+                            <thead className="table-header">
                                 <tr>
-                                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap" style={{ width: '35%' }}>PPMP No.</th>
-                                    <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center whitespace-nowrap" style={{ width: '15%' }}>Year</th>
-                                    <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center whitespace-nowrap" style={{ width: '15%' }}>Quarter</th>
-                                    <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center whitespace-nowrap" style={{ width: '20%' }}>Date Uploaded</th>
-                                    <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right whitespace-nowrap" style={{ width: '15%' }}>Actions</th>
+                                    <th className="table-th !text-center !px-4">PPMP No.</th>
+                                    <th className="table-th !text-center !px-4">Year</th>
+                                    <th className="table-th !text-center !px-4">Quarter</th>
+                                    <th className="table-th !text-center !px-4">Date Uploaded</th>
+                                    <th className="table-th !text-center !px-4">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                            <tbody>
                                 {ppmps.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
-                                        <td className="px-8 py-5 align-middle">
-                                            <div className="flex flex-col overflow-hidden">
-                                                <span className="font-black text-sm text-slate-800 dark:text-slate-200 group-hover:text-[var(--primary)] transition-colors truncate">
-                                                    {item.ppmp_no}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate">Initial Procurement Requirement</span>
-                                            </div>
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="font-black text-xs text-slate-800 dark:text-slate-200 truncate block">
+                                                {item.ppmp_no}
+                                            </span>
                                         </td>
-                                        <td className="px-6 py-5 align-middle text-center">
-                                            <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-black rounded-lg border border-slate-200 dark:border-slate-700">
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700">
                                                 {item.year || 'N/A'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 align-middle text-center">
-                                            <span className="text-[11px] font-black text-[var(--primary)] uppercase tracking-widest px-3 py-1.5 bg-[var(--primary)]/10 rounded-lg border border-[var(--primary)]/20 shadow-sm">
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="inline-block text-[10px] font-black text-[var(--primary)] uppercase tracking-widest px-3 py-1 bg-[var(--primary)]/10 rounded-lg border border-[var(--primary)]/20 shadow-sm">
                                                 {item.quarter || 'N/A'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 align-middle text-center">
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                                    {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : item.date}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">System Recorded</span>
-                                            </div>
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 tabular-nums">
+                                                {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : item.date}
+                                            </span>
                                         </td>
-                                        <td className="px-8 py-5 align-middle text-right">
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <button 
-                                                onClick={() => setPreviewDoc({
-                                                    title: item.ppmp_no,
-                                                    previewBlobUrl: item.file ? (item.file instanceof File ? URL.createObjectURL(item.file) : item.file) : null,
-                                                    previewBlobType: item.file?.type
-                                                })}
-                                                className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--primary)] hover:text-emerald-700 transition-colors py-2 pl-4"
+                                                onClick={() => {
+                                                    if (item.file_url) window.open(item.file_url, '_blank', 'noopener');
+                                                    else alert('No file uploaded for this PPMP.');
+                                                }}
+                                                className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--primary)] hover:text-emerald-700 transition-colors"
                                             >
                                                 View
                                             </button>

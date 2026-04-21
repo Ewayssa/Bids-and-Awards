@@ -114,6 +114,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             'contract_amount', 'notarized_place', 'notarized_date', 'ntp_service_provider', 
             'ntp_authorized_rep', 'ntp_received_by', 'oss_service_provider', 
             'oss_authorized_rep', 'secretary_service_provider', 'secretary_owner_rep', 
+            'pr_items',
             'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at', 
             'status', 'file_url', 'missing_count', 'procurement_record'
         )
@@ -167,6 +168,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             'secretary_owner_rep': {'required': False, 'allow_blank': True},
             'category': {'required': False, 'allow_blank': True},
             'subDoc': {'required': False, 'allow_blank': True},
+            'pr_items': {'required': False, 'allow_blank': True},
         }
 
     def validate_category(self, value):
@@ -216,6 +218,14 @@ class DocumentSerializer(serializers.ModelSerializer):
         except (InvalidOperation, ValueError, TypeError):
             return None
 
+    def validate_pr_items(self, value):
+        """Robustly handle pr_items string input."""
+        if value is None:
+            return ""
+        if isinstance(value, (list, dict)):
+            return json.dumps(value)
+        return str(value)
+
     def validate_market_budget(self, value):
         """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
         if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
@@ -247,13 +257,18 @@ class DocumentSerializer(serializers.ModelSerializer):
         val = str(value).strip()
         if not val:
             return val
-        # 1. New sequence format: YYYY-MM-MM-NNNN (e.g. 2026-04-04-0001) or YYYY-00M-MM-NNNN
-        # 2. Legacy format: YYYY-MM-NNN (e.g. 2026-04-001)
-        # 3. Simple numbers
-        if re.match(r'^\d{4}-\d{2}-\d{2}-\d{4}$', val) or re.match(r'^\d{4}-\d{3}-\d{2}-\d{4}$', val) or re.match(r'^\d{4}-\d{2}-\d{3}$', val) or val.isdigit():
+        # 1. New sequence format: YYYY-MM-DD-NNNN (e.g. 2026-04-04-0001) or YYYY-00M-MM-NNNN
+        # 2. Legacy format: YYYYs-MM-NNN (e.g. 2026-04-001)
+        # 3. DB Legacy format: YYYY-MMM-DD (e.g. 2026-004-04)
+        # 4. Simple numbers
+        if (re.match(r'^\d{4}-\d{2}-\d{2}-\d{4}$', val) or 
+            re.match(r'^\d{4}-\d{3}-\d{2}-\d{4}$', val) or 
+            re.match(r'^\d{4}-\d{2}-\d{3}$', val) or 
+            re.match(r'^\d{4}-\d{3}-\d{2}$', val) or
+            val.isdigit()):
             return val
         
-        raise serializers.ValidationError('BAC Folder No. format is invalid (expected YYYY-MM-MM-NNNN or YYYY-MM-NNN).')
+        raise serializers.ValidationError(f'BAC Folder No. format "{val}" is invalid.')
 
     def create(self, validated_data):
         # Remove status if provided (it will be auto-calculated)

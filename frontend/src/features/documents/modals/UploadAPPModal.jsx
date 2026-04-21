@@ -202,7 +202,7 @@ const UploadAPPModal = ({
                             </option>
                              {availablePPMPs.map((ppmp, idx) => (
                                  <option key={idx} value={ppmp.ppmp_no}>
-                                     {ppmp.ppmp_no} — {ppmp.title || 'Untitled PPMP'}
+                                     PPMP No. {ppmp.ppmp_no}
                                  </option>
                              ))}
                         </select>
@@ -235,10 +235,8 @@ const UploadAPPModal = ({
                                 onChange={(e) => updateField('quarter', e.target.value)}
                                 className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.quarter ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all cursor-pointer`}
                             >
-                                <option value="Q1">1st Quarter (Q1)</option>
-                                <option value="Q2">2nd Quarter (Q2)</option>
-                                <option value="Q3">3rd Quarter (Q3)</option>
-                                <option value="Q4">4th Quarter (Q4)</option>
+                                <option value="Q1">1st Quarter</option>
+                                <option value="Q2">2nd Quarter</option>
                             </select>
                             {errors.quarter && <span className="text-xs text-red-500 font-semibold">{errors.quarter}</span>}
                         </div>

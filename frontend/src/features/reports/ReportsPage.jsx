@@ -138,29 +138,12 @@ const Reports = ({ user }) => {
         });
     };
 
-    const openPreview = async (r) => {
+    const openPreview = (r) => {
         const fileUrl = r?.file_url ?? r?.file;
-        if (!fileUrl && !r?.id) return;
-        setPreviewReport({ title: r.title || 'Report Preview', file_url: fileUrl, previewBlobUrl: null, previewBlobType: null });
-        
-        try {
-            const fetchUrl = getFetchUrl(fileUrl);
-            const tryFetch = async (url) => {
-                const res = await fetch(toFullUrl(url), { 
-                    credentials: 'include',
-                    headers: getAuthHeaders()
-                });
-                if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
-                return res;
-            };
-            
-            const res = await (r?.id ? tryFetch(`/api/reports/${r.id}/preview/`) : tryFetch(fetchUrl));
-            const contentType = (res.headers.get('content-type') || '').split(';')[0].trim();
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            setPreviewReport(prev => prev ? { ...prev, previewBlobUrl: blobUrl, previewBlobType: contentType } : null);
-        } catch (err) {
-            setPreviewReport(prev => prev ? { ...prev, previewBlobUrl: 'failed' } : null);
+        if (fileUrl) {
+            window.open(toFullUrl(fileUrl), '_blank', 'noopener');
+        } else {
+            alert('No file uploaded for this report.');
         }
     };
 

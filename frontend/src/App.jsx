@@ -9,7 +9,6 @@ import APP from './features/documents/APP';
 import PR from './features/documents/PR';
 import Reports from './features/reports/ReportsPage';
 import Personnel from './features/users/UserManagement';
-import Settings from './features/users/Settings';
 import AuditTrail from './features/users/AuditTrail';
 import Navigation from './layouts/Navigation';
 import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/auth';
@@ -91,6 +90,30 @@ function AppContent() {
         };
     }, [user, navigate]);
 
+    // Auto-refresh profile if session data is incomplete (missing new flags)
+    useEffect(() => {
+        const needsRefresh = user && (
+            (user.position === undefined || user.position === null) ||
+            (user.is_bac_secretariat === undefined)
+        );
+
+        if (needsRefresh) {
+            const refreshProfile = async () => {
+                try {
+                    const data = await userService.getMyProfile();
+                    setUser(prev => {
+                        const updated = { ...prev, ...data };
+                        localStorage.setItem('user', JSON.stringify(updated));
+                        return updated;
+                    });
+                } catch (e) {
+                    console.error('Failed to auto-refresh profile:', e);
+                }
+            };
+            refreshProfile();
+        }
+    }, [user]);
+
     const userRole = user?.role || ROLES.USER;
     const defaultRoute = getDefaultRouteForRole(userRole);
 
@@ -114,7 +137,6 @@ function AppContent() {
                                 <Route path="/reports" element={canAccessRoute(userRole, '/reports') ? <Reports user={user} /> : <Navigate to={defaultRoute} replace />} />
                                 <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
                                 <Route path="/audit-trail" element={canAccessRoute(userRole, '/audit-trail') ? <AuditTrail user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/settings" element={canAccessRoute(userRole, '/settings') ? <Settings user={user} /> : <Navigate to={defaultRoute} replace />} />
                                 <Route path="*" element={<Navigate to={defaultRoute} replace />} />
                             </Routes>
                         </div>

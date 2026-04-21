@@ -25,7 +25,6 @@ const NAV_ITEMS = [
     { path: '/reports', label: 'Reports', icon: MdTableChart },
     { path: '/personnel', label: 'User Management', icon: MdGroup },
     { path: '/audit-trail', label: 'Activity Logs', icon: MdHistoryToggleOff },
-    { path: '/settings', label: 'Settings', icon: MdTune },
 ];
 
 const canAccessNavItem = (item, role) => {

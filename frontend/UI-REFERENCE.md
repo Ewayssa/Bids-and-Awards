@@ -1,4 +1,4 @@
-# BAC Documents Tracking System – UI Reference
+# Procurement Management System – UI Reference
 
 This document describes the **intended UI** of the system (based on the reference screenshots). The app should match this layout and copy.
 
@@ -6,7 +6,7 @@ This document describes the **intended UI** of the system (based on the referenc
 
 ## Sidebar (all pages)
 
-- **Header:** Green circular icon with letter **B** + title **"Bids and Awards Document Tracking"** (single line, no DILG logo).
+- **Header:** Green circular icon with letter **P** + title **"Procurement Management System"** (single line, no DILG logo).
 - **MENU** (all caps): Dashboard, Encode, Reports, Personnel, Settings.
 - **Admin** (all caps): User name (e.g. "Administrator"), then **Logout**.
 - **Bottom:** Current URL (e.g. `localhost:5173/personnel`).
@@ -16,21 +16,21 @@ This document describes the **intended UI** of the system (based on the referenc
 
 ## Dashboard
 
-- **Title:** BAC Dashboard  
+- **Title:** Procurement Dashboard  
 - **Subtitle:** `{User name} · {Weekday, Mon DD, YYYY}` (e.g. Admin Wednesday, Feb 18, 2026)
 - **Summary cards (left to right):**
   - **Total documents** (count)
   - **Completed** (count)
   - **On-going** (count)
   - **Pending** (count)
-- **Calendar:** "Calendar" / "BAC events and deadlines", month navigation, "Upcoming" with "None scheduled" when empty.
+- **Calendar:** "Calendar" / "Procurement events and deadlines", month navigation, "Upcoming" with "None scheduled" when empty.
 - **Document status:** Donut chart with "X total" in center; legend for Completed, On-going, Pending.
 
 ---
 
-## Encode (Document Encoding)
+## Encode (Procurement Records)
 
-- **Title:** Document Encoding  
+- **Title:** Procurement Records  
 - **Subtitle:** View all documents uploaded by users. Status is set automatically from document completeness. View or download files.
 - **Section:** "All Uploaded Documents"
 - **Controls:** Search (placeholder: "Search by title, PR No, category, sub-document, or uploaded by..."), **Group View**, **Export**, **Filters**.
@@ -61,19 +61,9 @@ This document describes the **intended UI** of the system (based on the referenc
 
 ---
 
-## Settings
-
-- **Title:** System Settings  
-- **Subtitle:** Backup and system options.
-- **Section:** "Backup & Restore" / "Save or restore system data."
-- **Description:** Save all file metadata, users, and events to a JSON file. Restore reapplies events, user status, and document status from a previously saved backup.
-- **Buttons:** Green **Save all (Backup)** and **Restore from Backup** (white with green border).
-
----
-
 ## Browser / App title
 
-- **Document title:** BAC Documents Tracking System
+- **Document title:** Procurement Management System
 
 ---
 

@@ -19,9 +19,8 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password),
     path('update-profile/', views.update_profile),
     path('dashboard/', views.get_dashboard_data),
+    path('me/', views.get_my_profile),
     path('next-transaction-number/', views.next_transaction_number),
     path('uploaded-documents/', views.DocumentViewSet.as_view({'get': 'list'})),
-    path('backup/', views.backup_data),
-    path('restore/', views.restore_data),
     path('', include(router.urls)),
 ]

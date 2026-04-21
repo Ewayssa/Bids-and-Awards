@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { userService } from '../../services/api';
-import { MdPersonAdd, MdClose, MdCheckCircle, MdSearch, MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff, MdContentCopy, MdCheck } from 'react-icons/md';
+import { MdPersonAdd, MdClose, MdCheckCircle, MdSearch, MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff, MdContentCopy, MdCheck, MdEdit } from 'react-icons/md';
 import PageHeader from '../../components/PageHeader';
 import Modal from '../../components/Modal';
 import { ROLES, getRoleDisplayName, getAvailableRoles, hasPermission, PERMISSIONS } from '../../utils/auth';
@@ -281,13 +281,13 @@ const Personnel = ({ user }) => {
                             <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 w-full">
                                 <thead className="bg-[#F8FAFC] dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
                                     <tr>
-                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Full Name / Identity</th>
-                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Email Address</th>
-                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Official Position</th>
-                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Department / Office</th>
-                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center whitespace-nowrap">Security Role</th>
-                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center whitespace-nowrap">Status</th>
-                                        {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right whitespace-nowrap pr-8">Actions</th>}
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">Full Name / Identity</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">Email Address</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">Official Position</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">Department / Office</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center whitespace-nowrap">Security Role</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center whitespace-nowrap">Status</th>
+                                        {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right whitespace-nowrap pr-8">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">

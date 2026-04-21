@@ -7,7 +7,7 @@ from .document_status import DocumentStatusCalculator
 
 def get_next_transaction_number(date=None):
     """
-    Example: 2026-004-04
+    Example: 2026-04-04-0001
     """
     prefix = ""
     try:
@@ -15,36 +15,51 @@ def get_next_transaction_number(date=None):
             now = timezone.now()
             year = now.year
             month = now.month
+            day = now.day
         else:
-            if hasattr(date, 'year') and hasattr(date, 'month'):
+            if hasattr(date, 'year') and hasattr(date, 'month') and hasattr(date, 'day'):
                 year = date.year
                 month = date.month
+                day = date.day
             else:
                 s = str(date).strip()[:10]
                 if not s or s.count('-') < 2:
                     now = timezone.now()
                     year = now.year
                     month = now.month
+                    day = now.day
                 else:
                     parts = s.split('-')
                     if len(parts) >= 3:
                         if len(parts[0]) == 4:
                             year = int(parts[0])
                             month = int(parts[1])
+                            day = int(parts[2])
                         elif len(parts[2]) == 2:
                             year = int(f"20{parts[2]}")
                             month = int(parts[0])
+                            day = int(parts[1])
                         else:
                             now = timezone.now()
                             year = now.year
                             month = now.month
+                            day = now.day
                     else:
                         now = timezone.now()
                         year = now.year
                         month = now.month
+                        day = now.day
 
-        # Format: YYYY-00M-MM (e.g. 2026-004-04)
-        prefix = f"{year}-{month:03d}-{month:02d}"
+        # Format: YYYY-MM-DD
+        date_prefix = f"{year}-{month:02d}-{day:02d}"
+        
+        # Count existing records for this specific day to get the next sequence
+        # We look for records that start with this date prefix
+        existing_count = ProcurementRecord.objects.filter(pr_no__startswith=date_prefix).count()
+        sequence = existing_count + 1
+        
+        # Format: YYYY-MM-DD-NNNN (e.g. 2026-04-04-0001)
+        prefix = f"{date_prefix}-{sequence:04d}"
         return prefix
     except Exception as e:
         import logging

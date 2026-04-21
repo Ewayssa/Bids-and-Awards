@@ -122,6 +122,9 @@ class Document(models.Model):
     secretary_service_provider = models.CharField(max_length=255, blank=True, help_text="Service Provider (for Secretary's Certificate)")
     secretary_owner_rep = models.CharField(max_length=255, blank=True, help_text="Owner/Authorized Representative (for Secretary's Certificate)")
     
+    # Storage for line items (e.g. for Purchase Request) stored as JSON array of objects
+    pr_items = models.TextField(blank=True, help_text='JSON array of {unit, description, quantity, unit_cost}')
+
     # Link to the structured procurement record
     procurement_record = models.ForeignKey(
         'ProcurementRecord',
@@ -299,6 +302,8 @@ class ProcurementRecord(models.Model):
         return f"{self.pr_no} - {self.title}"
 
 
+
+
 class ProcurementStageStatus(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     procurement_record = models.ForeignKey(ProcurementRecord, on_delete=models.CASCADE, related_name='stage_statuses')
@@ -315,3 +320,19 @@ class ProcurementStageStatus(models.Model):
 
     def __str__(self):
         return f"Stage {self.stage_number} - {self.procurement_record.pr_no}"
+
+
+# Single synchronization: When ProcurementRecord.user_pr_no is updated, 
+# propagate it to all linked PR documents.
+@receiver(post_save, sender=ProcurementRecord)
+def sync_pr_number_to_documents(sender, instance, created, **kwargs):
+    """
+    If a user_pr_no is assigned to the record, find all related PR documents 
+    and update their user_pr_no as well for consistency.
+    """
+    if instance.user_pr_no:
+        # Find all documents linked to this procurement record that are specifically "Purchase Request"
+        # We also update any document that has an empty user_pr_no to match the record's official one
+        instance.documents.filter(
+            subDoc='Purchase Request'
+        ).update(user_pr_no=instance.user_pr_no)

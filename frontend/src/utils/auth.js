@@ -26,7 +26,6 @@ export const PERMISSIONS = {
     VIEW_OWN_DOCUMENTS: 'view_own_documents',
     VIEW_REPORTS: 'view_reports',
     UPLOAD_REPORTS: 'upload_reports',
-    MANAGE_SETTINGS: 'manage_settings',
     VIEW_DASHBOARD: 'view_dashboard',
     MANAGE_EVENTS: 'manage_events',
 };
@@ -50,7 +49,6 @@ export const NAV_ACCESS_RULES = {
     '/pr': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
     '/reports': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER, ROLES.VIEWER],
     '/personnel': [ROLES.ADMIN],
-    '/settings': [ROLES.ADMIN],
     '/audit-trail': [ROLES.ADMIN],
 };
 
@@ -67,7 +65,7 @@ export const canAccessRoute = (userRole, route) => {
     return allowed.includes(normalizedRole);
 };
 
-const ROUTES_ORDER = ['/', '/encode', '/ppmp', '/app', '/pr', '/reports', '/personnel', '/audit-trail', '/settings'];
+const ROUTES_ORDER = ['/', '/encode', '/ppmp', '/app', '/pr', '/reports', '/personnel', '/audit-trail'];
 
 /**
  * Get the default landing page for a role

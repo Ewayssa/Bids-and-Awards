@@ -61,16 +61,6 @@ This document describes the **intended UI** of the system (based on the referenc
 
 ---
 
-## Settings
-
-- **Title:** System Settings  
-- **Subtitle:** Backup and system options.
-- **Section:** "Backup & Restore" / "Save or restore system data."
-- **Description:** Save all file metadata, users, and events to a JSON file. Restore reapplies events, user status, and document status from a previously saved backup.
-- **Buttons:** Green **Save all (Backup)** and **Restore from Backup** (white with green border).
-
----
-
 ## Browser / App title
 
 - **Document title:** Procurement Management System

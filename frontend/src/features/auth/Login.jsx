@@ -44,8 +44,10 @@ const Login = ({ onLogin, infoMessage }) => {
                 username: data.username,
                 role,
                 fullName: data.fullName,
-                position: data.position,
-                office: data.office,
+                position: data.position || '',
+                office: data.office || '',
+                is_bac_secretariat: !!data.is_bac_secretariat,
+                is_bac_chair: !!data.is_bac_chair,
                 must_change_password: data.must_change_password === true,
             });
         } catch (err) {

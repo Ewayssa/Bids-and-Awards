@@ -34,7 +34,6 @@ from ..serializers import (
     ProcurementStageStatusSerializer,
 )
 from ..services.dashboard_service import DashboardService
-from ..services.backup_service import BackupService
 from ..utils.workflow_logic import is_stage_ready_to_advance
 from ..models import AuditLog
 import logging
@@ -113,6 +112,21 @@ def register(request):
         {'message': 'Account created successfully. You can log in once an administrator activates your account.'},
         status=status.HTTP_201_CREATED,
     )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_profile(request):
+    """Return the currently authenticated user's profile info for session sync."""
+    user = request.user
+    return Response({
+        'username': user.username,
+        'role': user.role,
+        'fullName': user.fullName or user.username,
+        'position': getattr(user, 'position', '') or '',
+        'office': user.office or '',
+        'is_bac_secretariat': is_bac_secretariat(user),
+        'is_bac_chair': is_bac_chair(user),
+    })
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -472,6 +486,70 @@ class DocumentViewSet(viewsets.ModelViewSet):
             _log_audit('document_completed', actor, 'document', str(doc.id), title)
             _create_notification(f'BAC document completed: {title}', admin_only=True)
 
+    @action(detail=True, methods=['post'])
+    def assign_pr_no(self, request, pk=None):
+        """
+        Custom action to assign a PR # to a document and automatically 
+        initialize/link the BAC Folder (ProcurementRecord).
+        Triggered from the PR list page.
+        """
+        doc = self.get_object()
+        user_pr_no = request.data.get('user_pr_no', '').strip()
+        
+        if not user_pr_no:
+            return Response({'error': 'PR Number is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from django.db import transaction
+        with transaction.atomic():
+            # 1. Update the PR document metadata
+            doc.user_pr_no = user_pr_no
+            doc.save(update_fields=['user_pr_no'])
+            
+            # 2. Find or Create the ProcurementRecord (Folder)
+            ppmp_no = doc.ppmp_no
+            record = None
+            if ppmp_no:
+                record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
+            
+            if not record:
+                # Use helper to generate sequential BAC Folder ID
+                from ..utils.document_helpers import get_next_transaction_number
+                pr_no = get_next_transaction_number()
+                
+                record = ProcurementRecord.objects.create(
+                    pr_no=pr_no,
+                    ppmp_no=ppmp_no,
+                    title=doc.title,
+                    user_pr_no=user_pr_no,
+                    year=doc.year,
+                    quarter=doc.quarter,
+                    total_amount=doc.total_amount,
+                    source_of_fund=doc.source_of_fund,
+                    created_by=request.user.fullName or request.user.username
+                )
+                _log_audit('procurement_record_auto_created', request.user.username, 'procurement_record', str(record.id), f'Auto-created folder {record.pr_no} via PR {user_pr_no}')
+            else:
+                # If folder exists but PR No was not yet assigned to the folder itself
+                if not record.user_pr_no:
+                    record.user_pr_no = user_pr_no
+                    record.save(update_fields=['user_pr_no'])
+
+            # 3. Link context: Find all documents sharing this PPMP No and link them to the folder
+            if ppmp_no:
+                # Update both newly and previously orphan documents
+                affected = Document.objects.filter(
+                    ppmp_no=ppmp_no, 
+                    procurement_record__isnull=True
+                ).update(procurement_record=record, prNo=record.pr_no)
+            
+            # Ensure the triggering document is explicitly linked
+            if doc.procurement_record != record:
+                 doc.procurement_record = record
+                 doc.prNo = record.pr_no
+                 doc.save(update_fields=['procurement_record', 'prNo'])
+
+        return Response(DocumentSerializer(doc).data)
+
     def perform_destroy(self, instance):
         doc_id, title = str(instance.id), (instance.title or instance.prNo or 'Document')[:80]
         actor = self.request.user.username
@@ -615,31 +693,4 @@ def get_dashboard_data(request):
     data['is_bac_chair'] = is_bac_chair(user)
     return Response(data, headers={'Cache-Control': 'no-store, no-cache, must-revalidate'})
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, IsBACSecretariat])
-def backup_data(request):
-    zip_buffer = BackupService.create_zip_backup()
-    username = (request.query_params.get('username') or 'System').strip()
-    _log_audit('backup_exported', username, 'system', '', 'Full ZIP backup exported')
-    
-    response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
-    filename = f"bac_backup_{timezone.now().strftime('%Y%m%d_%H%M%S')}.zip"
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated, IsBACSecretariat])
-def restore_data(request):
-    username = (request.query_params.get('username') or request.user.username or 'System').strip()
-    
-    if 'file' not in request.FILES:
-        return Response({'detail': 'A .zip backup file is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    upload_file = request.FILES['file']
-    if not upload_file.name.endswith('.zip'):
-        return Response({'detail': 'Please upload a .zip file.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    restored = BackupService.restore_zip_backup(upload_file)
-    msg = f"Restore: {restored['calendarEvents']} events, {restored['users']} users, {restored['documents']} docs, {restored['reports']} reports"
-    _log_audit('restore_completed', username, 'system', '', msg)
-    return Response({'detail': 'Restore completed', 'restored': restored})

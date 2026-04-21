@@ -2,12 +2,16 @@ import React from 'react';
 import { formatDisplayDate } from '../../utils/helpers.jsx';
 import { MdDescription } from 'react-icons/md';
 
-const DocDetailItem = ({ label, value }) => {
-    if (!value && value !== 0 && value !== false) return null;
+const DocDetailItem = ({ label, value, isPRNo = false }) => {
+    const isMissing = !value && value !== 0 && value !== false;
+    if (isMissing && !isPRNo) return null;
+    
     return (
         <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{label}</span>
-            <span className="text-sm font-medium text-[var(--text)]">{String(value)}</span>
+            <span className={`text-sm font-medium ${isMissing ? 'text-amber-500 italic' : 'text-[var(--text)]'}`}>
+                {isMissing ? 'Pending PR No. Assignment' : String(value)}
+            </span>
         </div>
     );
 };
@@ -23,7 +27,7 @@ const DocDetailsView = ({ doc }) => {
                 return (
                     <>
                         <DocDetailItem label="Purpose" value={doc.title} />
-                        <DocDetailItem label="PR No." value={doc.user_pr_no} />
+                        <DocDetailItem label="PR No." value={doc.user_pr_no} isPRNo={true} />
                         <DocDetailItem label="Total Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
                     </>
                 );
@@ -31,7 +35,7 @@ const DocDetailsView = ({ doc }) => {
                 return (
                     <>
                         <DocDetailItem label="Title" value={doc.title} />
-                        <DocDetailItem label="PR No." value={doc.user_pr_no} />
+                        <DocDetailItem label="PR No." value={doc.user_pr_no} isPRNo={true} />
                         <DocDetailItem label="Source of Fund" value={doc.source_of_fund} />
                         <DocDetailItem label="Total Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
                     </>

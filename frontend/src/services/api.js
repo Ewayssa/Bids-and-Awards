@@ -109,6 +109,11 @@ export const documentService = {
         const response = await api.patch(`/upload/${id}/`, { status });
         return response.data;
     },
+    
+    async assignPRNo(id, userPRNo) {
+        const response = await api.post(`/upload/${id}/assign_pr_no/`, { user_pr_no: userPRNo });
+        return response.data;
+    },
 
     async addComment(id, comment) {
         const response = await api.post(`/upload/${id}/comments/`, { comment });
@@ -187,23 +192,6 @@ export const calendarEventService = {
     },
     async delete(id) {
         await api.delete(`/calendar-events/${id}/`);
-    },
-};
-
-export const backupRestoreService = {
-    async backup(username = '') {
-        const params = username ? { username } : undefined;
-        const response = await api.get(`/backup/`, { responseType: 'blob', params });
-        return response.data;
-    },
-    async restore(file, username = '') {
-        const formData = new FormData();
-        formData.append('file', file);
-        if (username) formData.append('username', username);
-        const response = await api.post(`/restore/`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response.data;
     },
 };
 
@@ -291,13 +279,18 @@ export const userService = {
         return response.data;
     },
 
-    async getAll() {
-        const response = await api.get(`/users/`);
+    async register(data) {
+        const response = await api.post(`/register/`, data);
         return response.data;
     },
 
-    async register(data) {
-        const response = await api.post(`/register/`, data);
+    async getMyProfile() {
+        const response = await api.get(`/me/`);
+        return response.data;
+    },
+
+    async getAll() {
+        const response = await api.get(`/users/`);
         return response.data;
     },
 

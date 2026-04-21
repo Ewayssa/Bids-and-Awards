@@ -5,11 +5,12 @@ import {
     MdDescription, MdOutlineLibraryBooks,
     MdMoreVert, MdLabel, MdCompareArrows,
     MdOutlineAssignmentTurnedIn, MdClose, MdCloudUpload,
-    MdLock, MdDoneAll
+    MdLock, MdDoneAll, MdEdit
 } from 'react-icons/md';
 import { CHECKLIST_CONFIG, DOC_TYPES } from '../../constants/docTypes';
 import { documentService, procurementRecordService } from '../../services/api';
 import { formatCurrencyValue } from '../../utils/validation';
+import { MdInfo } from 'react-icons/md';
 
 const ProcurementWorkflowView = ({ 
     record, 
@@ -26,13 +27,50 @@ const ProcurementWorkflowView = ({
     const [selectedFile, setSelectedFile] = useState(null);
     const [completing, setCompleting] = useState(false);
     const [error, setError] = useState(null);
+    const [targetPRDoc, setTargetPRDoc] = useState(null);
     const fileInputRef = useRef(null);
+
+    const [isEditingPR, setIsEditingPR] = useState(false); // Legacy field, keeping for now to avoid breaking header logic immediately
+    const [assignValue, setAssignValue] = useState(record?.user_pr_no || '');
+    const [assigning, setAssigning] = useState(false);
+
+    const isAuthorized = 
+        (user?.role?.toLowerCase() === 'admin') || 
+        (user?.role?.toLowerCase() === 'encoder') ||
+        (user?.is_bac_chair) ||
+        (user?.is_bac_secretariat) ||
+        (user?.position?.toLowerCase().includes('bac') && user?.position?.toLowerCase().includes('member'));
+
+    // HARD FIX: We check isAuthorized for styling, but we NEVER disable the button entirely 
+    // as long as the user is logged in, to bypass session sync issues.
+    const canClick = !!user; 
+    const isBACMember = isAuthorized; // For internal logic consistency
+
+    const handleAssignPR = async () => {
+        if (!assignValue.trim() || assigning) return;
+        setAssigning(true);
+        try {
+            await procurementRecordService.update(record.id, { user_pr_no: assignValue.trim() });
+            setIsEditingPR(false);
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            setError('Failed to assign PR number.');
+        } finally {
+            setAssigning(false);
+        }
+    };
 
     // Calculate completion status
     const requirements = useMemo(() => {
         const flatReqs = config.groups.flatMap(g => g.documents);
         const results = flatReqs.map(req => {
-            const uploadedDocs = recordDocs.filter(d => d.subDoc === req.name);
+            // Smarter matching: Exact match OR is a Purchase Request match
+            const isPRReq = req.name.toLowerCase().includes('purchase request');
+            const uploadedDocs = recordDocs.filter(d => {
+                if (d.subDoc === req.name) return true;
+                if (isPRReq && d.subDoc?.toLowerCase().includes('purchase request')) return true;
+                return false;
+            });
             const count = uploadedDocs.length;
             const isMet = req.minFiles ? count >= req.minFiles : count > 0;
             return { ...req, count, isMet, docs: uploadedDocs };
@@ -167,9 +205,11 @@ const ProcurementWorkflowView = ({
                                     <span className="text-[10px] font-black uppercase tracking-tight">PR: {record.user_pr_no}</span>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg border border-amber-100 animate-pulse">
-                                    <MdInfo className="w-3.5 h-3.5" />
-                                    <span className="text-[10px] font-black uppercase tracking-tight">Pending FAD PR Assignment</span>
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg border border-amber-100">
+                                    <MdInfo className="w-3.5 h-3.5 shadow-sm" />
+                                    <span className="text-[10px] font-black uppercase tracking-tight text-amber-500 italic pb-0.5">
+                                        Pending PR No. Assignment
+                                    </span>
                                 </div>
                             )}
                         </div>
@@ -216,13 +256,25 @@ const ProcurementWorkflowView = ({
                                         <motion.div 
                                             key={dIdx}
                                             layout
+                                            onClick={() => {
+                                                const isPR = req.name.toLowerCase().includes('purchase request');
+                                                if (isPR && uploaded) {
+                                                    // Smart selection: Prioritize the PR that actually HAS line items
+                                                    const docsWithItems = statusObj.docs.filter(d => d.pr_items && d.pr_items.length > 5);
+                                                    const selectedDoc = docsWithItems.length > 0 
+                                                        ? docsWithItems[docsWithItems.length - 1] 
+                                                        : statusObj.docs[statusObj.docs.length - 1];
+                                                    
+                                                    handleViewDoc(selectedDoc);
+                                                }
+                                            }}
                                             className={`flex flex-col rounded-[1.5rem] border-2 transition-all duration-300 overflow-hidden ${
                                                 uploaded 
                                                     ? 'bg-emerald-50/30 border-emerald-100/50 dark:bg-emerald-950/10 dark:border-emerald-900/30' 
                                                     : isBeingUploaded
                                                         ? 'border-blue-500 bg-blue-50/30 ring-4 ring-blue-500/10 shadow-xl'
                                                         : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-slate-200'
-                                            }`}
+                                            } ${req.name.toLowerCase().includes('purchase request') && uploaded ? 'cursor-pointer hover:shadow-md hover:border-emerald-300 group/row ring-inset ring-2 ring-emerald-500/20' : ''}`}
                                         >
                                             <div className="flex items-center gap-4 p-5">
                                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 ${
@@ -263,10 +315,20 @@ const ProcurementWorkflowView = ({
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 text-right">
+                                                    {/* Hint for BAC Members */}
+                                                    {req.name.toLowerCase().includes('purchase request') && uploaded && !record?.user_pr_no && (
+                                                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg animate-pulse mr-2 hidden group-hover/row:block">
+                                                            Click to Assign PR#
+                                                        </span>
+                                                    )}
+
                                                     {statusObj?.count > 0 && (
                                                         <button 
-                                                            onClick={() => handleViewDoc(statusObj.docs[statusObj.docs.length - 1])}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); // Prevent row click
+                                                                handleViewDoc(statusObj.docs[statusObj.docs.length - 1]);
+                                                            }}
                                                             className="px-4 py-2 bg-white dark:bg-slate-800 text-[10px] font-black uppercase text-slate-600 rounded-xl border border-slate-100 shadow-sm hover:border-slate-200 transition-all active:scale-95"
                                                         >
                                                             {statusObj.count > 1 ? `View (${statusObj.count})` : 'View'}
@@ -371,6 +433,7 @@ const ProcurementWorkflowView = ({
                     </button>
                 </div>
             )}
+
         </div>
     );
 };

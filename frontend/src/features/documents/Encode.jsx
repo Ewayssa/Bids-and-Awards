@@ -26,13 +26,11 @@ import CommentModal from './modals/CommentModal';
 import AlertModal from './modals/AlertModal';
 import ConfirmDialog from './modals/ConfirmDialog';
 import PreviewModal from './modals/PreviewModal';
-import NewProcurementRecordModal from "./modals/NewProcurementRecordModal";
 import ProcurementDocumentModal from "./modals/ProcurementDocumentModal";
 import ProcurementWorkflowView from "./ProcurementWorkflowView";
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
-    const [showNewRecordModal, setShowNewRecordModal] = useState(false);
     const [viewMode, setViewMode] = useState('list'); // 'list' | 'grouped'
     const [expandedGroups, setExpandedGroups] = useState(new Set());
     const [selectedWorkflowFolder, setSelectedWorkflowFolder] = useState(null);
@@ -124,6 +122,13 @@ const Encode = ({ user }) => {
 
 
     const handleView = (doc) => {
+        if (doc && (doc.file_url || doc.file)) {
+            const url = doc.file_url || (doc.file instanceof File ? URL.createObjectURL(doc.file) : doc.file);
+            if (url) {
+                window.open(url, '_blank', 'noopener');
+                return;
+            }
+        }
         setSelectedDoc(doc);
         setActiveModal('view');
     };
@@ -568,16 +573,6 @@ const Encode = ({ user }) => {
                 title="Procurement Records"
                 subtitle="Create new procurement records and keep document details complete and updated."
             >
-                {user?.role !== ROLES.VIEWER && (
-                    <button 
-                        type="button" 
-                        onClick={() => setShowNewRecordModal(true)} 
-                        className="px-6 py-2.5 bg-emerald-600/90 hover:bg-emerald-700 text-white rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-sm transition-all active:scale-95 flex items-center gap-2"
-                    >
-                        <MdUpload className="w-5 h-5" />
-                        <span>New Procurement</span>
-                    </button>
-                )}
             </PageHeader>
 
             <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0 shadow-lg shadow-slate-200/50">
@@ -592,7 +587,6 @@ const Encode = ({ user }) => {
                             </div>
                             <div>
                                 <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Active Procurement Projects</h3>
-                                <p className="text-xs text-slate-400 font-bold tracking-widest mt-0.5">FOLDER-CENTRIC WORKFLOW CONSOLE - Procurement Records</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">
@@ -673,18 +667,6 @@ const Encode = ({ user }) => {
             </div>
 
             {/* Structured Workflow Modals */}
-            <NewProcurementRecordModal
-                show={showNewRecordModal}
-                onClose={() => setShowNewRecordModal(false)}
-                onSuccess={(newRecord) => {
-                    setShowNewRecordModal(false);
-                    load();
-                    if (newRecord) {
-                        handleOpenWorkflow(newRecord);
-                    }
-                }}
-                currentUser={user}
-            />
 
             {/* View Details Modal */}
             {activeModal === 'view' && (
