@@ -278,44 +278,58 @@ const Personnel = ({ user }) => {
                 ) : (
                     <>
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-[var(--border)] w-full">
-                                <thead className="table-header">
+                            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800 w-full">
+                                <thead className="bg-[#F8FAFC] dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
                                     <tr>
-                                        <th className="table-th">Full Name</th>
-                                        <th className="table-th">Email</th>
-                                        <th className="table-th">Position</th>
-                                        <th className="table-th">Department</th>
-                                        <th className="table-th text-center">Role</th>
-                                        <th className="table-th text-center">Status</th>
-                                        {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="table-th text-center">Actions</th>}
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Full Name / Identity</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Email Address</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Official Position</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Department / Office</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center whitespace-nowrap">Security Role</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center whitespace-nowrap">Status</th>
+                                        {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right whitespace-nowrap pr-8">Actions</th>}
                                     </tr>
                                 </thead>
-                                <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
+                                <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">
                                     {paginatedUsers.map((u) => (
-                                        <tr key={u.id} className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group">
-                                            <td className="table-td font-medium">{u.fullName || '—'}</td>
-                                            <td className="table-td-muted">{u.username}</td>
-                                            <td className="table-td-muted">{u.position || '—'}</td>
-                                            <td className="table-td-muted">{u.office || '—'}</td>
-                                            <td className="table-td text-center">
-                                                <span className={`status-badge ${u.role === ROLES.ADMIN ? 'status-badge--complete' : 'status-badge--ongoing'}`}>
+                                        <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 ease-out group">
+                                            <td className="px-6 py-5 align-middle">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-slate-800 dark:text-slate-200 group-hover:text-[var(--primary)] transition-colors">{u.fullName || '—'}</span>
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Personnel Folder</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5 align-middle text-sm font-medium text-slate-500 dark:text-slate-400 tracking-tight">{u.username}</td>
+                                            <td className="px-6 py-5 align-middle text-sm font-medium text-slate-500 dark:text-slate-400 tracking-tight">{u.position || '—'}</td>
+                                            <td className="px-6 py-5 align-middle text-sm font-medium text-slate-500 dark:text-slate-400 tracking-tight">{u.office || '—'}</td>
+                                            <td className="px-6 py-5 align-middle text-center">
+                                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                                                    u.role === ROLES.ADMIN 
+                                                        ? 'bg-emerald-100 text-emerald-600 border-emerald-200' 
+                                                        : 'bg-blue-100 text-blue-600 border-blue-200'
+                                                }`}>
                                                     {getRoleDisplayName(u.role)}
                                                 </span>
                                             </td>
-                                            <td className="table-td text-center">
-                                                <span className={`status-badge ${u.is_active !== false ? 'status-badge--complete' : 'status-badge--pending'}`}>
+                                            <td className="px-6 py-5 align-middle text-center">
+                                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                                                    u.is_active !== false 
+                                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                                }`}>
                                                     {u.is_active !== false ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
                                             {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && (
-                                                <td className="table-td text-center">
+                                                <td className="px-6 py-5 align-middle text-right pr-8">
                                                     <button
                                                         type="button"
                                                         onClick={() => openEditModal(u)}
-                                                        className="px-3 py-1 text-[11px] font-medium rounded-full border border-[var(--border)] text-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all"
-                                                        title="Edit user"
+                                                        className="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-[var(--primary)] hover:border-[var(--primary)] hover:text-white transition-all duration-300 shadow-sm opacity-60 group-hover:opacity-100 inline-flex items-center gap-2"
+                                                        title="Modify User Credentials"
                                                     >
-                                                        Edit
+                                                        <MdEdit className="w-3.5 h-3.5" />
+                                                        Manage
                                                     </button>
                                                 </td>
                                             )}

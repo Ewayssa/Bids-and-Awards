@@ -149,46 +149,74 @@ const NewProcurementModal = ({
             <div className="space-y-4">
 
                 <div className="field-group">
-                    <label className="label">Title / Purpose <span className="text-red-500">*</span></label>
+                    <label className="label">Title / Purpose <span className="text-red-500 font-bold">*</span></label>
                     <textarea
                         value={form.title || ''}
                         onChange={(e) => updateFormField('title', e.target.value)}
                         className={`input-field min-h-[5rem] resize-none py-3 ${newFormErrors?.title ? 'border-red-400' : ''}`}
                         placeholder="Enter title or purpose"
                     />
-                    {newFormErrors?.title && <p className="text-xs text-red-500 mt-1">{newFormErrors.title}</p>}
+                    {newFormErrors?.title && <p className="text-xs text-red-500 mt-1 font-bold">{newFormErrors.title}</p>}
                 </div>
 
-                <div className="field-group">
-                    <label className="label">ABC (Approved Budget)</label>
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 font-bold text-sm">₱</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="field-group">
+                        <label className="label">ABC (Budget) <span className="text-red-500 font-bold">*</span></label>
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 font-bold text-sm">₱</div>
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={form.total_amount || ''}
+                                onChange={(e) => updateFormField('total_amount', toNumbersOnly(e.target.value))}
+                                onBlur={() => {
+                                    const val = String(form.total_amount || '').trim();
+                                    if (val && !isNaN(Number(val))) {
+                                        updateFormField('total_amount', Number(val).toFixed(2));
+                                    }
+                                }}
+                                className={`input-field pl-8 text-right font-mono ${newFormErrors?.total_amount ? 'border-red-400' : ''}`}
+                                placeholder="0.00"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="field-group">
+                        <label className="label">Fund Source <span className="text-red-500 font-bold">*</span></label>
                         <input
                             type="text"
-                            inputMode="decimal"
-                            value={form.total_amount || ''}
-                            onChange={(e) => updateFormField('total_amount', toNumbersOnly(e.target.value))}
-                            onBlur={() => {
-                                const val = String(form.total_amount || '').trim();
-                                if (val && !isNaN(Number(val))) {
-                                    updateFormField('total_amount', Number(val).toFixed(2));
-                                }
-                            }}
-                            className="input-field pl-8 text-right font-mono"
-                            placeholder="0.00"
+                            value={form.source_of_fund || ''}
+                            onChange={(e) => updateFormField('source_of_fund', e.target.value)}
+                            className={`input-field ${newFormErrors?.source_of_fund ? 'border-red-400' : ''}`}
+                            placeholder="e.g., General Fund"
                         />
                     </div>
                 </div>
 
-                <div className="field-group">
-                    <label className="label">Fund Source</label>
-                    <input
-                        type="text"
-                        value={form.source_of_fund || ''}
-                        onChange={(e) => updateFormField('source_of_fund', e.target.value)}
-                        className="input-field"
-                        placeholder="e.g., General Fund"
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="field-group">
+                        <label className="label">Year <span className="text-red-500 font-bold">*</span></label>
+                        <input
+                            type="text"
+                            value={form.year || new Date().getFullYear()}
+                            onChange={(e) => updateFormField('year', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                            className={`input-field ${newFormErrors?.year ? 'border-red-400' : ''}`}
+                            placeholder="e.g., 2024"
+                        />
+                    </div>
+                    <div className="field-group">
+                        <label className="label">Quarter <span className="text-red-500 font-bold">*</span></label>
+                        <select
+                            value={form.quarter || 'Q1'}
+                            onChange={(e) => updateFormField('quarter', e.target.value)}
+                            className={`input-field ${newFormErrors?.quarter ? 'border-red-400' : ''}`}
+                        >
+                            <option value="Q1">Q1</option>
+                            <option value="Q2">Q2</option>
+                            <option value="Q3">Q3</option>
+                            <option value="Q4">Q4</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -284,7 +312,12 @@ const NewProcurementModal = ({
                     <button
                         type="button"
                         onClick={() => setNewStep('form')}
-                        disabled={!selectedDocType || (!form.title?.trim())}
+                        disabled={
+                            !selectedDocType || 
+                            !form.title?.trim() || 
+                            !form.total_amount || 
+                            !form.source_of_fund
+                        }
                         className="btn-primary flex items-center gap-2 ml-auto"
                     >
                         Next

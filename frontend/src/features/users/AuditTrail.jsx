@@ -106,37 +106,50 @@ const AuditTrail = () => {
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded. Auto-updates in real time.</p>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full w-full divide-y divide-[var(--border)]" style={{ tableLayout: 'fixed' }}>
-                            <thead className="table-header">
+                    <div className="overflow-x-auto min-h-[400px]">
+                        <table className="min-w-full w-full border-collapse">
+                            <thead className="bg-[#F8FAFC] dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
                                 <tr>
-                                    <th className="table-th" style={{ width: '25%' }}>User</th>
-                                    <th className="table-th text-center" style={{ width: '50%' }}>Action</th>
-                                    <th className="table-th whitespace-nowrap" style={{ width: '25%' }}>Date and time</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-left" style={{ width: '25%' }}>Originating User</th>
+                                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center" style={{ width: '50%' }}>System Activity / Action</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right" style={{ width: '25%' }}>Execution Timeline</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-[var(--surface)] divide-y divide-[var(--border-light)]">
+                            <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">
                                 {logs.length === 0 ? (
                                     <tr key="empty">
-                                        <td colSpan={3} className="table-td text-center py-12 text-[var(--text-muted)]">
-                                            <MdHistory className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                                            No audit entries yet.
+                                        <td colSpan={3} className="px-8 py-20 text-center text-slate-400">
+                                            <div className="flex flex-col items-center">
+                                                <MdHistory className="w-12 h-12 mb-4 opacity-20" />
+                                                <p className="text-sm font-bold uppercase tracking-widest">No activity records found</p>
+                                                <p className="text-[10px] uppercase tracking-tighter mt-1">System is currently in a clean state</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 ) : (
                                     paginatedLogs.map((entry) => (
                                         <tr
                                             key={entry.id != null ? String(entry.id) : entry.created_at + (entry.actor || '')}
-                                            className="hover:bg-[var(--background-subtle)]/50 transition-all duration-300 ease-out group"
+                                            className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 ease-out group"
                                         >
-                                            <td className="table-td">{entry.actor || '—'}</td>
-                                            <td className="table-td text-center">
-                                                <span className="inline-flex justify-center items-center px-2.5 py-1 rounded-lg bg-[var(--background-subtle)]/70 text-[var(--text)] text-[11px] font-bold uppercase tracking-wider border border-[var(--border-light)] group-hover:border-[var(--primary-light)] transition-all duration-300">
+                                            <td className="px-8 py-5 align-middle">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-slate-700 dark:text-slate-300 group-hover:text-[var(--primary)] transition-colors">{entry.actor || 'System'}</span>
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Executor</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5 align-middle text-center">
+                                                <span className="inline-flex justify-center items-center px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-200 text-[10px] font-black uppercase tracking-[0.1em] border border-slate-200 dark:border-slate-700 group-hover:border-[var(--primary)] group-hover:text-[var(--primary)] transition-all duration-300 shadow-sm">
                                                     {ACTION_LABELS[entry.action] || entry.action}
                                                 </span>
                                             </td>
-                                            <td className="table-td-muted whitespace-nowrap">
-                                                {formatDate(entry.created_at)}
+                                            <td className="px-8 py-5 align-middle text-right whitespace-nowrap">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-[11px] font-black text-slate-600 dark:text-slate-400 tracking-tight">
+                                                        {formatDate(entry.created_at)}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">Verified Timestamp</span>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

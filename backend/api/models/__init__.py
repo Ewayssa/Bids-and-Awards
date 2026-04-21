@@ -278,6 +278,8 @@ class ProcurementRecord(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     pr_no = models.CharField(max_length=100, help_text='BAC Folder No.')
     ppmp_no = models.CharField(max_length=100, blank=True, help_text='Associated PPMP No. for grouping')
+    year = models.CharField(max_length=4, blank=True, help_text='Year (e.g. 2024)')
+    quarter = models.CharField(max_length=10, blank=True, help_text='Quarter (e.g. Q1, Q2)')
     user_pr_no = models.CharField(max_length=100, blank=True, help_text='PR No.')
     rfq_no = models.CharField(max_length=100, blank=True, help_text='RFQ No.')
     title = models.CharField(max_length=255, help_text='Title / Purpose')

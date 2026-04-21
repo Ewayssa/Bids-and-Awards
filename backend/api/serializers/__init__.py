@@ -271,6 +271,12 @@ class DocumentSerializer(serializers.ModelSerializer):
                 # Use existing folder's number and link
                 validated_data['prNo'] = record.pr_no
                 validated_data['procurement_record'] = record
+                
+                # If inheritance is needed
+                if not validated_data.get('year') and record.year:
+                    validated_data['year'] = record.year
+                if not validated_data.get('quarter') and record.quarter:
+                    validated_data['quarter'] = record.quarter
             else:
                 # Create a NEW folder for this PPMP No.
                 if not pr_no:
@@ -281,6 +287,8 @@ class DocumentSerializer(serializers.ModelSerializer):
                 record = ProcurementRecord.objects.create(
                     pr_no=pr_no,
                     ppmp_no=ppmp_no,
+                    year=validated_data.get('year', ''),
+                    quarter=validated_data.get('quarter', ''),
                     title=validated_data.get('title', f'Procurement for {ppmp_no}'),
                     created_by=validated_data.get('uploadedBy', 'System')
                 )
@@ -298,9 +306,17 @@ class DocumentSerializer(serializers.ModelSerializer):
             if not record:
                 record = ProcurementRecord.objects.create(
                     pr_no=pr_no,
+                    year=validated_data.get('year', ''),
+                    quarter=validated_data.get('quarter', ''),
                     title=validated_data.get('title', 'General Procurement'),
                     created_by=validated_data.get('uploadedBy', 'System')
                 )
+            
+            # Inheritance for non-PPMP grouping
+            if not validated_data.get('year') and record.year:
+                validated_data['year'] = record.year
+            if not validated_data.get('quarter') and record.quarter:
+                validated_data['quarter'] = record.quarter
             validated_data['prNo'] = pr_no
             validated_data['procurement_record'] = record
 
@@ -407,7 +423,7 @@ class ProcurementRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProcurementRecord
         fields = (
-            'id', 'pr_no', 'user_pr_no', 'rfq_no', 'title', 'procurement_type',
+            'id', 'pr_no', 'ppmp_no', 'year', 'quarter', 'user_pr_no', 'rfq_no', 'title', 'procurement_type',
             'procurement_type_display', 'mode_of_procurement', 'source_of_fund', 'total_amount',
             'end_user_office', 'current_stage', 'status', 'remarks',
             'created_by', 'created_at', 'updated_at', 'documents', 'stage_statuses'

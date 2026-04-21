@@ -41,6 +41,8 @@ const NewProcurementRecordModal = ({
     
     const [form, setForm] = useState({
         pr_no: '', // BAC Folder No.
+        year: new Date().getFullYear().toString(),
+        quarter: 'Q1',
         end_user_office: '', 
         title: '',
         source_of_fund: '',
@@ -65,6 +67,8 @@ const NewProcurementRecordModal = ({
         if (isModalOpen) {
             setForm({
                 pr_no: '',
+                year: new Date().getFullYear().toString(),
+                quarter: 'Q1',
                 end_user_office: '',
                 title: '',
                 source_of_fund: '',
@@ -101,6 +105,8 @@ const NewProcurementRecordModal = ({
     const validatePPMP = () => {
         const errs = {};
         if (!form.ppmp_no.trim()) errs.ppmp_no = 'PPMP No. is required';
+        if (!form.year.trim()) errs.year = 'Year is required';
+        if (!form.quarter.trim()) errs.quarter = 'Quarter is required';
         if (!form.title.trim()) errs.title = 'Project Title is required';
         if (!form.end_user_office.trim()) errs.end_user_office = 'Office / End-user is required';
         if (!form.total_amount || parseFloat(form.total_amount) <= 0) errs.total_amount = 'Budget is required';
@@ -160,6 +166,8 @@ const NewProcurementRecordModal = ({
             // 1. Create Procurement Record (BAC Folder)
             const recordData = {
                 pr_no: form.pr_no,
+                year: form.year,
+                quarter: form.quarter,
                 title: form.title,
                 end_user_office: form.end_user_office,
                 source_of_fund: form.source_of_fund,
@@ -184,6 +192,8 @@ const NewProcurementRecordModal = ({
                 formData.append('subDoc', subDoc);
                 formData.append('title', `${subDoc} for ${record.pr_no}`);
                 formData.append('prNo', record.pr_no);
+                formData.append('year', record.year || '');
+                formData.append('quarter', record.quarter || '');
                 formData.append('uploadedBy', uploadedBy);
                 
                 Object.entries(extraFields).forEach(([key, value]) => {
@@ -300,6 +310,38 @@ const NewProcurementRecordModal = ({
                             className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.end_user_office ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all`}
                             placeholder="e.g. Finance Section"
                         />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                            <MdEventNote className="w-4 h-4" />
+                            Year <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={form.year}
+                            onChange={(e) => updateField('year', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                            className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.year ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all text-center font-bold`}
+                            placeholder="YYYY"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                            <MdHistory className="w-4 h-4" />
+                            Quarter <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                            value={form.quarter}
+                            onChange={(e) => updateField('quarter', e.target.value)}
+                            className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.quarter ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all cursor-pointer font-bold`}
+                        >
+                            <option value="Q1">1st Quarter (Q1)</option>
+                            <option value="Q2">2nd Quarter (Q2)</option>
+                            <option value="Q3">3rd Quarter (Q3)</option>
+                            <option value="Q4">4th Quarter (Q4)</option>
+                        </select>
                     </div>
                 </div>
 
