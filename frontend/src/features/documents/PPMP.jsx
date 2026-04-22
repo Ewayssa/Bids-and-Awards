@@ -125,7 +125,7 @@ const PPMP = ({ user }) => {
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <button 
                                                 onClick={() => handleView(item)}
-                                                className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--primary)] hover:text-emerald-700 transition-colors"
+                                                className="btn-action-ghost !text-[10px] !py-1"
                                             >
                                                 View
                                             </button>

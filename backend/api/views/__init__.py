@@ -89,30 +89,6 @@ def login(request):
         })
     return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def register(request):
-    """Public self-registration."""
-    serializer = RegisterSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    user = serializer.save()
-    
-    _log_audit('user_registered', user.username, 'user', str(user.id), 'New account registered')
-    
-    from django.utils.timezone import localtime
-    time_str = localtime(timezone.now()).strftime('%B %d, %Y, %I:%M %p')
-    display_name = (user.fullName or user.username or 'Someone').strip()
-    
-    _create_notification(
-        f'New account created: {display_name} at {time_str}. Activate in User Management.',
-        link='/personnel',
-        admin_only=True,
-    )
-    return Response(
-        {'message': 'Account created successfully. You can log in once an administrator activates your account.'},
-        status=status.HTTP_201_CREATED,
-    )
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_my_profile(request):
@@ -471,7 +447,52 @@ class DocumentViewSet(viewsets.ModelViewSet):
         # Auto-assign uploadedBy from current user if not provided
         if not serializer.validated_data.get('uploadedBy'):
             serializer.validated_data['uploadedBy'] = self.request.user.fullName or self.request.user.username
+        
+        # 1. Save the document first to get an ID and other fields
         doc = serializer.save()
+        
+        # 2. Consolidation Logic: Group by ppmp_no
+        ppmp_no = doc.ppmp_no
+        if ppmp_no:
+            from django.db import transaction
+            with transaction.atomic():
+                # 3. Find or Create the ProcurementRecord (Folder)
+                record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
+                
+                if not record:
+                    # Use helper to generate sequential BAC Folder ID
+                    from ..utils.document_helpers import get_next_transaction_number
+                    pr_no = get_next_transaction_number()
+                    
+                    record = ProcurementRecord.objects.create(
+                        pr_no=pr_no,
+                        ppmp_no=ppmp_no,
+                        title=doc.title,
+                        year=doc.year,
+                        quarter=doc.quarter,
+                        total_amount=getattr(doc, 'total_amount', None),
+                        source_of_fund=getattr(doc, 'source_of_fund', ''),
+                        created_by=doc.uploadedBy
+                    )
+                    _log_audit('procurement_record_auto_created', doc.uploadedBy, 'procurement_record', str(record.id), f'Auto-created folder {record.pr_no} via {doc.subDoc} {ppmp_no}')
+                
+                # 4. Link this document to the record
+                # We update the fields on the document instance and save
+                doc.procurement_record = record
+                doc.prNo = record.pr_no
+                # Also ensure year/quarter/user_pr_no are in sync if they are missing
+                if doc.user_pr_no and not record.user_pr_no:
+                    record.user_pr_no = doc.user_pr_no
+                    record.save(update_fields=['user_pr_no'])
+                
+                doc.save(update_fields=['procurement_record', 'prNo'])
+                
+                # 5. Link context: Find all other documents sharing this PPMP No and link them to the folder
+                Document.objects.filter(
+                    ppmp_no=ppmp_no, 
+                    procurement_record__isnull=True
+                ).update(procurement_record=record, prNo=record.pr_no)
+
         title = (doc.title or doc.prNo or 'Document')[:80]
         _log_audit('document_created', doc.uploadedBy or 'Unknown', 'document', str(doc.id), title)
         _create_notification(f'New BAC document submitted: {title}', admin_only=False)

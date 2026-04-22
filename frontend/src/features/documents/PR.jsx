@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
-import { MdReceipt, MdAdd, MdVisibility, MdDelete } from 'react-icons/md';
+import { MdReceipt, MdAdd } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import CreatePRModal from './modals/CreatePRModal';
 import DocViewModal from './modals/DocViewModal';
@@ -61,17 +61,6 @@ const PR = ({ user }) => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this PR?')) return;
-        
-        try {
-            await documentService.delete(id);
-            fetchPRs();
-        } catch (err) {
-            console.error('Failed to delete PR:', err);
-            alert('Failed to delete PR. Please try again.');
-        }
-    };
 
     useEffect(() => {
         fetchPRs();
@@ -123,7 +112,7 @@ const PR = ({ user }) => {
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <button 
                                                 onClick={() => handleQuickView(item)}
-                                                className={`text-xs font-black transition-all truncate text-center hover:text-blue-600 block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
+                                                className={`text-xs font-black transition-all truncate text-center hover:text-slate-900 dark:hover:text-white block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
                                             >
                                                 {item.user_pr_no || 'No PR # Assigned'}
                                             </button>
@@ -147,20 +136,11 @@ const PR = ({ user }) => {
                                             <div className="flex justify-center items-center gap-2">
                                                 <button
                                                     onClick={() => handleQuickView(item)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                    title="View Document"
+                                                    className="btn-action-ghost !text-[10px] !py-1"
+                                                    title="Download PR"
                                                 >
-                                                    <MdVisibility className="w-5 h-5" />
+                                                    Download
                                                 </button>
-                                                {user?.role === ROLES.ADMIN && (
-                                                    <button
-                                                        onClick={() => handleDelete(item.id)}
-                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                                                        title="Delete PR"
-                                                    >
-                                                        <MdDelete className="w-5 h-5" />
-                                                    </button>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>

@@ -279,11 +279,6 @@ export const userService = {
         return response.data;
     },
 
-    async register(data) {
-        const response = await api.post(`/register/`, data);
-        return response.data;
-    },
-
     async getMyProfile() {
         const response = await api.get(`/me/`);
         return response.data;

@@ -18,15 +18,28 @@ export const generatePR_Excel = async (data) => {
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Purchase Request');
+    
+    // Page Setup for Multi-page support
+    worksheet.pageSetup = {
+        paperSize: 9, // A4
+        orientation: 'portrait',
+        fitToWidth: 1,
+        fitToHeight: 0, // Allow vertical flow across pages
+        margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+        printTitlesRow: '1:6' // Repeat Header and Table Headers on every page
+    };
 
-    // Set Column Widths
+    // Set view to Page Layout and disable gridlines for a clean document look
+    worksheet.views = [{ state: 'pageLayout', showGridLines: false }];
+
+    // Set Column Widths (matching photo proportions)
     worksheet.columns = [
-        { width: 14 }, // Stock No (A)
-        { width: 10 }, // Unit (B)
-        { width: 45 }, // Description (C)
-        { width: 10 }, // Quantity (D)
+        { width: 12 }, // Stock No (A)
+        { width: 8 },  // Unit (B)
+        { width: 65 }, // Description (C)
+        { width: 9 },  // Quantity (D)
         { width: 15 }, // Unit Cost (E)
-        { width: 18 }, // Total Cost (F)
+        { width: 22 }, // Total Cost (F)
     ];
 
     // Helper: Apply Border to a single cell
@@ -57,6 +70,7 @@ export const generatePR_Excel = async (data) => {
     appendixCell.value = 'Appendix 60';
     appendixCell.font = { name: 'Arial', italic: true, size: 10 };
     appendixCell.alignment = { horizontal: 'right' };
+    worksheet.getRow(1).height = 20;
 
     // Row 2: PURCHASE REQUEST
     worksheet.mergeCells('A2:F2');
@@ -64,24 +78,27 @@ export const generatePR_Excel = async (data) => {
     titleCell.value = 'PURCHASE REQUEST';
     titleCell.font = { name: 'Arial', bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(2).height = 35;
 
     // Row 3: Entity Name & Fund Cluster
-    worksheet.mergeCells('A3:D3');
+    worksheet.mergeCells('A3:E3');
     const entityCell = worksheet.getCell('A3');
-    entityCell.value = `Entity Name: DILG R1`;
+    entityCell.value = `Entity Name: DILG RI`;
     entityCell.font = { name: 'Arial', bold: true, size: 10 };
-    applyRangeBorder('A3', 'D3');
-
-    worksheet.mergeCells('E3:F3');
-    const fundCell = worksheet.getCell('E3');
-    fundCell.value = `Fund Cluster: ________________`;
+    entityCell.alignment = { vertical: 'middle', horizontal: 'left' };
+    applyRangeBorder('A3', 'E3');
+    
+    const fundCell = worksheet.getCell('F3');
+    fundCell.value = ` Fund Cluster: ___________`;
     fundCell.font = { name: 'Arial', bold: true, size: 10 };
-    applyRangeBorder('E3', 'F3');
+    fundCell.alignment = { vertical: 'middle', horizontal: 'left' };
+    applyBorder(fundCell);
+    worksheet.getRow(3).height = 25;
 
     // Row 4-5: Office/Section, PR No, Date
     worksheet.mergeCells('A4:B5');
     const officeLabelCell = worksheet.getCell('A4');
-    officeLabelCell.value = `Office/Section :\n\n${office || '________________'}`;
+    officeLabelCell.value = `Office/Section : \n${office || ''}`;
     officeLabelCell.font = { name: 'Arial', bold: true, size: 10 };
     officeLabelCell.alignment = { vertical: 'top', wrapText: true };
     applyRangeBorder('A4', 'B5');
@@ -90,32 +107,36 @@ export const generatePR_Excel = async (data) => {
     const prNoCell = worksheet.getCell('C4');
     prNoCell.value = `PR No.: ${prNo || '________________'}`;
     prNoCell.font = { name: 'Arial', bold: true, size: 10 };
+    prNoCell.alignment = { horizontal: 'left', vertical: 'middle' };
     applyRangeBorder('C4', 'E4');
 
     worksheet.mergeCells('F4:F5');
     const dateCell = worksheet.getCell('F4');
-    dateCell.value = `Date: ${date}`;
+    dateCell.value = ` Date: ${date || '___________'}`;
     dateCell.font = { name: 'Arial', bold: true, size: 10 };
-    dateCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    dateCell.alignment = { vertical: 'middle', horizontal: 'left' };
     applyRangeBorder('F4', 'F5');
 
     worksheet.mergeCells('C5:E5');
     const respCodeCell = worksheet.getCell('C5');
     respCodeCell.value = 'Responsibility Center Code : ________________';
     respCodeCell.font = { name: 'Arial', bold: true, size: 10 };
+    respCodeCell.alignment = { horizontal: 'left', vertical: 'middle' };
     applyRangeBorder('C5', 'E5');
+    worksheet.getRow(4).height = 25;
+    worksheet.getRow(5).height = 25;
 
     // --- Table Headers ---
     const headerRow = worksheet.getRow(6);
     headerRow.values = [
-        'Stock/\nProperty No.',
+        'Stock/\nProperty\nNo.',
         'Unit',
         'Item Description',
         'Quantity',
         'Unit Cost',
         'Total Cost'
     ];
-    headerRow.height = 35;
+    headerRow.height = 45;
     headerRow.font = { name: 'Arial', bold: true, size: 10 };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     headerRow.eachCell((cell) => applyBorder(cell));
@@ -158,70 +179,71 @@ export const generatePR_Excel = async (data) => {
     const totalLabelCell = worksheet.getCell(`A${currentRow}`);
     totalLabelCell.value = 'TOTAL  ';
     totalLabelCell.font = { name: 'Arial', bold: true };
-    totalLabelCell.alignment = { horizontal: 'right' };
+    totalLabelCell.alignment = { horizontal: 'right', vertical: 'middle' };
     applyRangeBorder(`A${currentRow}`, `E${currentRow}`);
     
     const totalValueCell = worksheet.getCell(`F${currentRow}`);
-    totalValueCell.value = total;
+    totalValueCell.value = parseFloat(total) || 0;
     totalValueCell.numFmt = '#,##0.00';
     totalValueCell.font = { name: 'Arial', bold: true };
+    totalValueCell.alignment = { horizontal: 'right', vertical: 'middle' };
     applyBorder(totalValueCell);
     currentRow++;
 
     // Purpose Row
     worksheet.mergeCells(`A${currentRow}:F${currentRow + 1}`);
     const purposeCell = worksheet.getCell(`A${currentRow}`);
-    purposeCell.value = `Purpose: ${title || 'For official use of DILG R1'}`;
+    purposeCell.value = `Purpose: ${title || ''}`;
     purposeCell.font = { name: 'Arial', size: 10 };
     purposeCell.alignment = { vertical: 'top', wrapText: true };
     applyRangeBorder(`A${currentRow}`, `F${currentRow + 1}`);
     currentRow += 2;
 
     // Signatory Headers
-    worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
-    worksheet.getCell(`A${currentRow}`).value = 'Requested by:';
-    worksheet.mergeCells(`D${currentRow}:F${currentRow}`);
-    worksheet.getCell(`D${currentRow}`).value = 'Approved by:';
+    worksheet.mergeCells(`B${currentRow}:D${currentRow}`);
+    const reqByCell = worksheet.getCell(`B${currentRow}`);
+    reqByCell.value = 'Requested by:';
+    reqByCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    
+    worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
+    const appByCell = worksheet.getCell(`E${currentRow}`);
+    appByCell.value = 'Approved by:';
+    appByCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    
     const sigHeaderRow = worksheet.getRow(currentRow);
-    sigHeaderRow.font = { name: 'Arial', bold: true, size: 10 };
-    applyRangeBorder(`A${currentRow}`, `C${currentRow}`);
-    applyRangeBorder(`D${currentRow}`, `F${currentRow}`);
+    sigHeaderRow.font = { name: 'Arial', size: 10 }; // Not bold
+    applyBorder(worksheet.getCell(`A${currentRow}`));
+    applyRangeBorder(`B${currentRow}`, `D${currentRow}`);
+    applyRangeBorder(`E${currentRow}`, `F${currentRow}`);
     currentRow++;
 
-    // Signature Area
-    worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
-    worksheet.mergeCells(`D${currentRow}:F${currentRow}`);
-    worksheet.getRow(currentRow).height = 40; // Provide space for actual signature
-    applyRangeBorder(`A${currentRow}`, `C${currentRow}`);
-    applyRangeBorder(`D${currentRow}`, `F${currentRow}`);
-    currentRow++;
-
-    // Labels for Signature/Name/Designation
-    const labels = [
-        { label: 'Signature:', height: 20 },
-        { label: 'Printed Name:', height: 20 },
-        { label: 'Designation:', height: 20 }
+    // Labels for Signature Area
+    const sigLabels = [
+        { label: 'Signature', height: 35 },
+        { label: 'Printed\nName :', height: 25 },
+        { label: 'Designati\non :', height: 25 }
     ];
 
-    labels.forEach((l) => {
+    sigLabels.forEach((l) => {
         const row = worksheet.getRow(currentRow);
         row.height = l.height;
         
-        // Requested side
-        worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
-        const leftCell = worksheet.getCell(`A${currentRow}`);
-        leftCell.value = l.label;
-        leftCell.font = { name: 'Arial', size: 9 };
-        leftCell.alignment = { vertical: 'bottom', horizontal: 'left' };
-        applyRangeBorder(`A${currentRow}`, `C${currentRow}`);
+        // Label in Column A
+        const labelCell = worksheet.getCell(`A${currentRow}`);
+        labelCell.value = l.label;
+        labelCell.font = { name: 'Arial', size: 9 };
+        labelCell.alignment = { vertical: 'middle', horizontal: 'left' };
+        applyBorder(labelCell);
 
-        // Approved side
-        worksheet.mergeCells(`D${currentRow}:F${currentRow}`);
-        const rightCell = worksheet.getCell(`D${currentRow}`);
-        rightCell.value = l.label;
-        rightCell.font = { name: 'Arial', size: 9 };
-        rightCell.alignment = { vertical: 'bottom', horizontal: 'left' };
-        applyRangeBorder(`D${currentRow}`, `F${currentRow}`);
+        // Requested side area (B-D)
+        worksheet.mergeCells(`B${currentRow}:D${currentRow}`);
+        const reqCell = worksheet.getCell(`B${currentRow}`);
+        applyRangeBorder(`B${currentRow}`, `D${currentRow}`);
+
+        // Approved side area (E-F)
+        worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
+        const appCell = worksheet.getCell(`E${currentRow}`);
+        applyRangeBorder(`E${currentRow}`, `F${currentRow}`);
 
         currentRow++;
     });

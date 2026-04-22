@@ -48,7 +48,6 @@ const DocViewModal = ({ doc, onClose }) => {
                                             rel="noopener noreferrer"
                                             className="btn-primary w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 group text-xs"
                                         >
-                                            <MdDownload className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
                                             Download / View
                                         </a>
 
@@ -67,7 +66,6 @@ const DocViewModal = ({ doc, onClose }) => {
                                                 }}
                                                 className="w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 border-2 border-emerald-600/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all text-xs"
                                             >
-                                                <MdTableChart className="w-4 h-4" />
                                                 Download Official PR Layout (Excel)
                                             </button>
                                         )}
@@ -97,7 +95,6 @@ const DocViewModal = ({ doc, onClose }) => {
                                         }}
                                         className="w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all text-xs"
                                     >
-                                        <MdTableChart className="w-4 h-4" />
                                         Generate Official PR (Excel)
                                     </button>
                                 </div>
@@ -112,9 +109,9 @@ const DocViewModal = ({ doc, onClose }) => {
                             )}
                         </div>
 
-                        <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-2xl border border-blue-100 dark:border-blue-500/20">
-                            <p className="text-[10px] font-bold text-blue-800 dark:text-blue-200 uppercase tracking-widest mb-1.5 ml-1">Quick Note</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-300 leading-relaxed ml-1 font-medium">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Quick Note</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed ml-1 font-medium">
                                 Document details are based on the latest submission. For history or changes, check the document trail.
                             </p>
                         </div>

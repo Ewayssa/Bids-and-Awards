@@ -189,6 +189,8 @@ const UploadPPMPModal = ({
                                 >
                                     <option value="Q1">1st Quarter</option>
                                     <option value="Q2">2nd Quarter</option>
+                                    <option value="Q3">3rd Quarter</option>
+                                    <option value="Q4">4th Quarter</option>
                                 </select>
                                 {errors.quarter && <span className="text-xs text-red-500 font-semibold">{errors.quarter}</span>}
                             </div>

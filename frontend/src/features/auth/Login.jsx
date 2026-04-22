@@ -19,11 +19,6 @@ const Login = ({ onLogin, infoMessage }) => {
     const [forgotError, setForgotError] = useState('');
     const [forgotLoading, setForgotLoading] = useState(false);
     const [forgotSuccess, setForgotSuccess] = useState(false);
-    const [registerOpen, setRegisterOpen] = useState(false);
-    const [registerForm, setRegisterForm] = useState({ username: '', fullName: '', password: '', confirmPassword: '', position: '', office: '' });
-    const [registerError, setRegisterError] = useState('');
-    const [registerLoading, setRegisterLoading] = useState(false);
-    const [registerSuccess, setRegisterSuccess] = useState(false);
     const [tempPassword, setTempPassword] = useState('');
     const [hasTriedLogin, setHasTriedLogin] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
@@ -82,64 +77,6 @@ const Login = ({ onLogin, infoMessage }) => {
         setForgotOpen(false);
         setForgotError('');
         setForgotLoading(false);
-    };
-
-    const openRegisterModal = () => {
-        setRegisterForm({ username: '', fullName: '', password: '', confirmPassword: '', position: '', office: '' });
-        setRegisterError('');
-        setRegisterSuccess(false);
-        setRegisterOpen(true);
-    };
-
-    const closeRegisterModal = () => {
-        setRegisterOpen(false);
-        setRegisterError('');
-        setRegisterLoading(false);
-    };
-
-    const handleRegisterSubmit = async (e) => {
-        e.preventDefault();
-        setRegisterError('');
-        const { username, fullName, password, confirmPassword, position, office } = registerForm;
-        if (!username.trim()) {
-            setRegisterError('Username or email is required.');
-            return;
-        }
-        if (!fullName.trim()) {
-            setRegisterError('Full name is required.');
-            return;
-        }
-        const validation = validatePassword(password);
-        if (!validation.valid) {
-            setRegisterError(validation.errors);
-            return;
-        }
-        if (password !== confirmPassword) {
-            setRegisterError('Password and confirmation do not match.');
-            return;
-        }
-        setRegisterLoading(true);
-        try {
-            await userService.register({
-                username: username.trim(),
-                fullName: fullName.trim(),
-                password,
-                position,
-                office,
-            });
-            setRegisterSuccess(true);
-            setTimeout(() => closeRegisterModal(), 3500);
-        } catch (err) {
-            const d = err.response?.data;
-            let msg = 'Registration failed.';
-            if (d?.username) msg = Array.isArray(d.username) ? d.username[0] : d.username;
-            else if (d?.fullName) msg = Array.isArray(d.fullName) ? d.fullName[0] : d.fullName;
-            else if (d?.password) msg = Array.isArray(d.password) ? d.password[0] : d.password;
-            else if (d?.detail) msg = Array.isArray(d.detail) ? d.detail.join(' ') : d.detail;
-            setRegisterError(msg);
-        } finally {
-            setRegisterLoading(false);
-        }
     };
 
     const handleForgotSubmit = async (e) => {
@@ -315,15 +252,6 @@ const Login = ({ onLogin, infoMessage }) => {
                         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2 text-sm">
                             <button
                                 type="button"
-                                onClick={openRegisterModal}
-                                className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold transition-colors flex items-center gap-1.5"
-                            >
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                Create account
-                            </button>
-                            <span className="text-slate-300 dark:text-slate-700" aria-hidden>·</span>
-                            <button
-                                type="button"
                                 onClick={openForgotModal}
                                 className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                             >
@@ -428,159 +356,6 @@ const Login = ({ onLogin, infoMessage }) => {
                                 className="btn-primary px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20"
                             >
                                 {forgotLoading ? 'Processing…' : 'Generate Password'}
-                            </button>
-                        </div>
-                    </form>
-                )}
-            </Modal>
-
-            <Modal
-                isOpen={registerOpen}
-                onClose={closeRegisterModal}
-                title="Create account"
-                size="xl"
-            >
-                {registerSuccess ? (
-                    <div className="text-center space-y-6">
-                        <div className="flex justify-center">
-                            <div className="text-green-600 text-4xl mb-3">✓</div>
-                        </div>
-                        <p className="text-[var(--text)] font-medium">Account created successfully.</p>
-                        <p className="text-[var(--text-muted)] text-sm mt-2">You can log in once an administrator activates your account.</p>
-                        <button
-                            onClick={closeRegisterModal}
-                            className="btn-primary px-10 py-3 rounded-xl font-bold"
-                        >
-                            Got it, thanks!
-                        </button>
-                    </div>
-                ) : (
-                    <form onSubmit={handleRegisterSubmit} className="space-y-4">
-                        {registerError && (
-                            <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg" role="alert">
-                                {Array.isArray(registerError) ? (
-                                    <ul className="list-disc list-inside space-y-0.5">
-                                        {registerError.map((msg, i) => (
-                                            <li key={i}>{msg}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    registerError
-                                )}
-                            </div>
-                        )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
-                                <input
-                                    id="register-username"
-                                    type="text"
-                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input"
-                                    value={registerForm.username}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, username: e.target.value }))}
-                                    placeholder=" "
-                                    required
-                                    disabled={registerLoading}
-                                    autoComplete="username"
-                                />
-                                <label htmlFor="register-username" className="floating-label">
-                                    Username or email
-                                </label>
-                            </div>
-                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
-                                <input
-                                    id="register-fullName"
-                                    type="text"
-                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input"
-                                    value={registerForm.fullName}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, fullName: e.target.value }))}
-                                    placeholder=" "
-                                    required
-                                    disabled={registerLoading}
-                                    autoComplete="name"
-                                />
-                                <label htmlFor="register-fullName" className="floating-label">
-                                    Full name
-                                </label>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
-                                <select
-                                    id="register-position"
-                                    value={registerForm.position}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, position: e.target.value }))}
-                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input appearance-none"
-                                    required
-                                    disabled={registerLoading}
-                                >
-                                    <option value="" disabled>Select Position</option>
-
-                                    <option value="BAC Secretariat">BAC Secretariat</option>
-                                    <option value="BAC Member">BAC Member</option>
-                                </select>
-                                <label htmlFor="register-position" className="floating-label active">
-                                    Position
-                                </label>
-                            </div>
-                            <div className="floating-label-group rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-800/40 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
-                                <input
-                                    id="register-office"
-                                    type="text"
-                                    className="w-full px-5 py-4 bg-transparent text-slate-900 dark:text-white placeholder-transparent outline-none border-0 focus:ring-0 text-[15px] rounded-2xl floating-input"
-                                    value={registerForm.office}
-                                    onChange={(e) => setRegisterForm((f) => ({ ...f, office: e.target.value }))}
-                                    placeholder=" "
-                                    required
-                                    disabled={registerLoading}
-                                    autoComplete="organization"
-                                />
-                                <label htmlFor="register-office" className="floating-label">
-                                    Office / Division
-                                </label>
-                            </div>
-                        </div>
-                        <PasswordInput
-                            id="register-password"
-                            label="Password"
-                            value={registerForm.password}
-                            onChange={(e) => setRegisterForm((f) => ({ ...f, password: e.target.value }))}
-                            placeholder="Enter password"
-                            variant="rounded"
-                            showRequirementsChecklist={registerForm.password.length > 0}
-                            rules={STRICT_PASSWORD_RULES}
-                            required
-                            minLength={8}
-                            disabled={registerLoading}
-                            autoComplete="new-password"
-                        />
-                        <PasswordInput
-                            id="register-confirmPassword"
-                            label="Confirm password"
-                            value={registerForm.confirmPassword}
-                            onChange={(e) => setRegisterForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                            placeholder="Confirm password"
-                            variant="rounded"
-                            showToggle={false}
-                            required
-                            disabled={registerLoading}
-                            autoComplete="new-password"
-                        />
-                        <p className="text-xs text-[var(--text-muted)]">Your account must be activated by an administrator before you can log in.</p>
-                        <div className="flex gap-3 justify-end pt-2">
-                            <button
-                                type="button"
-                                onClick={closeRegisterModal}
-                                className="btn-secondary"
-                                disabled={registerLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={registerLoading}
-                                className="btn-primary"
-                            >
-                                {registerLoading ? 'Creating…' : 'Create account'}
                             </button>
                         </div>
                     </form>

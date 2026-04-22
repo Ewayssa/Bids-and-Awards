@@ -120,7 +120,7 @@ const EncodeTable = ({
                                                             <td className="table-td text-center">
                                                                 <button 
                                                                     onClick={() => handleView(doc)} 
-                                                                    className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm shadow-emerald-500/5"
+                                                                    className="btn-action-ghost !text-[10px] !py-1"
                                                                 >
                                                                     View
                                                                 </button>
@@ -175,7 +175,7 @@ const EncodeTable = ({
                                         <td className="table-td text-center">
                                             <button 
                                                 onClick={() => handleView(doc)} 
-                                                className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95 shadow-sm shadow-emerald-500/5"
+                                                className="btn-action-ghost !text-[10px] !py-1"
                                             >
                                                 View
                                             </button>

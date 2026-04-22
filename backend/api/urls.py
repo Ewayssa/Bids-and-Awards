@@ -14,7 +14,6 @@ router.register(r'audit-log', views.AuditLogViewSet, basename='audit-log')
 
 urlpatterns = [
     path('login/', views.login),
-    path('register/', views.register),
     path('change-password/', views.change_password),
     path('forgot-password/', views.forgot_password),
     path('update-profile/', views.update_profile),

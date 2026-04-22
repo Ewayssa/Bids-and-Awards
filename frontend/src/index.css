@@ -259,6 +259,9 @@ textarea {
     .btn-action-secondary {
         @apply btn-action text-[var(--text-muted)] border border-[var(--border)] hover:bg-[var(--background-subtle)] hover:border-[var(--border)] hover:text-[var(--text)] hover:shadow-sm active:bg-[var(--border-light)];
     }
+    .btn-action-ghost {
+        @apply btn-action text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700;
+    }
     .input-field {
         @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-xl outline-none text-[var(--text)] placeholder-[var(--text-subtle)] bg-white transition-all duration-300 ease-out;
         @apply focus:border-[var(--primary)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--primary)_8%,transparent)] focus:bg-white;

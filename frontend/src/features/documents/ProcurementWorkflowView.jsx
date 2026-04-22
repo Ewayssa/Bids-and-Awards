@@ -168,7 +168,7 @@ const ProcurementWorkflowView = ({
                             <span className="text-[10px] font-black uppercase tracking-widest">RECORD LOCKED & COMPLETED</span>
                         </div>
                     ) : (
-                        <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 flex items-center gap-2">
+                        <div className="px-4 py-2 bg-slate-50 text-slate-500 rounded-2xl border border-slate-100 flex items-center gap-2">
                             <MdLabel className="w-4 h-4" />
                             <span className="text-[10px] font-black uppercase tracking-widest">{record?.status || 'Active'}</span>
                         </div>
@@ -272,7 +272,7 @@ const ProcurementWorkflowView = ({
                                                 uploaded 
                                                     ? 'bg-emerald-50/30 border-emerald-100/50 dark:bg-emerald-950/10 dark:border-emerald-900/30' 
                                                     : isBeingUploaded
-                                                        ? 'border-blue-500 bg-blue-50/30 ring-4 ring-blue-500/10 shadow-xl'
+                                                        ? 'border-slate-400 bg-slate-50/30 ring-4 ring-slate-400/10 shadow-xl'
                                                         : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800 hover:border-slate-200'
                                             } ${req.name.toLowerCase().includes('purchase request') && uploaded ? 'cursor-pointer hover:shadow-md hover:border-emerald-300 group/row ring-inset ring-2 ring-emerald-500/20' : ''}`}
                                         >
@@ -329,7 +329,7 @@ const ProcurementWorkflowView = ({
                                                                 e.stopPropagation(); // Prevent row click
                                                                 handleViewDoc(statusObj.docs[statusObj.docs.length - 1]);
                                                             }}
-                                                            className="px-4 py-2 bg-white dark:bg-slate-800 text-[10px] font-black uppercase text-slate-600 rounded-xl border border-slate-100 shadow-sm hover:border-slate-200 transition-all active:scale-95"
+                                                            className="btn-action-ghost !text-[10px] !py-1"
                                                         >
                                                             {statusObj.count > 1 ? `View (${statusObj.count})` : 'View'}
                                                         </button>
@@ -367,9 +367,9 @@ const ProcurementWorkflowView = ({
                                                         <div className="pt-5 flex flex-col sm:flex-row items-center gap-4">
                                                             <div 
                                                                 onClick={() => fileInputRef.current?.click()}
-                                                                className="flex-1 w-full h-12 border-2 border-dashed border-blue-200 dark:border-blue-900/50 rounded-xl flex items-center px-4 gap-3 bg-white dark:bg-slate-800 cursor-pointer hover:border-blue-400 transition-all group"
+                                                                className="flex-1 w-full h-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex items-center px-4 gap-3 bg-white dark:bg-slate-800 cursor-pointer hover:border-slate-400 transition-all group"
                                                             >
-                                                                <MdCloudUpload className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" />
+                                                                <MdCloudUpload className="w-5 h-5 text-slate-500 group-hover:scale-110 transition-transform" />
                                                                 <span className="text-xs font-bold text-slate-500 truncate">
                                                                     {selectedFile ? selectedFile.name : 'Select or drag document here...'}
                                                                 </span>
