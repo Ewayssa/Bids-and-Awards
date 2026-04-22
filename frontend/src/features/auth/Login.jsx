@@ -514,7 +514,7 @@ const Login = ({ onLogin, infoMessage }) => {
                                     disabled={registerLoading}
                                 >
                                     <option value="" disabled>Select Position</option>
-                                    <option value="BAC Chairperson">BAC Chairperson</option>
+
                                     <option value="BAC Secretariat">BAC Secretariat</option>
                                     <option value="BAC Member">BAC Member</option>
                                 </select>

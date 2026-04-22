@@ -26,6 +26,25 @@ const APP = ({ user }) => {
         }
     };
 
+    const handleView = (item) => {
+        // Find the record ID (some older records might store it differently in state)
+        const docId = item.id || item.pk;
+        
+        if (!docId) {
+            // Fallback: If no ID, try to open the file URL directly
+            if (item.file_url) {
+                window.open(item.file_url, '_blank', 'noopener,noreferrer');
+            } else {
+                alert('Cannot view this document: No file found.');
+            }
+            return;
+        }
+
+        // Use the new preview endpoint for better viewing (inline)
+        const previewUrl = `${window.location.origin}/api/upload/${docId}/preview/`;
+        window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this APP?')) return;
         
@@ -107,10 +126,7 @@ const APP = ({ user }) => {
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <button 
-                                                onClick={() => {
-                                                    if (item.file_url) window.open(item.file_url, '_blank', 'noopener');
-                                                    else alert('No file uploaded for this APP.');
-                                                }}
+                                                onClick={() => handleView(item)}
                                                 className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--primary)] hover:text-emerald-700 transition-colors"
                                             >
                                                 View
@@ -141,10 +157,7 @@ const APP = ({ user }) => {
                 }}
             />
 
-            <PreviewModal 
-                doc={previewDoc} 
-                onClose={() => setPreviewDoc(null)} 
-            />
+            {/* Preview logic removed as per user preference for new tab viewing */}
         </div>
     );
 };

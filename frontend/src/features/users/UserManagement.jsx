@@ -470,7 +470,7 @@ const Personnel = ({ user }) => {
                                         disabled={submitting}
                                     >
                                         <option value="">Select</option>
-                                        <option value="BAC Chairperson">BAC Chairperson</option>
+
                                         <option value="BAC Secretariat">BAC Secretariat</option>
                                         <option value="BAC Member">BAC Member</option>
                                     </select>
@@ -571,7 +571,6 @@ const Personnel = ({ user }) => {
                                     <label htmlFor="edit-position" className="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 ml-1">Position</label>
                                     <select id="edit-position" value={editForm.position} onChange={(e) => setEditForm(f => ({ ...f, position: e.target.value }))} className="input-field w-full" disabled={submitting}>
                                         <option value="">Select</option>
-                                        <option value="BAC Chairperson">BAC Chairperson</option>
                                         <option value="BAC Secretariat">BAC Secretariat</option>
                                         <option value="BAC Member">BAC Member</option>
                                     </select>

@@ -427,6 +427,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [IsAuthenticated()]
+        elif self.action in ['preview']:
+            return [AllowAny()]
         elif self.action in ['create']:
             return [IsAuthenticated()]
         elif self.action in ['update', 'partial_update', 'destroy']:
@@ -486,6 +488,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
             _log_audit('document_completed', actor, 'document', str(doc.id), title)
             _create_notification(f'BAC document completed: {title}', admin_only=True)
 
+        return Response(DocumentSerializer(doc).data)
+
     @action(detail=True, methods=['post'])
     def assign_pr_no(self, request, pk=None):
         """
@@ -536,8 +540,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
             # 3. Link context: Find all documents sharing this PPMP No and link them to the folder
             if ppmp_no:
-                # Update both newly and previously orphan documents
-                affected = Document.objects.filter(
+                Document.objects.filter(
                     ppmp_no=ppmp_no, 
                     procurement_record__isnull=True
                 ).update(procurement_record=record, prNo=record.pr_no)
@@ -549,6 +552,25 @@ class DocumentViewSet(viewsets.ModelViewSet):
                  doc.save(update_fields=['procurement_record', 'prNo'])
 
         return Response(DocumentSerializer(doc).data)
+
+    @action(detail=True, methods=['get'], url_path='preview', permission_classes=[AllowAny])
+    def preview(self, request, pk=None):
+        doc = self.get_object()
+        if not doc.file:
+            return Response({'detail': 'No file uploaded.'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            content_type, _ = mimetypes.guess_type(doc.file.name)
+            content_type = content_type or 'application/octet-stream'
+            
+            # Using HttpResponse instead of FileResponse to prevent Django from 
+            # automatically adding download headers.
+            response = HttpResponse(doc.file.read(), content_type=content_type)
+            response['Content-Disposition'] = 'inline'
+            # Prevent browser from trying to guess and download
+            response['X-Content-Type-Options'] = 'nosniff'
+            return response
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_destroy(self, instance):
         doc_id, title = str(instance.id), (instance.title or instance.prNo or 'Document')[:80]
@@ -567,18 +589,17 @@ class ReportViewSet(viewsets.ModelViewSet):
             report.save()
         _log_audit('report_created', report.uploadedBy or 'Unknown', 'report', str(report.id), report.title[:80])
 
-    @action(detail=True, methods=['get'], url_path='preview')
+    @action(detail=True, methods=['get'], url_path='preview', permission_classes=[AllowAny])
     def preview(self, request, pk=None):
         report = self.get_object()
         if not report.file: return Response({'detail': 'No file.'}, status=status.HTTP_404_NOT_FOUND)
         try:
-            # NOTE: For production, it's more efficient to offload file serving to a web server
-            # like Nginx using X-Accel-Redirect. This Django view is suitable for development.
             content_type, _ = mimetypes.guess_type(report.file.name)
             content_type = content_type or 'application/octet-stream'
-            resp = FileResponse(report.file.open('rb'), content_type=content_type)
-            resp['Content-Disposition'] = 'inline'
-            return resp
+            response = HttpResponse(report.file.read(), content_type=content_type)
+            response['Content-Disposition'] = 'inline'
+            response['X-Content-Type-Options'] = 'nosniff'
+            return response
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

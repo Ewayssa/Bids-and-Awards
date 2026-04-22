@@ -199,7 +199,7 @@ export const CHECKLIST_CONFIG = {
             {
                 name: 'Initial Documents',
                 documents: [
-                    { name: 'Purchase Request (with # and received by FAD Records Section)', required: true },
+                    { name: 'Purchase Request', required: true },
                     { name: 'Activity Design', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
                     { name: 'Annual Procurement Plan', required: true },
@@ -209,7 +209,7 @@ export const CHECKLIST_CONFIG = {
             {
                 name: 'Special (Lease of Venue)',
                 documents: [
-                    { name: 'Certification of Non Availability of DILG R1 facility signed by FAD Chief', required: true },
+                    { name: 'Certification of Non Availability of DILG R1 facility', required: true },
                     { name: 'Certification of Non Availability of Other Government Facility or RFQ Received and Certified by Government Facility', required: true },
                     { name: 'Cost Benefit Analysis', required: true },
                     { name: 'Justification Why Use Private Venue', required: false }
@@ -262,7 +262,7 @@ export const CHECKLIST_CONFIG = {
             {
                 name: 'Initial Documents',
                 documents: [
-                    { name: 'Purchase Request (with # and received by FAD Records Section)', required: true },
+                    { name: 'Purchase Request', required: true },
                     { name: 'Activity Design', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
                     { name: 'Annual Procurement Plan', required: true },

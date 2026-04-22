@@ -28,6 +28,7 @@ import ConfirmDialog from './modals/ConfirmDialog';
 import PreviewModal from './modals/PreviewModal';
 import ProcurementDocumentModal from "./modals/ProcurementDocumentModal";
 import ProcurementWorkflowView from "./ProcurementWorkflowView";
+import { generatePR_Excel } from "../../utils/prGenerator";
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
@@ -129,6 +130,41 @@ const Encode = ({ user }) => {
                 return;
             }
         }
+
+        // For Purchase Requests specifically: directly trigger the layout generation
+        if (doc?.subDoc === 'Purchase Request') {
+            try {
+                // Defensive parsing for pr_items
+                let items = [];
+                try {
+                    if (typeof doc.pr_items === 'string' && doc.pr_items.trim()) {
+                        items = JSON.parse(doc.pr_items);
+                    } else if (Array.isArray(doc.pr_items)) {
+                        items = doc.pr_items;
+                    }
+                } catch (e) {
+                    console.error('Data parsing error in Encode:', e);
+                }
+
+                const prData = {
+                    items: items,
+                    total: doc.total_amount,
+                    ppmp_no: doc.ppmp_no,
+                    prNo: doc.user_pr_no || '',
+                    title: doc.title,
+                    office: doc.end_user_office || ''
+                };
+                generatePR_Excel(prData);
+                return;
+            } catch (err) {
+                console.error('Failed to generate PR quick view:', err);
+                // Fallback: Continue to open the modal
+                setSelectedDoc(doc);
+                setActiveModal('view');
+                return;
+            }
+        }
+
         setSelectedDoc(doc);
         setActiveModal('view');
     };

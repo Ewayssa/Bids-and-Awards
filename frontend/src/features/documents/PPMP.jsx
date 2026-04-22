@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
-import { MdAssignment, MdUpload, MdVisibility, MdDelete } from 'react-icons/md';
+import { MdAssignment, MdUpload } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import UploadPPMPModal from './modals/UploadPPMPModal';
-import PreviewModal from './modals/PreviewModal';
 import { documentService } from '../../services/api';
 
 const PPMP = ({ user }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [ppmps, setPpmps] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [previewDoc, setPreviewDoc] = useState(null);
 
     const fetchPPMPs = async () => {
         setLoading(true);
@@ -24,6 +22,25 @@ const PPMP = ({ user }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleView = (item) => {
+        // Find the record ID (some older records might store it differently in state)
+        const docId = item.id || item.pk;
+        
+        if (!docId) {
+            // Fallback: If no ID, try to open the file URL directly
+            if (item.file_url) {
+                window.open(item.file_url, '_blank', 'noopener,noreferrer');
+            } else {
+                alert('Cannot view this document: No file found.');
+            }
+            return;
+        }
+
+        // Use the new preview endpoint for better viewing (inline)
+        const previewUrl = `${window.location.origin}/api/upload/${docId}/preview/`;
+        window.open(previewUrl, '_blank', 'noopener,noreferrer');
     };
 
     const handleDelete = async (id) => {
@@ -45,7 +62,7 @@ const PPMP = ({ user }) => {
     return (
         <div className="min-h-full pb-12">
             <PageHeader
-                title="Project Procurement Management Plan (PPMP)"
+                title="Project Procurement Management Plan"
                 subtitle="Manage and track PPMP records."
             >
                 {user?.role !== ROLES.VIEWER && (
@@ -62,7 +79,7 @@ const PPMP = ({ user }) => {
 
             <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0 shadow-lg shadow-slate-200/50">
 
-
+                
                 {ppmps.length > 0 ? (
                     <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
                         <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden">
@@ -86,8 +103,8 @@ const PPMP = ({ user }) => {
                                 {ppmps.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="font-black text-xs text-slate-800 dark:text-slate-200 truncate block">
-                                                {item.ppmp_no}
+                                            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight truncate block">
+                                                {item.ppmp_no || 'No PPMP #'}
                                             </span>
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
@@ -107,10 +124,7 @@ const PPMP = ({ user }) => {
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <button 
-                                                onClick={() => {
-                                                    if (item.file_url) window.open(item.file_url, '_blank', 'noopener');
-                                                    else alert('No file uploaded for this PPMP.');
-                                                }}
+                                                onClick={() => handleView(item)}
                                                 className="text-[11px] font-black uppercase tracking-[0.15em] text-[var(--primary)] hover:text-emerald-700 transition-colors"
                                             >
                                                 View
@@ -139,11 +153,6 @@ const PPMP = ({ user }) => {
                     fetchPPMPs();
                     setShowUploadModal(false);
                 }}
-            />
-
-            <PreviewModal 
-                doc={previewDoc} 
-                onClose={() => setPreviewDoc(null)} 
             />
         </div>
     );

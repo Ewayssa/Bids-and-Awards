@@ -3,12 +3,49 @@ import PageHeader from '../../components/PageHeader';
 import { MdReceipt, MdAdd, MdVisibility, MdDelete } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import CreatePRModal from './modals/CreatePRModal';
+import DocViewModal from './modals/DocViewModal';
+import { generatePR_Excel } from '../../utils/prGenerator';
 import { documentService } from '../../services/api';
 
 const PR = ({ user }) => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [prs, setPrs] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [selectedDoc, setSelectedDoc] = useState(null);
+
+    const handleQuickView = (item) => {
+        try {
+            if (item.file_url) {
+                window.open(item.file_url, '_blank', 'noopener');
+            } else {
+                // Defensive parsing for pr_items
+                let items = [];
+                try {
+                    if (typeof item.pr_items === 'string' && item.pr_items.trim()) {
+                        items = JSON.parse(item.pr_items);
+                    } else if (Array.isArray(item.pr_items)) {
+                        items = item.pr_items;
+                    }
+                } catch (e) {
+                    console.error('Data parsing error:', e);
+                }
+
+                const prData = {
+                    items: items,
+                    total: item.total_amount,
+                    ppmp_no: item.ppmp_no,
+                    prNo: item.user_pr_no || '',
+                    title: item.title,
+                    office: item.end_user_office || ''
+                };
+                generatePR_Excel(prData);
+            }
+        } catch (err) {
+            console.error('Quick view failed:', err);
+            // Fallback: Open the modal if generation fails
+            setSelectedDoc(item);
+        }
+    };
 
     const fetchPRs = async () => {
         setLoading(true);
@@ -66,9 +103,10 @@ const PR = ({ user }) => {
                         <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden">
                             <colgroup>
                                 <col className="w-[25%]" />
+                                <col className="w-[20%]" />
+                                <col className="w-[15%]" />
                                 <col className="w-[25%]" />
-                                <col className="w-[25%]" />
-                                <col className="w-[25%]" />
+                                <col className="w-[15%]" />
                             </colgroup>
                             <thead className="table-header">
                                 <tr>
@@ -76,6 +114,7 @@ const PR = ({ user }) => {
                                     <th className="table-th !text-center !px-4">PPMP No.</th>
                                     <th className="table-th !text-center !px-4">Total Cost</th>
                                     <th className="table-th !text-center !px-4">Date Uploaded</th>
+                                    <th className="table-th !text-center !px-4">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -83,11 +122,8 @@ const PR = ({ user }) => {
                                     <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <button 
-                                                onClick={() => {
-                                                    if (item.file_url) window.open(item.file_url, '_blank', 'noopener');
-                                                    else alert('No file uploaded for this PR.');
-                                                }}
-                                                className={`text-xs font-black transition-all truncate text-center hover:text-[var(--primary)] block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
+                                                onClick={() => handleQuickView(item)}
+                                                className={`text-xs font-black transition-all truncate text-center hover:text-blue-600 block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
                                             >
                                                 {item.user_pr_no || 'No PR # Assigned'}
                                             </button>
@@ -106,6 +142,26 @@ const PR = ({ user }) => {
                                             <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
                                                 {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : item.date || '-'}
                                             </span>
+                                        </td>
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <div className="flex justify-center items-center gap-2">
+                                                <button
+                                                    onClick={() => handleQuickView(item)}
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                    title="View Document"
+                                                >
+                                                    <MdVisibility className="w-5 h-5" />
+                                                </button>
+                                                {user?.role === ROLES.ADMIN && (
+                                                    <button
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                                        title="Delete PR"
+                                                    >
+                                                        <MdDelete className="w-5 h-5" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -131,6 +187,13 @@ const PR = ({ user }) => {
                     setShowCreateModal(false);
                 }}
             />
+
+            {selectedDoc && (
+                <DocViewModal 
+                    doc={selectedDoc} 
+                    onClose={() => setSelectedDoc(null)} 
+                />
+            )}
         </div>
     );
 };

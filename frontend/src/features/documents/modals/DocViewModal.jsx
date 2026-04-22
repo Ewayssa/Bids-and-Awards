@@ -1,7 +1,8 @@
 import React from 'react';
-import { MdFolder, MdDescription, MdDownload, MdWarning } from 'react-icons/md';
+import { MdFolder, MdDescription, MdDownload, MdWarning, MdTableChart } from 'react-icons/md';
 import Modal from '../../../components/Modal';
 import { DocDetailsView } from '../DocDetailsView';
+import { generatePR_Excel } from '../../../utils/prGenerator';
 
 const DocViewModal = ({ doc, onClose }) => {
     return (
@@ -40,15 +41,65 @@ const DocViewModal = ({ doc, onClose }) => {
                                         </div>
                                     </div>
                                     
-                                    <a
-                                        href={doc.file_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="btn-primary w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 group text-xs"
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <a
+                                            href={doc.file_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn-primary w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 group text-xs"
+                                        >
+                                            <MdDownload className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                                            Download / View
+                                        </a>
+
+                                        {doc?.subDoc === 'Purchase Request' && (
+                                            <button
+                                                onClick={() => {
+                                                    const prData = {
+                                                        items: typeof doc.pr_items === 'string' ? JSON.parse(doc.pr_items) : doc.pr_items || [],
+                                                        total: doc.total_amount,
+                                                        ppmp_no: doc.ppmp_no,
+                                                        prNo: doc.user_pr_no || '',
+                                                        title: doc.title,
+                                                        office: doc.end_user_office || ''
+                                                    };
+                                                    generatePR_Excel(prData);
+                                                }}
+                                                className="w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 border-2 border-emerald-600/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all text-xs"
+                                            >
+                                                <MdTableChart className="w-4 h-4" />
+                                                Download Official PR Layout (Excel)
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : doc?.subDoc === 'Purchase Request' ? (
+                                <div className="flex flex-col space-y-4">
+                                    <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 dark:bg-emerald-500/5 border border-dashed border-emerald-200 dark:border-emerald-500/20 rounded-2xl text-center">
+                                        <div className="p-3 bg-emerald-100 dark:bg-emerald-500/20 rounded-full text-emerald-600 dark:text-emerald-400 mb-3">
+                                            <MdTableChart className="w-6 h-6" />
+                                        </div>
+                                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide">PR Layout Ready</p>
+                                        <p className="text-xs text-emerald-600 dark:text-emerald-400/60 mt-1">You can generate the official formal Excel layout for this Purchase Request below.</p>
+                                    </div>
+
+                                    <button
+                                        onClick={() => {
+                                            const prData = {
+                                                items: typeof doc.pr_items === 'string' ? JSON.parse(doc.pr_items) : doc.pr_items || [],
+                                                total: doc.total_amount,
+                                                ppmp_no: doc.ppmp_no,
+                                                prNo: doc.user_pr_no || '',
+                                                title: doc.title,
+                                                office: doc.end_user_office || ''
+                                            };
+                                            generatePR_Excel(prData);
+                                        }}
+                                        className="w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all text-xs"
                                     >
-                                        <MdDownload className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                                        Download / View
-                                    </a>
+                                        <MdTableChart className="w-4 h-4" />
+                                        Generate Official PR (Excel)
+                                    </button>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center p-8 bg-amber-50 dark:bg-amber-500/5 border border-dashed border-amber-200 dark:border-amber-500/20 rounded-2xl text-center">

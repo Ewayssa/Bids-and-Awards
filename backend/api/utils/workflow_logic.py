@@ -5,7 +5,7 @@ BASE_PREP = [
     'Activity Design', 
     'Market Scoping', 
     'Project Procurement Management Plan/Supplemental PPMP', 
-    'Purchase Request (with # and received by FAD Records Section)', 
+    'Purchase Request', 
     'Annual Procurement Plan', 
     'RFQ Draft'
 ]
@@ -27,8 +27,8 @@ BASE_AWARD = [
 ]
 
 LOV_ADDITIONAL = [
-    'Certification of Non Availability of DILG R1 facility signed by FAD Chief',
-    'Certification of Non Availability of Other Government Facility signed by FAD Chief',
+    'Certification of Non Availability of DILG R1 facility',
+    'Certification of Non Availability of Other Government Facility',
     'Table of Rating Factor (for Lease of Venue)'
 ]
 SVP_ADDITIONAL = ['Proof of Posting (PhilGEPS)']

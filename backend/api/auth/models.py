@@ -20,7 +20,6 @@ class User(AbstractUser):
         ('bac_member', 'BAC Member'),
     )
     POSITION_CHOICES = (
-        ('BAC Chairperson', 'BAC Chairperson'),
         ('BAC Secretariat', 'BAC Secretariat'),
         ('BAC Member', 'BAC Member'),
     )
