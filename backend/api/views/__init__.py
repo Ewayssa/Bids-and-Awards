@@ -226,6 +226,17 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
+        
+        # Uniqueness check for PPMP No
+        ppmp_no = data.get('ppmp_no', '').strip()
+        if ppmp_no and ProcurementRecord.objects.filter(ppmp_no=ppmp_no).exists():
+            return Response({'error': f'A procurement record with PPMP No. "{ppmp_no}" already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Uniqueness check for PR No (User-assigned)
+        user_pr_no = data.get('user_pr_no', '').strip()
+        if user_pr_no and ProcurementRecord.objects.filter(user_pr_no=user_pr_no).exists():
+            return Response({'error': f'PR No. "{user_pr_no}" is already assigned to another record.'}, status=status.HTTP_400_BAD_REQUEST)
+
         data['created_by'] = request.user.fullName or request.user.username
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -397,8 +408,25 @@ class DocumentViewSet(viewsets.ModelViewSet):
         pr_no = self.request.query_params.get('prNo', '').strip()
         if pr_no:
             queryset = queryset.filter(prNo=pr_no)
-
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        subDoc = request.data.get('subDoc', '').strip()
+        ppmp_no = request.data.get('ppmp_no', '').strip()
+        user_pr_no = request.data.get('user_pr_no', '').strip()
+
+        # Duplicate check for PPMP documents
+        if 'Project Procurement Management Plan' in subDoc and ppmp_no:
+            if Document.objects.filter(subDoc=subDoc, ppmp_no=ppmp_no).exists():
+                return Response({'error': f'A PPMP with No. "{ppmp_no}" already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Duplicate check for Purchase Request documents
+        if subDoc == 'Purchase Request' and user_pr_no:
+            if Document.objects.filter(subDoc=subDoc, user_pr_no=user_pr_no).exists() or \
+               ProcurementRecord.objects.filter(user_pr_no=user_pr_no).exists():
+                return Response({'error': f'PR No. "{user_pr_no}" is already used by another record.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -523,6 +551,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
         
         if not user_pr_no:
             return Response({'error': 'PR Number is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Global Uniqueness Check for PR No
+        if ProcurementRecord.objects.filter(user_pr_no=user_pr_no).exists() or \
+           Document.objects.filter(user_pr_no=user_pr_no).exclude(id=doc.id).exists():
+            return Response({'error': f'PR No. "{user_pr_no}" already exists.'}, status=status.HTTP_400_BAD_REQUEST)
             
         from django.db import transaction
         with transaction.atomic():

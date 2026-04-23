@@ -71,9 +71,9 @@ class DashboardService:
     def get_monthly_trend():
         from django.db.models.functions import ExtractMonth, ExtractYear
         return Document.objects.annotate(
-            year=ExtractYear('uploaded_at'),
-            month=ExtractMonth('uploaded_at')
-        ).values('year', 'month').annotate(count=Count('id')).order_by('year', 'month')
+            trend_year=ExtractYear('uploaded_at'),
+            trend_month=ExtractMonth('uploaded_at')
+        ).values('trend_year', 'trend_month').annotate(count=Count('id')).order_by('trend_year', 'trend_month')
 
     @staticmethod
     def get_dashboard_data(uploaded_by='', is_admin=False):
@@ -138,11 +138,11 @@ class DashboardService:
         raw_trend = DashboardService.get_monthly_trend()
         monthly_trend = []
         for item in raw_trend:
-            year = item.get('year')
-            month = item.get('month')
-            if year and month:
+            y = item.get('trend_year')
+            m = item.get('trend_month')
+            if y and m:
                 monthly_trend.append({
-                    'month': f"{year}-{month:02d}",
+                    'month': f"{y}-{m:02d}",
                     'count': item.get('count', 0)
                 })
 

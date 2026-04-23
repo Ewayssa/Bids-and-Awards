@@ -34,7 +34,7 @@ const Login = ({ onLogin, infoMessage }) => {
         setLoading(true);
         try {
             const data = await userService.login(email, password);
-            const role = mapOldRoleToNew(data.role);
+            const role = mapOldRoleToNew(data.role, data.position);
             onLogin({
                 username: data.username,
                 role,

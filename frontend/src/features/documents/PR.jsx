@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
-import { MdReceipt, MdAdd } from 'react-icons/md';
+import { MdReceipt, MdAdd, MdCheck, MdClose } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import CreatePRModal from './modals/CreatePRModal';
 import DocViewModal from './modals/DocViewModal';
@@ -12,6 +12,13 @@ const PR = ({ user }) => {
     const [prs, setPrs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState(null);
+    const [editingPrId, setEditingPrId] = useState(null);
+    const [assignValue, setAssignValue] = useState('');
+    const [assigning, setAssigning] = useState(false);
+
+    const isAdmin = user?.role === ROLES.ADMIN;
+    const isMember = user?.role === ROLES.MEMBER;
+    const canAssignPR = isAdmin || isMember;
 
     const handleQuickView = (item) => {
         try {
@@ -55,10 +62,30 @@ const PR = ({ user }) => {
             });
             setPrs(data);
         } catch (err) {
-            console.error('Failed to fetch PRs:', err);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleAssignPR = async (item) => {
+        if (!assignValue.trim() || assigning) return;
+        setAssigning(true);
+        try {
+            await documentService.assignPRNo(item.id, assignValue.trim());
+            await fetchPRs();
+            setEditingPrId(null);
+            setAssignValue('');
+        } catch (err) {
+            console.error('Failed to assign PR #:', err);
+            alert(err.response?.data?.error || 'Failed to assign PR #. Please check if the number is already used.');
+        } finally {
+            setAssigning(false);
+        }
+    };
+
+    const startEditing = (item) => {
+        setEditingPrId(item.id);
+        setAssignValue(item.user_pr_no || '');
     };
 
 
@@ -134,13 +161,49 @@ const PR = ({ user }) => {
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <div className="flex justify-center items-center gap-2">
-                                                <button
-                                                    onClick={() => handleQuickView(item)}
-                                                    className="btn-action-ghost !text-[10px] !py-1"
-                                                    title="Download PR"
-                                                >
-                                                    Download
-                                                </button>
+                                                {editingPrId === item.id ? (
+                                                    <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
+                                                        <input 
+                                                            autoFocus
+                                                            type="text"
+                                                            value={assignValue}
+                                                            onChange={(e) => setAssignValue(e.target.value)}
+                                                            className="h-8 w-24 px-2 bg-white border-2 border-emerald-500 rounded text-[10px] font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                                                            placeholder="PR #"
+                                                        />
+                                                        <button 
+                                                            disabled={assigning || !assignValue.trim()}
+                                                            onClick={() => handleAssignPR(item)}
+                                                            className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all active:scale-90 shadow-sm"
+                                                        >
+                                                            {assigning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full" /> : <MdCheck className="w-5 h-5" />}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setEditingPrId(null)}
+                                                            className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
+                                                        >
+                                                            <MdClose className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {canAssignPR && (
+                                                            <button 
+                                                                onClick={() => startEditing(item)}
+                                                                className="btn-action-ghost !text-emerald-600 !border-emerald-100 hover:!bg-emerald-50 !text-[10px] !py-1"
+                                                            >
+                                                                {item.user_pr_no ? 'Update PR #' : 'Assign PR #'}
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleQuickView(item)}
+                                                            className="btn-action-ghost !text-[10px] !py-1"
+                                                            title="Download PR"
+                                                        >
+                                                            Download
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

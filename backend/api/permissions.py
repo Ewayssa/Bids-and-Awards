@@ -144,7 +144,7 @@ def is_bac_secretariat(user):
     """Check if user is BAC Secretariat (Admin)."""
     if getattr(user, 'is_superuser', False):
         return True
-    return get_user_role(user) == 'bac_secretariat'
+    return get_user_role(user) == 'bac_secretariat' or getattr(user, 'position', '') == 'BAC Secretariat'
 
 
 def is_bac_chair(user):
@@ -154,7 +154,7 @@ def is_bac_chair(user):
 
 def is_bac_member(user):
     """Check if user is BAC Member."""
-    return get_user_role(user) == 'bac_member'
+    return get_user_role(user) == 'bac_member' or getattr(user, 'position', '') == 'BAC Member'
 
 def is_planning_unit(user):
     return get_user_role(user) == 'planning_unit'

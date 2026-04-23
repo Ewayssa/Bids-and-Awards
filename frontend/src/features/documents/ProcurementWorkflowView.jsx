@@ -34,17 +34,12 @@ const ProcurementWorkflowView = ({
     const [assignValue, setAssignValue] = useState(record?.user_pr_no || '');
     const [assigning, setAssigning] = useState(false);
 
-    const isAuthorized = 
-        (user?.role?.toLowerCase() === 'admin') || 
-        (user?.role?.toLowerCase() === 'encoder') ||
-        (user?.is_bac_chair) ||
-        (user?.is_bac_secretariat) ||
-        (user?.position?.toLowerCase().includes('bac') && user?.position?.toLowerCase().includes('member'));
+    const isAdmin = user?.role === ROLES.ADMIN;
+    const isSecretariat = user?.role === ROLES.SECRETARIAT;
+    const isMember = user?.role === ROLES.MEMBER;
 
-    // HARD FIX: We check isAuthorized for styling, but we NEVER disable the button entirely 
-    // as long as the user is logged in, to bypass session sync issues.
-    const canClick = !!user; 
-    const isBACMember = isAuthorized; // For internal logic consistency
+    const canMarkAsCompleted = isAdmin || isSecretariat || isMember;
+    const canUpload = isAdmin || isSecretariat;
 
     const handleAssignPR = async () => {
         if (!assignValue.trim() || assigning) return;
@@ -316,13 +311,7 @@ const ProcurementWorkflowView = ({
                                                 </div>
 
                                                 <div className="flex items-center gap-2 text-right">
-                                                    {/* Hint for BAC Members */}
-                                                    {req.name.toLowerCase().includes('purchase request') && uploaded && !record?.user_pr_no && (
-                                                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg animate-pulse mr-2 hidden group-hover/row:block">
-                                                            Click to Assign PR#
-                                                        </span>
-                                                    )}
-
+                                                    {/* Document row actions */}
                                                     {statusObj?.count > 0 && (
                                                         <button 
                                                             onClick={(e) => {
@@ -335,7 +324,7 @@ const ProcurementWorkflowView = ({
                                                         </button>
                                                     )}
                                                     
-                                                    {!isClosed && !uploaded && (
+                                                    {!isClosed && !uploaded && canUpload && (
                                                         isBeingUploaded ? (
                                                             <button 
                                                                 onClick={() => { setActiveUploadDoc(null); setSelectedFile(null); }}
@@ -421,9 +410,9 @@ const ProcurementWorkflowView = ({
 
                     <button
                         onClick={handleComplete}
-                        disabled={!requirements.allRequiredMet || !requirements.hasOfficialPR || completing}
+                        disabled={!requirements.allRequiredMet || !requirements.hasOfficialPR || completing || !canMarkAsCompleted}
                         className={`px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-3 ${
-                            requirements.allRequiredMet && requirements.hasOfficialPR 
+                            requirements.allRequiredMet && requirements.hasOfficialPR && canMarkAsCompleted
                                 ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 hover:bg-emerald-700 active:scale-95' 
                                 : 'bg-slate-100 text-slate-400 cursor-not-allowed grayscale'
                         }`}

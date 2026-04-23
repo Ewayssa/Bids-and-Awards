@@ -6,14 +6,14 @@
 
 export const ROLES = {
     ADMIN: 'admin',
-    USER: 'user',
-    ENCODER: 'encoder',
-    VIEWER: 'viewer',
+    SECRETARIAT: 'bac_secretariat',
+    MEMBER: 'bac_member',
 };
 
 export const ROLE_DISPLAY_NAMES = {
     [ROLES.ADMIN]: 'Admin',
-    [ROLES.USER]: 'User',
+    [ROLES.SECRETARIAT]: 'BAC Secretariat',
+    [ROLES.MEMBER]: 'BAC Member',
 };
 
 export const PERMISSIONS = {
@@ -32,22 +32,27 @@ export const PERMISSIONS = {
 
 const ROLE_PERMISSIONS = {
     [ROLES.ADMIN]: Object.values(PERMISSIONS),
-    [ROLES.USER]: [
+    [ROLES.SECRETARIAT]: [
         PERMISSIONS.UPLOAD_DOCUMENTS,
-        PERMISSIONS.VIEW_OWN_DOCUMENTS,
+        PERMISSIONS.VIEW_ALL_DOCUMENTS,
         PERMISSIONS.VIEW_REPORTS,
         PERMISSIONS.VIEW_DASHBOARD,
         PERMISSIONS.MANAGE_EVENTS,
     ],
+    [ROLES.MEMBER]: [
+        PERMISSIONS.VIEW_ALL_DOCUMENTS,
+        PERMISSIONS.VIEW_REPORTS,
+        PERMISSIONS.VIEW_DASHBOARD,
+    ],
 };
 
 export const NAV_ACCESS_RULES = {
-    '/': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER, ROLES.VIEWER],
-    '/encode': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
-    '/ppmp': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
-    '/app': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
-    '/pr': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER],
-    '/reports': [ROLES.ADMIN, ROLES.USER, ROLES.ENCODER, ROLES.VIEWER],
+    '/': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
+    '/encode': [ROLES.ADMIN, ROLES.SECRETARIAT],
+    '/ppmp': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
+    '/app': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
+    '/pr': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
+    '/reports': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
     '/personnel': [ROLES.ADMIN],
     '/audit-trail': [ROLES.ADMIN],
 };
@@ -100,26 +105,29 @@ export const getRoleDisplayName = (role) => {
  */
 export const getAvailableRoles = () => [
     { value: ROLES.ADMIN, label: ROLE_DISPLAY_NAMES[ROLES.ADMIN] },
-    { value: ROLES.USER, label: ROLE_DISPLAY_NAMES[ROLES.USER] },
+    { value: ROLES.SECRETARIAT, label: ROLE_DISPLAY_NAMES[ROLES.SECRETARIAT] },
+    { value: ROLES.MEMBER, label: ROLE_DISPLAY_NAMES[ROLES.MEMBER] },
 ];
 
 /**
  * Normalize legacy role values from backend
  */
-export const mapOldRoleToNew = (oldRole) => {
-    if (!oldRole) return ROLES.USER;
-    const r = String(oldRole).toLowerCase().trim();
+export const mapOldRoleToNew = (oldRole, position = '') => {
+    const r = String(oldRole || '').toLowerCase().trim();
+    const p = String(position || '').toLowerCase().trim();
     
     // Admin variants
     if (r === 'admin' || r === 'administrator') return ROLES.ADMIN;
     
-    // Encoder / Secretariat variants
-    if (r.includes('encoder') || r.includes('secretariat') || r.includes('editor')) return ROLES.ENCODER;
+    // Position-based mapping (Preferred)
+    if (p === 'bac secretariat') return ROLES.SECRETARIAT;
+    if (p === 'bac member') return ROLES.MEMBER;
     
-    // Viewer / Member variants
-    if (r.includes('viewer') || r.includes('guest') || r.includes('member')) return ROLES.VIEWER;
+    // Legacy mapping
+    if (r.includes('secretariat') || r.includes('encoder')) return ROLES.SECRETARIAT;
+    if (r.includes('member') || r.includes('viewer')) return ROLES.MEMBER;
     
-    return ROLES.USER;
+    return ROLES.MEMBER; // Default to least privileged new role
 };
 
 // --- Password Validation ---

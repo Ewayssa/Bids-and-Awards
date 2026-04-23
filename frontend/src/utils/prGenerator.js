@@ -39,7 +39,7 @@ export const generatePR_Excel = async (data) => {
         { width: 65 }, // Description (C)
         { width: 9 },  // Quantity (D)
         { width: 15 }, // Unit Cost (E)
-        { width: 22 }, // Total Cost (F)
+        { width: 28 }, // Total Cost (F) - Increased width to prevent Fund Cluster overlap
     ];
 
     // Helper: Apply Border to a single cell
@@ -89,11 +89,15 @@ export const generatePR_Excel = async (data) => {
     applyRangeBorder('A3', 'E3');
     
     const fundCell = worksheet.getCell('F3');
-    fundCell.value = ` Fund Cluster: ___________`;
-    fundCell.font = { name: 'Arial', bold: true, size: 10 };
-    fundCell.alignment = { vertical: 'middle', horizontal: 'left' };
+    fundCell.value = {
+        richText: [
+            { font: { bold: true, size: 10, name: 'Arial' }, text: 'Fund Cluster: ' },
+            { font: { bold: true, size: 10, name: 'Arial', underline: 'single' }, text: '                       ' }
+        ]
+    };
+    fundCell.alignment = { vertical: 'bottom', horizontal: 'left', indent: 1 };
     applyBorder(fundCell);
-    worksheet.getRow(3).height = 25;
+    worksheet.getRow(3).height = 35; 
 
     // Row 4-5: Office/Section, PR No, Date
     worksheet.mergeCells('A4:B5');
@@ -104,11 +108,15 @@ export const generatePR_Excel = async (data) => {
     applyRangeBorder('A4', 'B5');
 
     worksheet.mergeCells('C4:E4');
-    const prNoCell = worksheet.getCell('C4');
-    prNoCell.value = `PR No.: ${prNo || '________________'}`;
-    prNoCell.font = { name: 'Arial', bold: true, size: 10 };
-    prNoCell.alignment = { horizontal: 'left', vertical: 'middle' };
-    applyRangeBorder('C4', 'E4');
+    const prNoCell = worksheet.getCell('E4');
+    prNoCell.value = {
+        richText: [
+            { font: { bold: true, size: 10, name: 'Arial' }, text: 'PR No.: ' },
+            { font: { bold: true, size: 10, name: 'Arial', underline: 'single' }, text: '                        ' }
+        ]
+    };
+    prNoCell.alignment = { vertical: 'bottom', horizontal: 'left', indent: 1 };
+    applyRangeBorder('E4', 'F4');
 
     worksheet.mergeCells('F4:F5');
     const dateCell = worksheet.getCell('F4');
@@ -118,11 +126,15 @@ export const generatePR_Excel = async (data) => {
     applyRangeBorder('F4', 'F5');
 
     worksheet.mergeCells('C5:E5');
-    const respCodeCell = worksheet.getCell('C5');
-    respCodeCell.value = 'Responsibility Center Code : ________________';
-    respCodeCell.font = { name: 'Arial', bold: true, size: 10 };
-    respCodeCell.alignment = { horizontal: 'left', vertical: 'middle' };
-    applyRangeBorder('C5', 'E5');
+    const resCodeCell = worksheet.getCell('C6');
+    resCodeCell.value = {
+        richText: [
+            { font: { bold: true, size: 10, name: 'Arial' }, text: 'Responsibility Center Code : ' },
+            { font: { bold: true, size: 10, name: 'Arial', underline: 'single' }, text: '                ' }
+        ]
+    };
+    resCodeCell.alignment = { vertical: 'bottom', horizontal: 'left', indent: 1 };
+    applyRangeBorder('C6', 'F6');
     worksheet.getRow(4).height = 25;
     worksheet.getRow(5).height = 25;
 
@@ -155,8 +167,8 @@ export const generatePR_Excel = async (data) => {
             itemTotal
         ];
         
-        row.getCell(5).numFmt = '#,##0.00';
-        row.getCell(6).numFmt = '#,##0.00';
+        row.getCell(5).numFmt = '"₱"#,##0.00';
+        row.getCell(6).numFmt = '"₱"#,##0.00';
         row.getCell(3).alignment = { wrapText: true, vertical: 'top' };
         row.eachCell((cell) => applyBorder(cell));
         currentRow++;
@@ -184,7 +196,7 @@ export const generatePR_Excel = async (data) => {
     
     const totalValueCell = worksheet.getCell(`F${currentRow}`);
     totalValueCell.value = parseFloat(total) || 0;
-    totalValueCell.numFmt = '#,##0.00';
+    totalValueCell.numFmt = '"₱"#,##0.00';
     totalValueCell.font = { name: 'Arial', bold: true };
     totalValueCell.alignment = { horizontal: 'right', vertical: 'middle' };
     applyBorder(totalValueCell);
@@ -193,9 +205,9 @@ export const generatePR_Excel = async (data) => {
     // Purpose Row
     worksheet.mergeCells(`A${currentRow}:F${currentRow + 1}`);
     const purposeCell = worksheet.getCell(`A${currentRow}`);
-    purposeCell.value = `Purpose: ${title || ''}`;
-    purposeCell.font = { name: 'Arial', size: 10 };
-    purposeCell.alignment = { vertical: 'top', wrapText: true };
+    purposeCell.value = 'Purpose: ';
+    purposeCell.font = { name: 'Arial', size: 10, bold: true };
+    purposeCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 };
     applyRangeBorder(`A${currentRow}`, `F${currentRow + 1}`);
     currentRow += 2;
 

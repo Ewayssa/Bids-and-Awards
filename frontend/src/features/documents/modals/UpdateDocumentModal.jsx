@@ -91,7 +91,14 @@ const UpdateDocumentModal = ({
                                     </div>
                                     <div className="field-group">
                                         <label className="label">PR No.</label>
-                                        <input type="text" value={form.user_pr_no} onChange={(e) => setForm((f) => ({ ...f, user_pr_no: toNumbersOnly(e.target.value) }))} className="input-field" placeholder="Enter PR number" />
+                                        <input 
+                                            type="text" 
+                                            value={form.user_pr_no} 
+                                            onChange={(e) => setForm((f) => ({ ...f, user_pr_no: toNumbersOnly(e.target.value) }))} 
+                                            className={`input-field ${!(isAdmin || user?.role === 'bac_member') ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
+                                            placeholder={!(isAdmin || user?.role === 'bac_member') ? "Pending Member Assignment" : "Enter PR number"}
+                                            readOnly={!(isAdmin || user?.role === 'bac_member')}
+                                        />
                                     </div>
                                 </div>
                                 <div className="field-group">
@@ -112,7 +119,14 @@ const UpdateDocumentModal = ({
                                     </div>
                                     <div className="field-group">
                                         <label className="label">PR No.</label>
-                                        <input type="text" value={form.user_pr_no} onChange={(e) => setForm((f) => ({ ...f, user_pr_no: e.target.value }))} className="input-field" placeholder="Enter PR number" />
+                                        <input 
+                                            type="text" 
+                                            value={form.user_pr_no} 
+                                            onChange={(e) => setForm((f) => ({ ...f, user_pr_no: e.target.value }))} 
+                                            className={`input-field ${!(isAdmin || user?.role === 'bac_member') ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
+                                            placeholder={!(isAdmin || user?.role === 'bac_member') ? "Pending Member Assignment" : "Enter PR number"}
+                                            readOnly={!(isAdmin || user?.role === 'bac_member')}
+                                        />
                                     </div>
                                 </div>
                                 <div className="field-group">

@@ -175,7 +175,7 @@ const CreatePRModal = ({
             }
         } catch (err) {
             console.error('Submission error:', err);
-            setError('Failed to create PR and supporting documents. Please try again.');
+            setError(err.response?.data?.error || 'Failed to create PR and supporting documents. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -283,16 +283,30 @@ const CreatePRModal = ({
                         </motion.div>
                     )}
 
-                    {!isSuccess && error && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl flex items-center gap-3"
-                        >
-                            <MdInfo className="w-5 h-5 text-red-500 shrink-0" />
-                            <p className="text-sm font-semibold text-red-600 dark:text-red-400">{error}</p>
-                        </motion.div>
-                    )}
+                    <AnimatePresence>
+                        {!isSuccess && error && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ 
+                                    opacity: 1, 
+                                    x: [0, -5, 5, -5, 5, 0], // Shake effect
+                                    scale: 1 
+                                }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.4 }}
+                                className="p-5 bg-red-50 dark:bg-red-900/30 border-2 border-red-200 dark:border-red-800 rounded-3xl flex items-start gap-4 shadow-lg shadow-red-500/5 group"
+                            >
+                                <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-800/50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <MdInfo className="w-6 h-6 text-red-600" />
+                                </div>
+                                <div className="flex-1 pt-1">
+                                    <p className="text-sm font-bold text-red-600 dark:text-red-400 leading-relaxed">
+                                        {error.split('"').map((part, i) => i % 2 === 1 ? <span key={i} className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 rounded-lg text-red-800 dark:text-red-200 font-black">"{part}"</span> : part)}
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {/* Connection & Attachments Section */}
                     <div className="flex flex-col sm:flex-row items-end gap-4">

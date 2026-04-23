@@ -13,6 +13,7 @@ import {
     MdDescription,
     MdChevronLeft,
     MdChevronRight,
+    MdLabel
 } from 'react-icons/md';
 import PageHeader from '../../components/PageHeader';
 import { TABLE_PAGE_SIZE } from '../../utils/constants';
@@ -29,6 +30,7 @@ import PreviewModal from './modals/PreviewModal';
 import ProcurementDocumentModal from "./modals/ProcurementDocumentModal";
 import ProcurementWorkflowView from "./ProcurementWorkflowView";
 import { generatePR_Excel } from "../../utils/prGenerator";
+import PPMPFolderModal from "./modals/PPMPFolderModal";
 
 const Encode = ({ user }) => {
     const [searchParams] = useSearchParams();
@@ -38,6 +40,7 @@ const Encode = ({ user }) => {
     const [alertMessage, setAlertMessage] = useState(null);
     const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
@@ -56,16 +59,18 @@ const Encode = ({ user }) => {
     const [activeChecklistCategoryId, setActiveChecklistCategoryId] = useState(null);
     const [selectedProcurementRecord, setSelectedProcurementRecord] = useState(null);
     const [procurementRecords, setProcurementRecords] = useState([]);
+    const [selectedPPMP, setSelectedPPMP] = useState(null);
+    const [selectedPPMPDocs, setSelectedPPMPDocs] = useState([]);
 
     const isAdmin = user?.role === ROLES.ADMIN;
-    const canUploadDocuments = [ROLES.ADMIN, ROLES.ENCODER, ROLES.USER].includes(user?.role);
-    const canViewAllDocuments = [ROLES.ADMIN, ROLES.VIEWER, ROLES.ENCODER, ROLES.USER].includes(user?.role);
+    const canUploadDocuments = [ROLES.ADMIN, ROLES.SECRETARIAT].includes(user?.role);
+    const canViewAllDocuments = [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER].includes(user?.role);
 
     const load = async () => {
         setLoading(true);
+        setError(null);
         try {
-            const [dashboardData, docsResponse, recordsResponse] = await Promise.all([
-                dashboardService.getData(true, ''),
+            const [docsResponse, recordsResponse] = await Promise.all([
                 documentService.getAll(),
                 procurementRecordService.getAll(),
             ]);
@@ -79,12 +84,15 @@ const Encode = ({ user }) => {
             
             setDocuments(sortedDocs);
             setProcurementRecords(recordsResponse);
-            setPendingBreakdown(dashboardData?.pendingBreakdown ?? []);
+            
+            // Non-blocking dashboard load
+            dashboardService.getData(true, '').then(data => {
+                setPendingBreakdown(data?.pendingBreakdown ?? []);
+            }).catch(e => console.error('Dashboard load failed:', e));
+
         } catch (e) {
             console.error('Load failed:', e);
-            setDocuments([]);
-            setProcurementRecords([]);
-            setPendingBreakdown([]);
+            setError(e.message || 'Failed to load documents');
         } finally {
             setLoading(false);
         }
@@ -238,6 +246,17 @@ const Encode = ({ user }) => {
                 groups[prNo] = [];
             }
             groups[prNo].push(doc);
+        });
+        return groups;
+    }, [filteredDocuments]);
+
+    // Group documents by PPMP No for the Folder view
+    const ppmpGroups = useMemo(() => {
+        const groups = {};
+        filteredDocuments.forEach(doc => {
+            const ppmp = (doc.ppmp_no || 'Unassigned').trim();
+            if (!groups[ppmp]) groups[ppmp] = [];
+            groups[ppmp].push(doc);
         });
         return groups;
     }, [filteredDocuments]);
@@ -602,19 +621,29 @@ const Encode = ({ user }) => {
         setActiveModal('detailedWorkflow');
     };
 
+    const handleOpenPPMPFolder = (ppmpNo) => {
+        setSelectedPPMP(ppmpNo);
+        setSelectedPPMPDocs(ppmpGroups[ppmpNo] || []);
+        // Find if there's a matching procurement record for this PPMP
+        // If multiple exist, we just take the first one or link to a general view
+        const matchingRecord = procurementRecords.find(r => r.ppmp_no === ppmpNo);
+        setSelectedProcurementRecord(matchingRecord);
+        setActiveModal('ppmpFolder');
+    };
+
 
     return (
         <div className="min-h-full pb-12">
             <PageHeader
                 title="Procurement Records"
-                subtitle="Create new procurement records and keep document details complete and updated."
+                subtitle="Consolidated view of all procurement documents grouped by PPMP classification."
             >
             </PageHeader>
 
             <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0 shadow-lg shadow-slate-200/50">
 
 
-                {/* Procurement Records Section */}
+                {/* Procurement Records Section - UPLOADED PROCUREMENT */}
                 <div className="p-6 sm:p-8 bg-[var(--background-subtle)]/30">
                     <div className="flex items-center justify-between mb-8 overflow-hidden">
                         <div className="flex items-center gap-4">
@@ -622,12 +651,14 @@ const Encode = ({ user }) => {
                                 <MdTimeline className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Active Procurement Projects</h3>
+                                <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">
+                                    Uploaded Procurement
+                                </h3>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">
-                            <span className="text-xs font-black text-[var(--primary)]">{procurementRecords.length}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Projects</span>
+                            <span className="text-xs font-black text-[var(--primary)]">{Object.keys(ppmpGroups).length}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Folders</span>
                         </div>
                     </div>
 
@@ -636,65 +667,78 @@ const Encode = ({ user }) => {
                             Array(3).fill(0).map((_, i) => (
                                 <div key={i} className="h-48 rounded-3xl bg-slate-100 animate-pulse" />
                             ))
-                        ) : procurementRecords.length > 0 ? (
-                            procurementRecords.map((record) => (
-                                <div 
-                                    key={record.id}
-                                    onClick={() => handleOpenWorkflow(record)}
-                                    className="group cursor-pointer bg-white dark:bg-slate-900 rounded-[2rem] p-6 border-2 border-transparent hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-2xl hover:shadow-[var(--primary)]/10 flex flex-col gap-4 relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                                    
-                                    <div className="flex items-start justify-between relative z-10">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-300">
-                                                {record.procurement_type === 'lease_of_venue' ? '🏢' : 
-                                                 record.procurement_type === 'small_value' ? '📋' : 
-                                                 record.procurement_type === 'public_bidding' ? '📢' : '🤝'}
-                                            </div>
-                                            <div>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Tracking ID: {record.id?.toString().slice(0,8) || 'N/A'}</p>
-                                                <p className="text-xs font-black text-[var(--primary)] uppercase">PR No: {record.pr_no}</p>
-                                            </div>
-                                        </div>
-                                        <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                                            record.status === 'awarded' || record.status === 'closed' 
-                                                ? 'bg-emerald-100 text-emerald-600 border-emerald-200' 
-                                                : record.status === 'draft' 
-                                                    ? 'bg-slate-100 text-slate-500 border-slate-200'
-                                                    : 'bg-blue-100 text-blue-600 border-blue-200'
-                                        }`}>
-                                            {record.status}
-                                        </div>
-                                    </div>
-
-                                    <div className="relative z-10 flex-1">
-                                        <h4 className="text-lg font-black text-slate-900 dark:text-white leading-tight line-clamp-2 group-hover:text-[var(--primary)] transition-colors duration-300">
-                                            {record.title}
-                                        </h4>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">
-                                            {record.procurement_type_display || record.procurement_type}
-                                        </p>
-                                    </div>
-
-                                    <div className="pt-4 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between relative z-10">
-                                        <div className="flex flex-col">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Budget (ABC)</span>
-                                            <span className="text-xs font-black text-slate-900 dark:text-slate-200">₱{record.total_amount ? formatCurrencyValue(record.total_amount) : '0.00'}</span>
-                                        </div>
-                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-[var(--primary)] group-hover:text-white transition-all duration-300 shadow-sm">
-                                            <MdChevronRight className="w-6 h-6" />
-                                        </div>
-                                    </div>
+                        ) : error ? (
+                            <div className="col-span-full py-20 bg-red-50 rounded-[2rem] border-2 border-dashed border-red-200 flex flex-col items-center justify-center text-center">
+                                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4 text-red-400">
+                                    <MdClose className="w-8 h-8" />
                                 </div>
-                            ))
+                                <h4 className="text-lg font-bold text-red-600">Loading Error</h4>
+                                <p className="text-xs text-red-400 mt-2 uppercase tracking-widest font-black">{error}</p>
+                                <button onClick={load} className="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Retry</button>
+                            </div>
+                        ) : Object.keys(ppmpGroups).length > 0 ? (
+                            Object.keys(ppmpGroups).sort((a, b) => {
+                                // Sort by latest document's upload time (LIFO)
+                                const latestA = Math.max(...ppmpGroups[a].map(d => new Date(d.uploaded_at).getTime()));
+                                const latestB = Math.max(...ppmpGroups[b].map(d => new Date(d.uploaded_at).getTime()));
+                                return latestB - latestA;
+                            }).map((ppmpNo) => {
+                                const docs = ppmpGroups[ppmpNo];
+                                const hasPPMP = docs.some(d => (d.subDoc || '').includes('PPMP'));
+                                const hasPR = docs.some(d => (d.subDoc || '').includes('Purchase Request'));
+                                const prNo = docs.find(d => d.prNo && d.prNo !== 'Unassigned')?.prNo || 'Pending';
+                                
+                                return (
+                                    <div 
+                                        key={ppmpNo}
+                                        onClick={() => handleOpenPPMPFolder(ppmpNo)}
+                                        className="group cursor-pointer bg-white dark:bg-slate-900 rounded-3xl p-5 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-2xl hover:shadow-[var(--primary)]/10 flex flex-col gap-3 relative overflow-hidden"
+                                    >
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                                        
+                                        <div className="flex items-start justify-between relative z-10">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                                    📂
+                                                </div>
+                                            </div>
+                                            <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-slate-700">
+                                                {docs.length} Documents
+                                            </div>
+                                        </div>
+
+                                        <div className="relative z-10 flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h4 className="text-base font-black text-slate-900 dark:text-white leading-tight group-hover:text-[var(--primary)] transition-colors duration-300">
+                                                    PPMP: {ppmpNo?.replace(/Market scoping\s*(for)?\s*/gi, '')}
+                                                </h4>
+                                            </div>
+                                            {docs.find(d => d.user_pr_no) && (
+                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-100 dark:border-emerald-800/50 w-fit mt-1">
+                                                    <MdLabel className="w-3 h-3" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">{docs.find(d => d.user_pr_no).user_pr_no}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-end relative z-10">
+                                            <div className="flex items-center gap-2 text-[var(--primary)] font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                                Open Folder
+                                                <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white shadow-sm">
+                                                    <MdChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         ) : (
                             <div className="col-span-full py-20 bg-white/50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
                                 <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4 text-slate-300">
                                     <MdDescription className="w-8 h-8" />
                                 </div>
                                 <h4 className="text-lg font-bold text-slate-400">No Active Projects</h4>
-                                <p className="text-xs text-slate-400 mt-2 uppercase tracking-widest font-black">Begin a new procurement folder to track progress</p>
+                                <p className="text-xs text-slate-400 mt-2 uppercase tracking-widest font-black">Group documents by PPMP No to see them here</p>
                             </div>
                         )}
                     </div>
@@ -724,6 +768,17 @@ const Encode = ({ user }) => {
                     setSelectedWorkflowFolder(null);
                 }}
                 prNo={selectedWorkflowFolder}
+            />
+
+            <PPMPFolderModal
+                isOpen={activeModal === 'ppmpFolder'}
+                onClose={() => {
+                    setActiveModal(null);
+                    setSelectedPPMP(null);
+                    setSelectedPPMPDocs([]);
+                }}
+                ppmpNo={selectedPPMP}
+                documents={selectedPPMPDocs}
             />
 
             <ProcurementDocumentModal
