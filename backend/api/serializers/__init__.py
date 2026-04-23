@@ -99,6 +99,32 @@ class DocumentSerializer(serializers.ModelSerializer):
     def get_missing_count(self, obj):
         return get_document_missing_count(obj)
 
+    missing_package_files = serializers.SerializerMethodField()
+    def get_missing_package_files(self, obj):
+        """Identify which of the mandatory 'Big Three' files are missing."""
+        sub_doc = (obj.subDoc or '').strip()
+        # Only care about this for the main procurement pack
+        if sub_doc not in {'Purchase Request', 'Requisition and Issue Slip', 'Market Scoping', 'Activity Design'}:
+            return []
+            
+        required = {'Requisition and Issue Slip', 'Market Scoping', 'Activity Design'}
+        
+        # 1. Check folder first
+        if obj.procurement_record:
+            submitted = set(obj.procurement_record.documents.filter(file__isnull=False).exclude(file='').values_list('subDoc', flat=True))
+        else:
+            # Fallback to loose PR/PPMP number search
+            from ..models import Document
+            from django.db.models import Q
+            pr = (obj.prNo or '').strip()
+            ppmp = (obj.ppmp_no or '').strip()
+            filters = Q()
+            if pr: filters |= Q(prNo=pr)
+            if ppmp: filters |= Q(ppmp_no=ppmp)
+            submitted = set(Document.objects.filter(filters).filter(file__isnull=False).exclude(file='').values_list('subDoc', flat=True)) if (pr or ppmp) else set()
+            
+        return list(required - submitted)
+
     class Meta:
         model = Document
         fields = (
@@ -116,7 +142,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             'oss_authorized_rep', 'secretary_service_provider', 'secretary_owner_rep', 
             'pr_items',
             'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at', 
-            'status', 'file_url', 'missing_count', 'procurement_record'
+            'status', 'file_url', 'missing_count', 'missing_package_files', 'procurement_record'
         )
         extra_kwargs = {
             'file': {'required': False},

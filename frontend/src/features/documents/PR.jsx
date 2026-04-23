@@ -4,6 +4,7 @@ import { MdReceipt, MdAdd, MdCheck, MdClose } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import CreatePRModal from './modals/CreatePRModal';
 import DocViewModal from './modals/DocViewModal';
+import DocUploadModal from './modals/DocUploadModal';
 import { generatePR_Excel } from '../../utils/prGenerator';
 import { documentService } from '../../services/api';
 
@@ -12,6 +13,8 @@ const PR = ({ user }) => {
     const [prs, setPrs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState(null);
+    const [uploadingMissingType, setUploadingMissingType] = useState(null);
+    const [selectedFileForUpload, setSelectedFileForUpload] = useState(null);
     const [editingPrId, setEditingPrId] = useState(null);
     const [assignValue, setAssignValue] = useState('');
     const [assigning, setAssigning] = useState(false);
@@ -116,50 +119,66 @@ const PR = ({ user }) => {
 
                 {prs.length > 0 ? (
                     <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
-                        <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden">
-                            <colgroup>
-                                <col className="w-[25%]" />
-                                <col className="w-[20%]" />
-                                <col className="w-[15%]" />
-                                <col className="w-[25%]" />
-                                <col className="w-[15%]" />
-                            </colgroup>
-                            <thead className="table-header">
-                                <tr>
-                                    <th className="table-th !text-center !px-4">PR No.</th>
-                                    <th className="table-th !text-center !px-4">PPMP No.</th>
-                                    <th className="table-th !text-center !px-4">Total Cost</th>
-                                    <th className="table-th !text-center !px-4">Date Uploaded</th>
-                                    <th className="table-th !text-center !px-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {prs.map((item, idx) => (
-                                    <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <button 
-                                                onClick={() => handleQuickView(item)}
-                                                className={`text-xs font-black transition-all truncate text-center hover:text-slate-900 dark:hover:text-white block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
-                                            >
-                                                {item.user_pr_no || 'No PR # Assigned'}
-                                            </button>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700 font-mono">
-                                                {item.ppmp_no || 'UNLINKED'}
-                                            </span>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="text-sm font-black text-emerald-600 font-mono whitespace-nowrap">
-                                                ₱{parseFloat(item.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </span>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
-                                                {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : item.date || '-'}
-                                            </span>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden text-center">
+                                    <colgroup>
+                                        <col className="w-[20%]" />
+                                        <col className="w-[15%]" />
+                                        <col className="w-[12%]" />
+                                        <col className="w-[18%]" />
+                                        <col className="w-[12%]" />
+                                        <col className="w-[23%]" />
+                                    </colgroup>
+                                    <thead className="table-header">
+                                        <tr>
+                                            <th className="table-th !text-center !px-4">PR No.</th>
+                                            <th className="table-th !text-center !px-4">PPMP No.</th>
+                                            <th className="table-th !text-center !px-4">Total Cost</th>
+                                            <th className="table-th !text-center !px-4">Date Uploaded</th>
+                                            <th className="table-th !text-center !px-4">Status</th>
+                                            <th className="table-th !text-center !px-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {prs.map((item, idx) => {
+                                            // Format status for display
+                                            const statusLabels = {
+                                                'complete': { label: 'Completed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                                                'ongoing': { label: 'On Going', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+                                                'pending': { label: 'Pending', color: 'bg-slate-50 text-slate-600 border-slate-200' }
+                                            };
+                                            const status = statusLabels[item.status] || statusLabels.pending;
+
+                                            return (
+                                                <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <button 
+                                                            onClick={() => handleQuickView(item)}
+                                                            className={`text-xs font-black transition-all truncate text-center hover:text-slate-900 dark:hover:text-white block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
+                                                        >
+                                                            {item.user_pr_no || 'No PR # Assigned'}
+                                                        </button>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700 font-mono">
+                                                            {item.ppmp_no || 'UNLINKED'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className="text-sm font-black text-emerald-600 font-mono whitespace-nowrap">
+                                                            ₱{parseFloat(item.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
+                                                            {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : item.date || '-'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight border ${status.color}`}>
+                                                            {status.label}
+                                                        </span>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <div className="flex justify-center items-center gap-2">
                                                 {editingPrId === item.id ? (
                                                     <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
@@ -195,21 +214,27 @@ const PR = ({ user }) => {
                                                                 {item.user_pr_no ? 'Update PR #' : 'Assign PR #'}
                                                             </button>
                                                         )}
-                                                        <button
-                                                            onClick={() => handleQuickView(item)}
-                                                            className="btn-action-ghost !text-[10px] !py-1"
-                                                            title="Download PR"
-                                                        >
-                                                            Download
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                                                    <button
+                                                                        onClick={() => setSelectedDoc(item)}
+                                                                        className="px-6 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-full font-black uppercase tracking-widest text-[9px] hover:scale-110 active:scale-95 transition-all shadow-xl shadow-slate-900/20"
+                                                                    >
+                                                                        View
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleQuickView(item)}
+                                                                        className="px-6 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-full font-black uppercase tracking-widest text-[9px] border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95 shadow-lg"
+                                                                    >
+                                                                        Download
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                     </div>
                 ) : (
                     <div className="p-6 sm:p-8 bg-[var(--background-subtle)]/30 min-h-[400px] flex flex-col items-center justify-center text-center">
@@ -235,6 +260,36 @@ const PR = ({ user }) => {
                 <DocViewModal 
                     doc={selectedDoc} 
                     onClose={() => setSelectedDoc(null)} 
+                    onUploadMissing={(type, file) => {
+                        setUploadingMissingType(type);
+                        setSelectedFileForUpload(file);
+                    }}
+                />
+            )}
+
+            {uploadingMissingType && selectedDoc && (
+                <DocUploadModal
+                    isOpen={true}
+                    onClose={() => {
+                        setUploadingMissingType(null);
+                        setSelectedFileForUpload(null);
+                    }}
+                    docType={uploadingMissingType}
+                    targetDoc={selectedDoc}
+                    initialFile={selectedFileForUpload}
+                    user={user}
+                    onSuccess={async (newDoc) => {
+                        await fetchPRs();
+                        // Corrected: use 'subDoc' instead of 'doc_type' to match backend
+                        if (newDoc && newDoc.subDoc === 'Purchase Request') {
+                            setSelectedDoc({...newDoc});
+                        } else {
+                            // If it's a linked doc, re-fetch to get updated parent state
+                            const data = await documentService.getAll({ subDoc: 'Purchase Request' });
+                            const updated = data.find(p => p.id === selectedDoc.id);
+                            if (updated) setSelectedDoc({...updated});
+                        }
+                    }}
                 />
             )}
         </div>

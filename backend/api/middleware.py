@@ -28,8 +28,9 @@ class SecureHeadersMiddleware:
         response = self.get_response(request)
         media_url = getattr(settings, "MEDIA_URL", "/media/")
 
-        # Allow embedding report preview in iframe (so View shows file in modal)
-        if '/api/reports/' in request.path and '/preview/' in request.path:
+        # Allow embedding document/report preview in iframe (so View shows file in modal)
+        is_preview = '/preview/' in request.path
+        if is_preview and (request.path.startswith('/api/reports/') or request.path.startswith('/api/upload/')):
             response['X-Frame-Options'] = 'SAMEORIGIN'
         # Media files: allow embedding, force inline
         elif request.path.startswith(media_url):

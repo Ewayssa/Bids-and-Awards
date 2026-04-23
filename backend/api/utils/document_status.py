@@ -83,31 +83,62 @@ class DocumentStatusCalculator:
 
     @classmethod
     def calculate_status(cls, document) -> str:
-        """Calculate document status based on completeness requirements.
-
-        Logic:
-        - Complete: all required fields and file present.
-        - Ongoing: file uploaded OR some fields filled, but not complete.
-        - Pending: only basic identification fields present (no file, no specific data).
-        """
+        """Calculate document status based on submission requirements."""
         sub_doc = (document.subDoc or '').strip()
 
-        # Check for full completeness
-        is_complete = True
+        # 1. Fundamental Package Submission Check (Mandatory for key procurement files)
+        package_related = sub_doc in {'Purchase Request', 'Requisition and Issue Slip', 'Market Scoping', 'Activity Design'}
+        if package_related:
+            required_package = {'Requisition and Issue Slip', 'Market Scoping', 'Activity Design'}
+            
+            # Find related documents by Folder or PR/PPMP fallback
+            from api.models import Document
+            pr_no = (document.prNo or '').strip()
+            ppmp_no = (document.ppmp_no or '').strip()
+            folder = document.procurement_record
+            
+            if folder:
+                # Get subDocs that actually have a file attached
+                submitted_docs = set(folder.documents.filter(file__isnull=False).exclude(file='').values_list('subDoc', flat=True))
+            else:
+                from django.db.models import Q
+                filters = Q()
+                if pr_no: filters |= Q(prNo=pr_no)
+                if ppmp_no: filters |= Q(ppmp_no=ppmp_no)
+                submitted_docs = set(Document.objects.filter(filters).filter(file__isnull=False).exclude(file='').values_list('subDoc', flat=True))
+
+            # The package is complete if RIS, MS, AD are all SUBMITTED and CURRENT file exists
+            if required_package.issubset(submitted_docs):
+                current_has_file = bool(document.file)
+                if current_has_file and hasattr(document.file, 'name'):
+                    current_has_file = bool(document.file.name and str(document.file.name).strip())
+                
+                if current_has_file:
+                    return 'complete'
+
+            # Otherwise, if it has a file, it's at least 'ongoing'
+            current_has_file = bool(document.file)
+            if current_has_file and hasattr(document.file, 'name'):
+                current_has_file = bool(document.file.name and str(document.file.name).strip())
+            
+            if current_has_file:
+                return 'ongoing'
+
+        # 2. Individual Completeness Fallback (for non-package documents)
+        id_complete = True
         ignore_prno = cls.is_new_procurement(document)
         
         if not cls._has_basic_fields(document, ignore_prno=ignore_prno):
-            is_complete = False
+            id_complete = False
         elif not cls._has_subdoc_specific_fields(document, sub_doc):
-            is_complete = False
+            id_complete = False
         elif not cls._has_required_file(document, sub_doc):
-            is_complete = False
+            id_complete = False
 
-        if is_complete:
+        if id_complete:
             return 'complete'
 
-        # If not complete, check if it has started (file or partial data)
-        # Check actual file existence for 'ongoing' determination
+        # 3. Partial Submission Check
         actual_has_file = bool(document.file)
         if actual_has_file and hasattr(document.file, 'name'):
             actual_has_file = bool(document.file.name and str(document.file.name).strip())

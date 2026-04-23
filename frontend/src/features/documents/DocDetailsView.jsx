@@ -28,7 +28,6 @@ const DocDetailsView = ({ doc }) => {
                     <>
                         <DocDetailItem label="Purpose" value={doc.title} />
                         <DocDetailItem label="PR No." value={doc.user_pr_no} isPRNo={true} />
-                        <DocDetailItem label="Total Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
                     </>
                 );
             case 'Activity Design':
@@ -37,7 +36,6 @@ const DocDetailsView = ({ doc }) => {
                         <DocDetailItem label="Title" value={doc.title} />
                         <DocDetailItem label="PR No." value={doc.user_pr_no} isPRNo={true} />
                         <DocDetailItem label="Source of Fund" value={doc.source_of_fund} />
-                        <DocDetailItem label="Total Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
                     </>
                 );
             case 'Project Procurement Management Plan/Supplemental PPMP':
@@ -46,7 +44,6 @@ const DocDetailsView = ({ doc }) => {
                         <DocDetailItem label="Title" value={doc.title} />
                         <DocDetailItem label="PPMP No." value={doc.ppmp_no} />
                         <DocDetailItem label="Source of Fund" value={doc.source_of_fund} />
-                        <DocDetailItem label="Total Budget" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
                     </>
                 );
             case 'Annual Procurement Plan':
@@ -88,7 +85,6 @@ const DocDetailsView = ({ doc }) => {
                         <DocDetailItem label="Resolution No." value={doc.resolution_no} />
                         <DocDetailItem label="Title" value={doc.title} />
                         <DocDetailItem label="Winning Bidder" value={doc.winning_bidder} />
-                        <DocDetailItem label="Amount" value={doc.total_amount ? `₱${Number(doc.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
                         <DocDetailItem label="Office/Division" value={doc.office_division} />
                         <DocDetailItem label="Venue" value={doc.venue} />
                     </>
@@ -132,44 +128,9 @@ const DocDetailsView = ({ doc }) => {
 
     return (
         <div className="flex flex-col bg-[var(--surface)]">
-            <div className="p-4 border-b border-[var(--border)] bg-[var(--background-subtle)]/30">
-                <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-green-50 text-green-600">
-                        <MdDescription className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <h4 className="text-sm font-bold text-[var(--text)] tracking-tight">Procurement Details</h4>
-                        <p className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-widest">{doc.subDoc}</p>
-                    </div>
-                </div>
-            </div>
             
             <div className="p-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4 items-start">
-                    <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full shadow-sm ${
-                                doc.status === 'complete' ? 'bg-emerald-500 shadow-emerald-500/40' :
-                                doc.status === 'ongoing' ? 'bg-amber-500 shadow-amber-500/40' :
-                                'bg-rose-500 shadow-rose-500/40'
-                            }`} />
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                                doc.status === 'complete' ? 'text-emerald-600' :
-                                doc.status === 'ongoing' ? 'text-amber-600' :
-                                'text-rose-600'
-                            }`}>
-                                {doc.status || 'pending'}
-                            </span>
-                        </div>
-                        <DocDetailItem label="BAC Folder No." value={doc.prNo} />
-                    </div>
-                    
-                    <div className="pt-5">
-                        <DocDetailItem label="Date Encoding" value={formatDisplayDate(doc.date) || '—'} />
-                    </div>
-                </div>
-                
-                <div className="pt-4 border-t border-[var(--border-light)] grid grid-cols-2 gap-x-4 gap-y-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                     {renderSpecificFields()}
                 </div>
             </div>

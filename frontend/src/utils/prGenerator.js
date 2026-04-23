@@ -18,7 +18,7 @@ export const generatePR_Excel = async (data) => {
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Purchase Request');
-    
+
     // Page Setup for Multi-page support
     worksheet.pageSetup = {
         paperSize: 9, // A4
@@ -87,7 +87,7 @@ export const generatePR_Excel = async (data) => {
     entityCell.font = { name: 'Arial', bold: true, size: 10 };
     entityCell.alignment = { vertical: 'middle', horizontal: 'left' };
     applyRangeBorder('A3', 'E3');
-    
+
     const fundCell = worksheet.getCell('F3');
     fundCell.value = {
         richText: [
@@ -97,7 +97,7 @@ export const generatePR_Excel = async (data) => {
     };
     fundCell.alignment = { vertical: 'bottom', horizontal: 'left', indent: 1 };
     applyBorder(fundCell);
-    worksheet.getRow(3).height = 35; 
+    worksheet.getRow(3).height = 35;
 
     // Row 4-5: Office/Section, PR No, Date
     worksheet.mergeCells('A4:B5');
@@ -109,10 +109,11 @@ export const generatePR_Excel = async (data) => {
 
     worksheet.mergeCells('C4:E4');
     const prNoCell = worksheet.getCell('E4');
+    const prNoText = prNo ? `  ${prNo}` : '                        ';
     prNoCell.value = {
         richText: [
             { font: { bold: true, size: 10, name: 'Arial' }, text: 'PR No.: ' },
-            { font: { bold: true, size: 10, name: 'Arial', underline: 'single' }, text: '                        ' }
+            { font: { bold: true, size: 10, name: 'Arial', underline: 'single' }, text: prNoText }
         ]
     };
     prNoCell.alignment = { vertical: 'bottom', horizontal: 'left', indent: 1 };
@@ -166,7 +167,7 @@ export const generatePR_Excel = async (data) => {
             parseFloat(item.unit_cost) || 0,
             itemTotal
         ];
-        
+
         row.getCell(5).numFmt = '"₱"#,##0.00';
         row.getCell(6).numFmt = '"₱"#,##0.00';
         row.getCell(3).alignment = { wrapText: true, vertical: 'top' };
@@ -193,7 +194,7 @@ export const generatePR_Excel = async (data) => {
     totalLabelCell.font = { name: 'Arial', bold: true };
     totalLabelCell.alignment = { horizontal: 'right', vertical: 'middle' };
     applyRangeBorder(`A${currentRow}`, `E${currentRow}`);
-    
+
     const totalValueCell = worksheet.getCell(`F${currentRow}`);
     totalValueCell.value = parseFloat(total) || 0;
     totalValueCell.numFmt = '"₱"#,##0.00';
@@ -216,12 +217,12 @@ export const generatePR_Excel = async (data) => {
     const reqByCell = worksheet.getCell(`B${currentRow}`);
     reqByCell.value = 'Requested by:';
     reqByCell.alignment = { horizontal: 'left', vertical: 'middle' };
-    
+
     worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
     const appByCell = worksheet.getCell(`E${currentRow}`);
     appByCell.value = 'Approved by:';
     appByCell.alignment = { horizontal: 'left', vertical: 'middle' };
-    
+
     const sigHeaderRow = worksheet.getRow(currentRow);
     sigHeaderRow.font = { name: 'Arial', size: 10 }; // Not bold
     applyBorder(worksheet.getCell(`A${currentRow}`));
@@ -239,7 +240,7 @@ export const generatePR_Excel = async (data) => {
     sigLabels.forEach((l) => {
         const row = worksheet.getRow(currentRow);
         row.height = l.height;
-        
+
         // Label in Column A
         const labelCell = worksheet.getCell(`A${currentRow}`);
         labelCell.value = l.label;
