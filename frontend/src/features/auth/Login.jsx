@@ -177,7 +177,7 @@ const Login = ({ onLogin, infoMessage }) => {
                             Welcome back
                         </h2>
                         <p className="text-slate-500 dark:text-slate-400 mt-1">
-                            Please enter your details to sign in.
+                            Please enter your details to log in.
                         </p>
                     </div>
 
@@ -244,9 +244,9 @@ const Login = ({ onLogin, infoMessage }) => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Signing in...
+                                    Logging in...
                                 </span>
-                            ) : 'Sign in'}
+                            ) : 'Login'}
                         </button>
 
                         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2 text-sm">
@@ -299,7 +299,7 @@ const Login = ({ onLogin, infoMessage }) => {
                             onClick={closeForgotModal}
                             className="btn-primary w-full py-3 rounded-xl"
                         >
-                            Back to Sign In
+                            Back to Login
                         </button>
                     </div>
                 ) : (

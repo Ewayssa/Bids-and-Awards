@@ -27,7 +27,6 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
 
     const wedgePath = (startDeg, endDeg) => {
         if (endDeg <= startDeg) return '';
-        // Handle full circle case
         if (Math.abs(endDeg - startDeg) >= 360) {
             return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r} Z`;
         }
@@ -44,15 +43,16 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
 
     const sliceMeta = [
         { label: 'Completed', value: completed, pct: completedPct, color: '#10b981', fill: 'url(#pie-completed)', start: 0, end: completedEnd },
-        { label: 'On-going', value: ongoing, pct: ongoingPct, color: '#3b82f6', fill: 'url(#pie-ongoing)', start: completedEnd, end: ongoingEnd },
+        { label: 'On Going', value: ongoing, pct: ongoingPct, color: '#3b82f6', fill: 'url(#pie-ongoing)', start: completedEnd, end: ongoingEnd },
         { label: 'Pending', value: pending, pct: pendingPct, color: '#f59e0b', fill: 'url(#pie-pending)', start: ongoingEnd, end: pendingEnd },
     ];
+    const legendMeta = sliceMeta.filter((slice) => slice.label === 'Completed' || slice.label === 'On Going');
 
     const barSeries = [
-        { label: 'Lease of Venue', key: 'Lease of Venue', color: '#22c55e', gradient: 'linear-gradient(90deg, #4ade80 0%, #22c55e 100%)' },
-        { label: 'Small Value Procurement', key: 'Small Value Procurement', color: '#3b82f6', gradient: 'linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)' },
+        { label: 'Lease of Venue', key: 'Lease of Venue', color: '#10b981', gradient: 'linear-gradient(90deg, #34d399 0%, #10b981 100%)' },
+        { label: 'Small Value', key: 'Small Value Procurement', color: '#3b82f6', gradient: 'linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%)' },
         { label: 'Public Bidding', key: 'Public Bidding', color: '#8b5cf6', gradient: 'linear-gradient(90deg, #a78bfa 0%, #8b5cf6 100%)' },
-        { label: 'Negotiated Procurement', key: 'Negotiated Procurement', color: '#f59e0b', gradient: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' },
+        { label: 'Negotiated', key: 'Negotiated Procurement', color: '#f59e0b', gradient: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' },
     ];
 
     const barValues = barSeries.map((s) => Number(procurementMethodCounts?.[s.key]) || 0);
@@ -60,53 +60,54 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
     const barMax = Math.max(1, ...barValues);
 
     return (
-        <section className="overflow-visible flex flex-col min-w-0 dashboard-section border-b lg:border-b-0 border-[var(--border-light)] dashboard-section-progress" style={{ animationDelay: '0.25s' }}>
-            <div className="px-6 py-5 border-b border-[var(--border-light)] bg-white/50">
-                <h2 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest flex items-center gap-2">
-                    <MdPostAdd className="w-4 h-4 text-[var(--primary)]" />
-                    Procurement Progress
-                </h2>
-                <p className="text-[11px] text-[var(--text-subtle)] mt-1 font-medium">Real-time status overview</p>
+        <section className="overflow-visible flex flex-col min-w-0 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 p-1" style={{ animationDelay: '0.25s' }}>
+            <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
+                <div>
+                    <p className="text-xl font-black text-slate-800 tracking-tight">Procurement Progress</p>
+                </div>
+                <div className="px-3 py-1 bg-emerald-50 rounded-full text-[10px] font-black text-emerald-600 uppercase tracking-widest border border-emerald-100">
+                    Real-time
+                </div>
             </div>
-            <div className="p-6 flex flex-col xl:flex-row gap-8 min-w-0 overflow-visible items-center sm:items-stretch bg-white">
-                <div className="flex flex-col items-center py-6 sm:py-0 flex-shrink-0 xl:border-r border-[var(--border-light)] xl:pr-8">
-                    <div className="relative w-72 h-72 flex-shrink-0 dashboard-pie-container">
-                        <svg viewBox="0 0 100 100" className="w-full h-full dashboard-pie-svg filter drop-shadow-xl" aria-hidden>
+            
+            <div className="p-8 flex flex-col xl:flex-row gap-12 items-center">
+                <div className="flex flex-col items-center gap-5 flex-shrink-0">
+                    <div className="relative w-64 h-64">
+                        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-2xl overflow-visible">
                             <defs>
                                 <linearGradient id="pie-completed" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#10b981" />
-                                    <stop offset="100%" stopColor="#059669" />
+                                    <stop offset="0%" stopColor="#34d399" />
+                                    <stop offset="100%" stopColor="#10b981" />
                                 </linearGradient>
                                 <linearGradient id="pie-ongoing" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#3b82f6" />
-                                    <stop offset="100%" stopColor="#2563eb" />
+                                    <stop offset="0%" stopColor="#60a5fa" />
+                                    <stop offset="100%" stopColor="#3b82f6" />
                                 </linearGradient>
                                 <linearGradient id="pie-pending" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#f59e0b" />
-                                    <stop offset="100%" stopColor="#d97706" />
+                                    <stop offset="0%" stopColor="#fbbf24" />
+                                    <stop offset="100%" stopColor="#f59e0b" />
                                 </linearGradient>
                             </defs>
                             {(completed + ongoing + pending) === 0 ? (
-                                <circle cx={cx} cy={cy} r={r} fill="var(--background-subtle)" stroke="var(--border-light)" strokeWidth="1" className="dashboard-pie-empty" />
+                                <circle cx={cx} cy={cy} r={r} fill="#f1f5f9" stroke="#e2e8f0" strokeWidth="1" />
                             ) : (
                                 <g>
-                                    {sliceMeta.map((slice, idx) => {
+                                    {sliceMeta.map((slice) => {
                                         const path = wedgePath(slice.start, slice.end);
                                         if (!path) return null;
                                         const midAngle = (slice.start + slice.end) / 2;
                                         const mid = angleToXY(midAngle);
-                                        const explodeDx = ((mid.x - cx) / r) * explodeDist;
-                                        const explodeDy = ((mid.y - cy) / r) * explodeDist;
+                                        const explodeDx = ((mid.x - cx) / r) * (hoveredSlice === slice.label ? explodeDist : 0);
+                                        const explodeDy = ((mid.y - cy) / r) * (hoveredSlice === slice.label ? explodeDist : 0);
                                         return (
                                             <path
                                                 key={slice.label}
                                                 d={path}
                                                 fill={slice.fill}
-                                                className="dashboard-pie-wedge transition-transform duration-500 cursor-pointer"
+                                                className="transition-all duration-500 cursor-pointer"
                                                 stroke="#fff"
                                                 strokeWidth="2"
-                                                transform={hoveredSlice === slice.label ? `translate(${explodeDx}, ${explodeDy})` : undefined}
-                                                style={{ animationDelay: `${0.35 + idx * 0.1}s` }}
+                                                transform={`translate(${explodeDx}, ${explodeDy})`}
                                                 onMouseEnter={() => setHoveredSlice(slice.label)}
                                                 onMouseLeave={() => setHoveredSlice(null)}
                                             />
@@ -116,65 +117,69 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                             )}
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-4xl font-black text-[var(--text)] leading-none tracking-tighter">
+                            <span className="text-4xl font-black text-slate-800 leading-none tracking-tighter">
                                 {completed + ongoing + pending}
                             </span>
-                            <span className="text-[10px] font-bold text-[var(--text-subtle)] uppercase tracking-widest mt-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                                 TOTAL
                             </span>
                         </div>
                     </div>
-                    {(completed + ongoing + pending) > 0 && (
-                        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mt-8">
-                            {sliceMeta.map((slice) => (
-                                <div key={slice.label} className="flex items-center gap-2 group cursor-default" onMouseEnter={() => setHoveredSlice(slice.label)} onMouseLeave={() => setHoveredSlice(null)}>
-                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }} />
-                                    <div className="flex flex-col">
-                                        <span className="text-[13px] font-bold text-[var(--text)] leading-none group-hover:text-[var(--primary)] transition-colors">{slice.label}</span>
-                                        <span className="text-[10px] font-semibold text-[var(--text-subtle)] tabular-nums mt-0.5">{formatNumber(slice.value)} records</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+
+                    <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
+                        {legendMeta.map((slice) => (
+                            <button
+                                key={slice.label}
+                                type="button"
+                                className={`min-w-0 rounded-2xl border px-3 py-2 text-left transition-all duration-200 ${
+                                    hoveredSlice === slice.label
+                                        ? 'border-slate-300 bg-slate-50 shadow-lg shadow-slate-200/60'
+                                        : 'border-slate-100 bg-white hover:bg-slate-50'
+                                }`}
+                                onMouseEnter={() => setHoveredSlice(slice.label)}
+                                onMouseLeave={() => setHoveredSlice(null)}
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
+                                    <span className="truncate text-[10px] font-black text-slate-500 uppercase tracking-tight">
+                                        {slice.label}
+                                    </span>
+                                </span>
+                                <span className="mt-1 block text-sm font-black text-slate-800 tabular-nums">
+                                    {slice.value}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <div className="w-full min-w-0 flex-1 pt-10 xl:pt-4 xl:pl-10">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h3 className="text-xs font-bold text-[var(--text)] uppercase tracking-widest">Procurement Methods</h3>
-                        <span className="text-[10px] font-bold text-[var(--text-subtle)] bg-[var(--background-subtle)] px-2.5 py-1 rounded-full border border-[var(--border-light)] uppercase tracking-wider">Top Types</span>
-                    </div>
-                    <div className="space-y-10">
-                        {barSeries.map((series, i) => {
-                            const value = Number(procurementMethodCounts?.[series.key]) || 0;
-                            const pctOfTotal = barTotal > 0 ? (value / barTotal) * 100 : 0;
-                            const pctOfMax = barMax > 0 ? (value / barMax) * 100 : 0;
-                            const barWidthPct = value > 0 ? Math.max(pctOfMax, 4) : 0;
-                            return (
-                                <div key={series.key} className="group min-w-0" style={{ animationDelay: `${0.25 + i * 0.08}s` }}>
-                                    <div className="flex justify-between items-end mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: series.color }} />
-                                            <span className="text-base font-bold text-[var(--text)] group-hover:text-[var(--primary)] transition-colors tracking-tight">{series.label}</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-2xl font-black text-[var(--text)] tabular-nums">{value}</span>
-                                            <span className="text-[10px] font-bold text-[var(--text-subtle)] ml-1">({formatNumber(pctOfTotal, 0)}%)</span>
-                                        </div>
-                                    </div>
-                                    <div className="h-6 w-full rounded-full bg-[var(--background-subtle)]/40 backdrop-blur-sm overflow-hidden border border-[var(--border-light)] relative shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)] group-hover:shadow-[inset_0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-300">
-                                        <div
-                                            className="h-full rounded-full transition-all duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)] relative animate-shimmer"
-                                            style={{ 
-                                                width: `${barWidthPct}%`, 
-                                                background: series.gradient,
-                                                boxShadow: hoveredSlice === series.key || hoveredSlice === null ? `0 4px 12px ${series.color}40` : 'none'
-                                            }}
-                                        />
-                                    </div>
+
+                <div className="w-full flex-1 space-y-6">
+                    {barSeries.map((series, i) => {
+                        const value = Number(procurementMethodCounts?.[series.key]) || 0;
+                        const pctOfMax = barMax > 0 ? (value / barMax) * 100 : 0;
+                        return (
+                            <div key={series.key} className="group">
+                                <div className="flex justify-between items-end mb-2">
+                                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-800 transition-colors">
+                                        {series.label}
+                                    </span>
+                                    <span className="text-lg font-black text-slate-800 tabular-nums">
+                                        {value}
+                                    </span>
                                 </div>
-                            );
-                        })}
-                    </div>
+                                <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                                        style={{ 
+                                            width: `${value > 0 ? Math.max(pctOfMax, 4) : 0}%`, 
+                                            background: series.gradient,
+                                            boxShadow: `0 0 12px ${series.color}40`
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </section>

@@ -12,7 +12,7 @@ PROCUREMENT_STAGES = [
         'name': 'Initial Documents',
         'order': 1,
         'categories': ['Initial Documents'],
-        'subDocs': ['Purchase Request', 'Activity Design', 'Project Procurement Management Plan/Supplemental PPMP', 'Annual Procurement Plan', 'Market Scopping', 'Requisition and Issue Slip', 'Supplies']
+        'subDocs': ['Purchase Request', 'Project Procurement Management Plan/Supplemental PPMP', 'Annual Procurement Plan', 'Supplies']
     },
     {
         'id': 'pre_procurement',
@@ -62,11 +62,8 @@ PROCUREMENT_STAGES = [
 CHECKLIST_DOC_TYPES = [
     ('Initial Documents', [
         'Purchase Request', 
-        'Activity Design', 
         'Project Procurement Management Plan/Supplemental PPMP', 
         'Annual Procurement Plan', 
-        'Market Scopping', 
-        'Requisition and Issue Slip',
         'Supplies'
     ]),
     ('RFQ Concerns', [

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { documentService, reportService, dashboardService, procurementRecordService } from '../../services/api';
+import { documentService, reportService, dashboardService, procurementRecordService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
 import { ROLES } from '../../utils/auth';
 import {
     MdUpload,
@@ -108,8 +108,6 @@ const Encode = ({ user }) => {
         }
     }, [statusFromUrl]);
 
-
-
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         return token ? { Authorization: `Bearer ${token}` } : {};
@@ -128,13 +126,16 @@ const Encode = ({ user }) => {
         return missing.length > 0;
     };
 
-
-
     const handleView = (doc) => {
+        if (doc?.id && doc?.file_url) {
+            openPreviewTab(getDocumentPreviewUrl(doc.id), getUploadedFilename(doc));
+            return;
+        }
+
         if (doc && (doc.file_url || doc.file)) {
             const url = doc.file_url || (doc.file instanceof File ? URL.createObjectURL(doc.file) : doc.file);
             if (url) {
-                window.open(url, '_blank', 'noopener');
+                openPreviewTab(url, getUploadedFilename(doc));
                 return;
             }
         }
@@ -289,6 +290,13 @@ const Encode = ({ user }) => {
     // Get list of missing fields for a document (matches backend completeness logic)
     const getMissingFields = (doc) => {
         if (!doc) return [];
+        const hasUploadedOrGeneratedFile = !!(
+            doc.file ||
+            (doc.file_url && String(doc.file_url).trim()) ||
+            (doc.subDoc === 'Purchase Request' && (doc.pr_items || doc.total_amount || doc.title || doc.ppmp_no))
+        );
+        if (hasUploadedOrGeneratedFile) return [];
+
         const missing = [];
         const sub = (doc.subDoc || '').trim();
         const titleRequired = !sub.startsWith('PHILGEPS - ');
@@ -306,14 +314,6 @@ const Encode = ({ user }) => {
         if (sub === 'Annual Procurement Plan') {
             if (!doc.app_type) missing.push('APP Type');
             if (doc.certified_true_copy && !doc.certified_signed_by) missing.push('Signatory');
-        } else if (sub === 'Market Scopping') {
-            if (!doc.market_budget) missing.push('Budget');
-            if (!doc.market_service_provider_1) missing.push('Service Provider 1');
-            if (!doc.market_service_provider_2) missing.push('Service Provider 2');
-            if (!doc.market_service_provider_3) missing.push('Service Provider 3');
-        } else if (sub === 'Requisition and Issue Slip') {
-            if (!doc.office_division) missing.push('Office/Division');
-            if (!doc.received_by) missing.push('Received By');
         } else if (sub === 'Notice of BAC Meeting') {
             if (!doc.agenda) missing.push('Agenda');
             if (!doc.date) missing.push('Date');
@@ -363,8 +363,10 @@ const Encode = ({ user }) => {
             if (!doc.secretary_owner_rep) missing.push('Owner/Rep');
         }
 
-        // File requirement check (includes expanded exemptions for Lease of Venue, Small Value Procurement, Public Bidding)
+        // File requirement check. Purchase Requests are generated from saved PR data,
+        // so the downloadable/viewable PR Excel file does not need an uploaded file.
         const noFileRequired = (() => {
+            if (sub === 'Purchase Request') return true;
             if (sub === 'PHILGEPS - Small Value Procurement' || sub === 'PHILGEPS - Public Bidding') return false;
             const kw = ['Lease of Venue', 'Small Value Procurement', 'Public Bidding', 'Minutes of the Meeting'];
             const exact = ['Notice of Award (Posted)', 'Abstract of Quotation (Posted)', 'BAC Resolution (Posted)'];
@@ -524,7 +526,7 @@ const Encode = ({ user }) => {
 
     const triggerDownload = async (doc, { blob: existingBlob, blobUrl } = {}) => {
         if (!isAdmin) return;
-        const r = { file_url: doc?.file_url, title: doc?.title };
+        const r = { id: doc?.id, file_url: doc?.file_url, title: doc?.title };
         if (!r?.file_url && !blobUrl) return;
         const ext = getSuggestedExt(r?.file_url || blobUrl);
         const base = r?.title ? `${r.title.replace(/[/\\?%*:|"<>]/g, '_')}` : 'document';
@@ -588,8 +590,8 @@ const Encode = ({ user }) => {
             }
         } catch (err) {
             if (r?.file_url) {
-                const url = getFetchUrl(r.file_url);
-                window.open(url, '_blank', 'noopener');
+                const url = r?.id ? getDocumentPreviewUrl(r.id) : getFetchUrl(r.file_url);
+                openPreviewTab(url, getUploadedFilename(doc));
             }
         }
     };
@@ -662,10 +664,10 @@ const Encode = ({ user }) => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {loading ? (
                             Array(3).fill(0).map((_, i) => (
-                                <div key={i} className="h-48 rounded-3xl bg-slate-100 animate-pulse" />
+                                <div key={i} className="h-32 rounded-2xl bg-slate-100 animate-pulse" />
                             ))
                         ) : error ? (
                             <div className="col-span-full py-20 bg-red-50 rounded-[2rem] border-2 border-dashed border-red-200 flex flex-col items-center justify-center text-center">
@@ -684,48 +686,36 @@ const Encode = ({ user }) => {
                                 return latestB - latestA;
                             }).map((ppmpNo) => {
                                 const docs = ppmpGroups[ppmpNo];
-                                const hasPPMP = docs.some(d => (d.subDoc || '').includes('PPMP'));
-                                const hasPR = docs.some(d => (d.subDoc || '').includes('Purchase Request'));
                                 const prNo = docs.find(d => d.prNo && d.prNo !== 'Unassigned')?.prNo || 'Pending';
+                                const displayPRNo = docs.find(d => d.user_pr_no)?.user_pr_no || prNo;
                                 
                                 return (
                                     <div 
                                         key={ppmpNo}
                                         onClick={() => handleOpenPPMPFolder(ppmpNo)}
-                                        className="group cursor-pointer bg-white dark:bg-slate-900 rounded-3xl p-5 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-2xl hover:shadow-[var(--primary)]/10 flex flex-col gap-3 relative overflow-hidden"
+                                        className="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl p-4 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-xl hover:shadow-[var(--primary)]/10 flex flex-col gap-2 relative overflow-hidden self-start"
                                     >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)]/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                                        <div className="absolute top-0 right-0 w-28 h-28 bg-[var(--primary)]/5 rounded-full -mr-14 -mt-14 group-hover:scale-150 transition-transform duration-700" />
                                         
                                         <div className="flex items-start justify-between relative z-10">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-base shadow-inner group-hover:scale-110 transition-transform duration-300 shrink-0">
                                                     📂
                                                 </div>
+                                                <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight truncate group-hover:text-[var(--primary)] transition-colors duration-300">
+                                                    PR #: {displayPRNo}
+                                                </h4>
                                             </div>
-                                            <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-slate-700">
+                                            <div className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 rounded-full text-[8px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-slate-700 shrink-0">
                                                 {docs.length} Documents
                                             </div>
                                         </div>
 
-                                        <div className="relative z-10 flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h4 className="text-base font-black text-slate-900 dark:text-white leading-tight group-hover:text-[var(--primary)] transition-colors duration-300">
-                                                    PPMP: {ppmpNo?.replace(/Market scoping\s*(for)?\s*/gi, '')}
-                                                </h4>
-                                            </div>
-                                            {docs.find(d => d.user_pr_no) && (
-                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-100 dark:border-emerald-800/50 w-fit mt-1">
-                                                    <MdLabel className="w-3 h-3" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">{docs.find(d => d.user_pr_no).user_pr_no}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-end relative z-10">
+                                        <div className="pt-2 border-t border-slate-50 dark:border-slate-800 flex items-center justify-end relative z-10">
                                             <div className="flex items-center gap-2 text-[var(--primary)] font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                                                 Open Folder
-                                                <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white shadow-sm">
-                                                    <MdChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
+                                                <div className="w-7 h-7 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white shadow-sm">
+                                                    <MdChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                                                 </div>
                                             </div>
                                         </div>

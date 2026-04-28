@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
-import { MdReceipt, MdAdd, MdCheck, MdClose } from 'react-icons/md';
+import { MdReceipt, MdAdd, MdCheck, MdClose, MdVisibility, MdDownload } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import CreatePRModal from './modals/CreatePRModal';
 import DocViewModal from './modals/DocViewModal';
 import DocUploadModal from './modals/DocUploadModal';
+import AlertModal from './modals/AlertModal';
 import { generatePR_Excel } from '../../utils/prGenerator';
-import { documentService } from '../../services/api';
+import { documentService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
 
 const PR = ({ user }) => {
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
     const [prs, setPrs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState(null);
@@ -23,10 +25,43 @@ const PR = ({ user }) => {
     const isMember = user?.role === ROLES.MEMBER;
     const canAssignPR = isAdmin || isMember;
 
+    const loadPRWithRelatedDocs = async (item) => {
+        let relatedDocuments = [];
+
+        try {
+            if (item.ppmp_no) {
+                relatedDocuments = await documentService.getAll({ ppmp_no: item.ppmp_no });
+            } else if (item.prNo) {
+                relatedDocuments = await documentService.getAll({ prNo: item.prNo });
+            }
+        } catch (err) {
+            console.error('Failed to load related PR documents:', err);
+        }
+
+        const hasSelf = relatedDocuments.some(doc => doc.id === item.id);
+        return {
+            ...item,
+            related_documents: hasSelf ? relatedDocuments : [item, ...relatedDocuments]
+        };
+    };
+
+    const handleView = async (item) => {
+        const hydrated = await loadPRWithRelatedDocs(item);
+        setSelectedDoc(hydrated);
+    };
+
+    const refreshSelectedDoc = async (fallbackDoc = selectedDoc) => {
+        if (!fallbackDoc) return;
+        const data = await documentService.getAll({ subDoc: 'Purchase Request' });
+        setPrs(data);
+        const updated = data.find(p => p.id === fallbackDoc.id) || fallbackDoc;
+        setSelectedDoc(await loadPRWithRelatedDocs(updated));
+    };
+
     const handleQuickView = (item) => {
         try {
-            if (item.file_url) {
-                window.open(item.file_url, '_blank', 'noopener');
+            if (item.id && item.file_url) {
+                openPreviewTab(getDocumentPreviewUrl(item.id), getUploadedFilename(item));
             } else {
                 // Defensive parsing for pr_items
                 let items = [];
@@ -71,7 +106,7 @@ const PR = ({ user }) => {
     };
 
     const handleAssignPR = async (item) => {
-        if (!assignValue.trim() || assigning) return;
+        if (item.user_pr_no || !assignValue.trim() || assigning) return;
         setAssigning(true);
         try {
             await documentService.assignPRNo(item.id, assignValue.trim());
@@ -79,16 +114,17 @@ const PR = ({ user }) => {
             setEditingPrId(null);
             setAssignValue('');
         } catch (err) {
-            console.error('Failed to assign PR #:', err);
-            alert(err.response?.data?.error || 'Failed to assign PR #. Please check if the number is already used.');
+            console.error('Failed to assign PR No.:', err);
+            alert(err.response?.data?.error || 'Failed to assign PR No. Please check if the number is already used.');
         } finally {
             setAssigning(false);
         }
     };
 
-    const startEditing = (item) => {
+    const startAssigning = (item) => {
+        if (item.user_pr_no) return;
         setEditingPrId(item.id);
-        setAssignValue(item.user_pr_no || '');
+        setAssignValue('');
     };
 
 
@@ -121,33 +157,19 @@ const PR = ({ user }) => {
                     <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
                                 <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden text-center">
                                     <colgroup>
-                                        <col className="w-[20%]" />
-                                        <col className="w-[15%]" />
-                                        <col className="w-[12%]" />
-                                        <col className="w-[18%]" />
-                                        <col className="w-[12%]" />
-                                        <col className="w-[23%]" />
+                                        <col className="w-[30%]" />
+                                        <col className="w-[30%]" />
+                                        <col className="w-[40%]" />
                                     </colgroup>
                                     <thead className="table-header">
                                         <tr>
                                             <th className="table-th !text-center !px-4">PR No.</th>
                                             <th className="table-th !text-center !px-4">PPMP No.</th>
-                                            <th className="table-th !text-center !px-4">Total Cost</th>
-                                            <th className="table-th !text-center !px-4">Date Uploaded</th>
-                                            <th className="table-th !text-center !px-4">Status</th>
                                             <th className="table-th !text-center !px-4">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {prs.map((item, idx) => {
-                                            // Format status for display
-                                            const statusLabels = {
-                                                'complete': { label: 'Completed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-                                                'ongoing': { label: 'On Going', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-                                                'pending': { label: 'Pending', color: 'bg-slate-50 text-slate-600 border-slate-200' }
-                                            };
-                                            const status = statusLabels[item.status] || statusLabels.pending;
-
                                             return (
                                                 <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
@@ -155,7 +177,7 @@ const PR = ({ user }) => {
                                                             onClick={() => handleQuickView(item)}
                                                             className={`text-xs font-black transition-all truncate text-center hover:text-slate-900 dark:hover:text-white block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
                                                         >
-                                                            {item.user_pr_no || 'No PR # Assigned'}
+                                                            {item.user_pr_no || 'No PR No. Assigned'}
                                                         </button>
                                                     </td>
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
@@ -163,71 +185,54 @@ const PR = ({ user }) => {
                                                             {item.ppmp_no || 'UNLINKED'}
                                                         </span>
                                                     </td>
-                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                                        <span className="text-sm font-black text-emerald-600 font-mono whitespace-nowrap">
-                                                            ₱{parseFloat(item.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        </span>
-                                                    </td>
-                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
-                                                            {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : item.date || '-'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight border ${status.color}`}>
-                                                            {status.label}
-                                                        </span>
-                                                    </td>
-                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <div className="flex justify-center items-center gap-2">
-                                                {editingPrId === item.id ? (
-                                                    <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
-                                                        <input 
-                                                            autoFocus
-                                                            type="text"
-                                                            value={assignValue}
-                                                            onChange={(e) => setAssignValue(e.target.value)}
-                                                            className="h-8 w-24 px-2 bg-white border-2 border-emerald-500 rounded text-[10px] font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
-                                                            placeholder="PR #"
-                                                        />
-                                                        <button 
-                                                            disabled={assigning || !assignValue.trim()}
-                                                            onClick={() => handleAssignPR(item)}
-                                                            className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all active:scale-90 shadow-sm"
-                                                        >
-                                                            {assigning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full" /> : <MdCheck className="w-5 h-5" />}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setEditingPrId(null)}
-                                                            className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
-                                                        >
-                                                            <MdClose className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        {canAssignPR && (
-                                                            <button 
-                                                                onClick={() => startEditing(item)}
-                                                                className="btn-action-ghost !text-emerald-600 !border-emerald-100 hover:!bg-emerald-50 !text-[10px] !py-1"
-                                                            >
-                                                                {item.user_pr_no ? 'Update PR #' : 'Assign PR #'}
-                                                            </button>
-                                                        )}
+                                                    <td className="table-td !text-center !px-3 !py-3 border-b border-slate-50 dark:border-slate-800/50 min-w-[280px]">
+                                                        <div className="flex flex-wrap justify-center items-center gap-2">
+                                                            {editingPrId === item.id && !item.user_pr_no ? (
+                                                                <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
+                                                                    <input
+                                                                        autoFocus
+                                                                        type="text"
+                                                                        value={assignValue}
+                                                                        onChange={(e) => setAssignValue(e.target.value)}
+                                                                        className="h-8 w-24 px-2 bg-white border-2 border-emerald-500 rounded text-[10px] font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                                                                        placeholder="PR No."
+                                                                    />
                                                                     <button
-                                                                        onClick={() => setSelectedDoc(item)}
-                                                                        className="px-6 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-full font-black uppercase tracking-widest text-[9px] hover:scale-110 active:scale-95 transition-all shadow-xl shadow-slate-900/20"
+                                                                        disabled={assigning || !assignValue.trim()}
+                                                                        onClick={() => handleAssignPR(item)}
+                                                                        className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all active:scale-90 shadow-sm"
                                                                     >
-                                                                        View
+                                                                        {assigning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full" /> : <MdCheck className="w-5 h-5" />}
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => handleQuickView(item)}
-                                                                        className="px-6 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-full font-black uppercase tracking-widest text-[9px] border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95 shadow-lg"
+                                                                        onClick={() => setEditingPrId(null)}
+                                                                        className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
                                                                     >
-                                                                        Download
+                                                                        <MdClose className="w-5 h-5" />
                                                                     </button>
-                                                                </>
+                                                                </div>
+                                                            ) : (
+                                                                canAssignPR && !item.user_pr_no && (
+                                                                    <button
+                                                                        onClick={() => startAssigning(item)}
+                                                                        className="btn-action-secondary justify-center !text-emerald-700 !border-emerald-200 hover:!bg-emerald-50 !text-[10px] !font-black !uppercase !tracking-wide"
+                                                                    >
+                                                                        Assign PR No.
+                                                                    </button>
+                                                                )
                                                             )}
+                                                            <button
+                                                                onClick={() => handleView(item)}
+                                                                className="btn-action justify-center bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-700 !text-[10px] !font-black !uppercase !tracking-wide shadow-sm"
+                                                            >
+                                                                View
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleQuickView(item)}
+                                                                className="btn-action-secondary justify-center !text-slate-800 dark:!text-white !text-[10px] !font-black !uppercase !tracking-wide"
+                                                            >
+                                                                Download
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -252,6 +257,7 @@ const PR = ({ user }) => {
                 onClose={() => setShowCreateModal(false)}
                 onSuccess={(data) => {
                     fetchPRs();
+                    setSuccessMessage('Purchase Request saved successfully.');
                     setShowCreateModal(false);
                 }}
             />
@@ -279,19 +285,16 @@ const PR = ({ user }) => {
                     initialFile={selectedFileForUpload}
                     user={user}
                     onSuccess={async (newDoc) => {
-                        await fetchPRs();
-                        // Corrected: use 'subDoc' instead of 'doc_type' to match backend
-                        if (newDoc && newDoc.subDoc === 'Purchase Request') {
-                            setSelectedDoc({...newDoc});
-                        } else {
-                            // If it's a linked doc, re-fetch to get updated parent state
-                            const data = await documentService.getAll({ subDoc: 'Purchase Request' });
-                            const updated = data.find(p => p.id === selectedDoc.id);
-                            if (updated) setSelectedDoc({...updated});
-                        }
+                        await refreshSelectedDoc(newDoc?.subDoc === 'Purchase Request' ? newDoc : selectedDoc);
+                        setSuccessMessage(`${uploadingMissingType} uploaded successfully.`);
                     }}
                 />
             )}
+
+            <AlertModal
+                message={successMessage}
+                onClose={() => setSuccessMessage('')}
+            />
         </div>
     );
 };

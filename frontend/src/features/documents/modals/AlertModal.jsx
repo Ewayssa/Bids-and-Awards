@@ -1,32 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { MdCheckCircle } from 'react-icons/md';
 import Modal from '../../../components/Modal';
 
-const AlertModal = ({ message, onClose }) => {
+const AlertModal = ({ message, onClose, autoCloseMs = 2500 }) => {
+    useEffect(() => {
+        if (!message || !autoCloseMs) return undefined;
+
+        const timer = setTimeout(onClose, autoCloseMs);
+        return () => clearTimeout(timer);
+    }, [message, onClose, autoCloseMs]);
+
     return (
         <Modal
             isOpen={!!message}
             onClose={onClose}
-            title="Success"
+            title=""
             size="sm"
-            showCloseButton={true}
+            header={<></>}
         >
-            <div className="text-center py-2">
-                <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center animate-bounce">
-                        <MdCheckCircle className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+            <div className="text-center py-1">
+                <div className="flex justify-center mb-3">
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                        <MdCheckCircle className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
                     </div>
                 </div>
-                <p className="text-[var(--text)] font-bold text-lg leading-relaxed">{message}</p>
-                <div className="mt-8">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="btn-primary w-full py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/20"
-                    >
-                        Great, thanks!
-                    </button>
-                </div>
+                <p className="text-[var(--text)] font-bold text-sm leading-relaxed">{message}</p>
             </div>
         </Modal>
     );

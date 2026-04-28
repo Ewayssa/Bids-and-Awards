@@ -4,7 +4,7 @@ from api.models import Document, ProcurementRecord
 class DashboardService:
     # Simplified Requirement Lists (Short Labels)
     DEFAULT_REQUIREMENTS = [
-        'Purchase Request', 'Activity Design', 'PPMP', 'APP', 'Market Scoping', 'Requisition and Issue Slip',
+        'Purchase Request', 'PPMP', 'APP',
         'PhilGEPS Posting (RFQ)', 'Certificate of Posting (RFQ)', 'Request for Quotation', 'Supplier Quotations', 'Documentary Requirements',
         'Notice of BAC Meeting', 'Invitation to COA', 'Attendance Sheet', 'Minutes of Meeting', 'Masterlist (Meeting)',
         'BAC Resolution', 'Abstract of Quotation', 'Notice of Award', 'Contract/PO', 'Notice to Proceed', 'OSS', 'Sec. Cert / SPA',
@@ -12,7 +12,7 @@ class DashboardService:
     ]
 
     LEASE_REQUIREMENTS = [
-        'Purchase Request', 'Activity Design', 'PPMP', 'APP', 'Market Scoping',
+        'Purchase Request', 'PPMP', 'APP',
         'Non-Avail (DILG)', 'Non-Avail (Gov)', 'Cost Benefit Analysis', 'Justification (Private Venue)',
         'Notice of BAC Meeting', 'Invitation to COA', 'Attendance Sheet', 'Minutes of Meeting', 'Masterlist (Meeting)',
         'BAC Resolution', 'Abstract of Quotation', 'Rating Factor', 'Notice of Award', 'Lease Agreement', 'Notice to Proceed', 'OSS', 'Sec. Cert / SPA',
@@ -27,13 +27,56 @@ class DashboardService:
     }
 
     @staticmethod
-    def get_document_stats():
-        return Document.objects.aggregate(
-            total=Count('id'),
-            complete=Count('id', filter=Q(status='complete')),
-            ongoing=Count('id', filter=Q(status='ongoing')),
-            pending=Count('id', filter=Q(status='pending'))
-        )
+    def _document_has_uploaded_or_generated_file(document):
+        return bool(document.file) or (document.subDoc or '').strip() == 'Purchase Request'
+
+    @staticmethod
+    def _folder_is_completed(documents):
+        docs = list(documents)
+        return bool(docs) and all(DashboardService._document_has_uploaded_or_generated_file(doc) for doc in docs)
+
+    @staticmethod
+    def get_folder_stats():
+        """
+        Count dashboard progress by procurement folder/PPMP group, not by document row.
+        A folder is completed when every document currently in that folder has a file,
+        with Purchase Request counted as the system-generated file.
+        """
+        seen_document_ids = set()
+        total = 0
+        complete = 0
+        ongoing = 0
+
+        for record in ProcurementRecord.objects.prefetch_related('documents').all():
+            docs = list(record.documents.all())
+            if not docs:
+                continue
+            total += 1
+            seen_document_ids.update(doc.id for doc in docs)
+            if DashboardService._folder_is_completed(docs):
+                complete += 1
+            else:
+                ongoing += 1
+
+        orphan_docs = Document.objects.filter(procurement_record__isnull=True).exclude(id__in=seen_document_ids)
+        groups = {}
+        for doc in orphan_docs:
+            key = (doc.ppmp_no or doc.prNo or str(doc.id)).strip()
+            groups.setdefault(key, []).append(doc)
+
+        for docs in groups.values():
+            total += 1
+            if DashboardService._folder_is_completed(docs):
+                complete += 1
+            else:
+                ongoing += 1
+
+        return {
+            'total': total,
+            'complete': complete,
+            'ongoing': ongoing,
+            'pending': 0,
+        }
 
     @staticmethod
     def get_category_breakdown():
@@ -84,8 +127,9 @@ class DashboardService:
         from api.models import CalendarEvent, ProcurementRecord
         from django.utils import timezone
         
-        # 1. Base stats for the Progress Ring (pieData)
-        stats = DashboardService.get_document_stats()
+        # 1. Base stats for the Progress Ring / stat cards.
+        # These are folder/PPMP counts, not individual document counts.
+        stats = DashboardService.get_folder_stats()
         pieData = [
             stats.get('total', 0),
             stats.get('complete', 0),
@@ -93,7 +137,7 @@ class DashboardService:
             stats.get('pending', 0)
         ]
         
-        # 2. Total Documents
+        # 2. Total folders represented in the progress cards
         totalDocumentsUploaded = stats.get('total', 0)
 
         # 3. Calendar Events (Next 30 days or all upcoming)
@@ -154,6 +198,5 @@ class DashboardService:
             'pendingBreakdown': pendingBreakdown,
             'monthlyTrend': monthly_trend
         }
-
 
 

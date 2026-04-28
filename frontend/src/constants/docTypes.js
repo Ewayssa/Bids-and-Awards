@@ -3,7 +3,7 @@
  */
 export const WORKFLOW_STAGES = [
     { id: 1, name: 'Planning', description: 'PPMP/APP alignment and initial preparation' },
-    { id: 2, name: 'Requisition', description: 'Purchase Request (PR) and Activity Design certification' },
+    { id: 2, name: 'Requisition', description: 'Purchase Request (PR) certification' },
     { id: 3, name: 'Pre-Procurement', description: 'BAC review and determination of procurement mode' },
     { id: 4, name: 'Posting', description: 'PhilGEPS advertisement and RFQ floating' },
     { id: 5, name: 'Opening', description: 'Submission and opening of bids/quotations' },
@@ -37,8 +37,6 @@ export const PROCUREMENT_STAGES = [
         categories: ['Requisition'],
         subDocs: [
             'Purchase Request (PR)',
-            'Activity Design / TOR',
-            'Market Scoping / Canvass',
             'Technical Specifications'
         ],
         description: 'Submission of formalized requirements by the end-user.'
@@ -185,7 +183,7 @@ export const RFQ_PROCUREMENT_METHODS = [
  */
 const BASE_REQS = [
     'PPMP (Approved)', 'APP (Excerpt)', 'Purchase Request (PR)', 
-    'Activity Design / TOR', 'BAC Checklist', 'Notice of Award (NOA)', 
+    'BAC Checklist', 'Notice of Award (NOA)', 
     'Contract Agreement / PO', 'Notice to Proceed (NTP)', 'Disbursement Voucher (DV)'
 ];
 
@@ -200,10 +198,8 @@ export const CHECKLIST_CONFIG = {
                 name: 'Initial Documents',
                 documents: [
                     { name: 'Purchase Request', required: true },
-                    { name: 'Activity Design', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
-                    { name: 'Annual Procurement Plan', required: true },
-                    { name: 'Market Scoping', required: true }
+                    { name: 'Annual Procurement Plan', required: true }
                 ]
             },
             {
@@ -263,10 +259,8 @@ export const CHECKLIST_CONFIG = {
                 name: 'Initial Documents',
                 documents: [
                     { name: 'Purchase Request', required: true },
-                    { name: 'Activity Design', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
-                    { name: 'Annual Procurement Plan', required: true },
-                    { name: 'Market Scoping', required: true }
+                    { name: 'Annual Procurement Plan', required: true }
                 ]
             },
             {
@@ -348,7 +342,6 @@ export const CHECKLIST_CONFIG = {
                 name: 'Initial Documents',
                 documents: [
                     { name: 'Purchase Request', required: true },
-                    { name: 'Activity Design', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
                     { name: 'Annual Procurement Plan', required: true }
                 ]

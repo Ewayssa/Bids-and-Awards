@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { PDFDocument } from 'pdf-lib';
 import { 
     MdDownload, 
     MdDescription,
     MdCheckCircle
 } from 'react-icons/md';
 import Modal from '../../../components/Modal';
+import { getDocumentPreviewUrl } from '../../../services/api';
 
 // Memoized Document Item to prevent unnecessary re-renders
 const DocItem = React.memo(({ doc, isNear, innerRef }) => {
@@ -18,7 +20,7 @@ const DocItem = React.memo(({ doc, isNear, innerRef }) => {
                 <div className="w-full h-full relative overflow-hidden">
                     {/* The Clipping Trick: Make iframe slightly larger than container to hide its native scrollbars */}
                     <iframe 
-                        src={`${doc.file_url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
+                        src={`${getDocumentPreviewUrl(doc.id)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
                         className="absolute inset-0 w-[108%] h-[108%] -top-[4%] -left-[4%] border-none"
                         title={doc.title}
                         loading="lazy"
@@ -36,6 +38,7 @@ const DocItem = React.memo(({ doc, isNear, innerRef }) => {
 
 const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents }) => {
     const [activeId, setActiveId] = useState(null);
+    const [isDownloading, setIsDownloading] = useState(false);
     const scrollContainerRef = useRef(null);
     const itemRefs = useRef({});
 
@@ -93,22 +96,64 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents }) => {
         }
     };
 
-    const handleDownload = () => {
-        folderDocs.forEach((doc, index) => {
-            setTimeout(() => {
-                const link = document.createElement('a');
-                link.href = doc.file_url;
-                link.download = doc.title || `doc_${index}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }, index * 500);
-        });
+    const safeFilename = (value, fallback) => {
+        const cleaned = String(value || fallback || 'document')
+            .replace(/[/\\?%*:|"<>]/g, '_')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return cleaned || fallback || 'document';
+    };
+
+    const handleDownload = async () => {
+        if (folderDocs.length === 0 || isDownloading) return;
+
+        setIsDownloading(true);
+        try {
+            const mergedPdf = await PDFDocument.create();
+
+            for (const [index, doc] of folderDocs.entries()) {
+                const response = await fetch(getDocumentPreviewUrl(doc.id), { credentials: 'include' });
+                if (!response.ok) {
+                    throw new Error(`Failed to download ${doc.subDoc || doc.title || `document ${index + 1}`}`);
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.toLowerCase().includes('pdf')) {
+                    throw new Error(`${doc.subDoc || doc.title || `Document ${index + 1}`} is not a PDF file.`);
+                }
+
+                const bytes = await response.arrayBuffer();
+                const sourcePdf = await PDFDocument.load(bytes);
+                const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+                copiedPages.forEach((page) => mergedPdf.addPage(page));
+            }
+
+            if (mergedPdf.getPageCount() === 0) {
+                throw new Error('No PDF pages were found to download.');
+            }
+
+            const pdfBytes = await mergedPdf.save();
+            const displayPPMP = ppmpNo || 'Unassigned';
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${safeFilename(`Procurement Records - PPMP ${displayPPMP}`, 'procurement-records')}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Folder download failed:', err);
+            alert(err.message || 'Unable to download the procurement documents.');
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     if (!isOpen) return null;
 
-    const displayPPMP = ppmpNo?.replace(/Market scoping\s*(for)?\s*/gi, '') || 'Unassigned';
+    const displayPPMP = ppmpNo || 'Unassigned';
 
     return (
         <Modal
@@ -117,17 +162,19 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents }) => {
             title={`Procurement Documentation: PPMP ${displayPPMP}`}
             size="2xl"
             showCloseButton={true}
+            bodyClassName="!p-0 overflow-hidden"
         >
-            <div className="flex bg-white -m-6 h-[80vh] overflow-hidden">
+            <div className="flex bg-white h-[80vh] overflow-hidden">
                 {/* Fixed Sidebar */}
                 <div className="w-64 border-r border-slate-200 bg-slate-50 flex flex-col h-full z-10">
                     <div className="p-6 border-b border-slate-200 bg-white/50 backdrop-blur-md">
                         <button
                             onClick={handleDownload}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--primary)] text-white rounded-xl shadow-lg shadow-[var(--primary)]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
+                            disabled={folderDocs.length === 0 || isDownloading}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--primary)] text-white rounded-xl shadow-lg shadow-[var(--primary)]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
                             <MdDownload className="w-4 h-4" />
-                            Download
+                            {isDownloading ? 'Preparing...' : 'Download All'}
                         </button>
                     </div>
 

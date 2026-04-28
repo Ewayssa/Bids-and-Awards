@@ -110,9 +110,9 @@ const AuditTrail = () => {
                         <table className="min-w-full w-full border-collapse">
                             <thead className="bg-[#F8FAFC] dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
                                 <tr>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-left" style={{ width: '25%' }}>Originating User</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-left" style={{ width: '25%' }}>User</th>
                                     <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center" style={{ width: '50%' }}>System Activity / Action</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right" style={{ width: '25%' }}>Execution Timeline</th>
+                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right" style={{ width: '25%' }}>Date & Time</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">
@@ -135,7 +135,6 @@ const AuditTrail = () => {
                                             <td className="px-8 py-5 align-middle">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-slate-700 dark:text-slate-300 group-hover:text-[var(--primary)] transition-colors">{entry.actor || 'System'}</span>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Executor</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5 align-middle text-center">
@@ -148,7 +147,6 @@ const AuditTrail = () => {
                                                     <span className="text-[11px] font-black text-slate-600 dark:text-slate-400 tracking-tight">
                                                         {formatDate(entry.created_at)}
                                                     </span>
-                                                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">Verified Timestamp</span>
                                                 </div>
                                             </td>
                                         </tr>

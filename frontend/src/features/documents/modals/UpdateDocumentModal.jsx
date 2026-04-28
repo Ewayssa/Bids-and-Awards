@@ -21,14 +21,17 @@ const UpdateDocumentModal = ({
     isAdmin
 }) => {
     if (!isOpen || !selectedDoc) return null;
+    const canAssignPRNo = isAdmin || user?.role === 'bac_member';
+    const isPRNoLocked = Boolean(selectedDoc.user_pr_no);
+    const isPRNoReadOnly = !canAssignPRNo || isPRNoLocked;
     
     // Dynamic sizing based on content
     const getModalSize = () => {
         const sub = selectedDoc?.subDoc;
         if (['Notice of BAC Meeting', 'Invitation to COA', 'Attendance Sheet', 'Minutes of the Meeting'].includes(sub)) return 'md';
         if (['Abstract of Quotation'].includes(sub)) return '2xl';
-        if (['Purchase Request', 'Activity Design', 'BAC Resolution', 'Contract Services/Purchase Order', 'Notice to Proceed'].includes(sub)) return 'lg';
-        return 'xl'; // Default for PPMP, APP, Market Scoping, etc.
+        if (['Purchase Request', 'BAC Resolution', 'Contract Services/Purchase Order', 'Notice to Proceed'].includes(sub)) return 'lg';
+        return 'xl'; // Default for PPMP, APP, etc.
     };
 
     return (
@@ -95,53 +98,10 @@ const UpdateDocumentModal = ({
                                             type="text" 
                                             value={form.user_pr_no} 
                                             onChange={(e) => setForm((f) => ({ ...f, user_pr_no: toNumbersOnly(e.target.value) }))} 
-                                            className={`input-field ${!(isAdmin || user?.role === 'bac_member') ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
-                                            placeholder={!(isAdmin || user?.role === 'bac_member') ? "Pending Member Assignment" : "Enter PR number"}
-                                            readOnly={!(isAdmin || user?.role === 'bac_member')}
+                                            className={`input-field ${isPRNoReadOnly ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
+                                            placeholder={!canAssignPRNo ? "Pending Member Assignment" : isPRNoLocked ? "PR number assigned" : "Enter PR number"}
+                                            readOnly={isPRNoReadOnly}
                                         />
-                                    </div>
-                                </div>
-                                <div className="field-group">
-                                    <label className="label">Upload File</label>
-                                    <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files[0] }))} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
-                                </div>
-                            </div>
-                        )}
-
-                        {selectedDoc?.subDoc === 'Activity Design' && (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="field-group">
-                                        <label className="label">BAC Folder No.</label>
-                                        <div className="h-11 px-4 flex items-center bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-xs text-slate-400 border-dashed">
-                                            {form.prNo}
-                                        </div>
-                                    </div>
-                                    <div className="field-group">
-                                        <label className="label">PR No.</label>
-                                        <input 
-                                            type="text" 
-                                            value={form.user_pr_no} 
-                                            onChange={(e) => setForm((f) => ({ ...f, user_pr_no: e.target.value }))} 
-                                            className={`input-field ${!(isAdmin || user?.role === 'bac_member') ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
-                                            placeholder={!(isAdmin || user?.role === 'bac_member') ? "Pending Member Assignment" : "Enter PR number"}
-                                            readOnly={!(isAdmin || user?.role === 'bac_member')}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="field-group">
-                                    <label className="label">Title</label>
-                                    <textarea value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="input-field min-h-[5rem] resize-none py-3" placeholder="Document title" />
-                                </div>
-                                <div className="field-group">
-                                    <label className="label">Source of Fund</label>
-                                    <input type="text" value={form.source_of_fund} onChange={(e) => setForm((f) => ({ ...f, source_of_fund: e.target.value }))} className="input-field" placeholder="Source of fund" />
-                                </div>
-                                <div className="field-group">
-                                    <label className="label">Total Amount</label>
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 font-bold text-sm">₱</div>
-                                        <input type="text" inputMode="decimal" value={form.total_amount} onChange={(e) => setForm((f) => ({ ...f, total_amount: toNumbersOnly(e.target.value) }))} className="input-field pl-8 text-right font-mono" placeholder="0.00" />
                                     </div>
                                 </div>
                                 <div className="field-group">
@@ -230,79 +190,6 @@ const UpdateDocumentModal = ({
                                 <div className="field-group">
                                     <label className="label">Upload File</label>
                                     <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files[0] }))} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
-                                </div>
-                            </div>
-                        )}
-
-                        {selectedDoc?.subDoc === 'Market Scopping' && (
-                            <div className="space-y-4">
-                                <div className="field-group">
-                                    <label className="label">Title</label>
-                                    <textarea value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="input-field min-h-[5rem] resize-none py-3" placeholder="Enter market scoping title..." />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="field-group">
-                                        <label className="label">Budget</label>
-                                        <div className="relative group">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 font-bold text-sm">₱</div>
-                                            <input type="text" inputMode="decimal" value={form.market_budget} onChange={(e) => setForm((f) => ({ ...f, market_budget: toNumbersOnly(e.target.value) }))} className="input-field pl-8 text-right font-mono" placeholder="0.00" />
-                                        </div>
-                                    </div>
-                                    <div className="field-group">
-                                        <label className="label">Expected Date of Delivery</label>
-                                        <input type="text" value={form.market_expected_delivery} onChange={(e) => setForm((f) => ({ ...f, market_expected_delivery: e.target.value }))} className="input-field" placeholder="MM/YY" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="field-group">
-                                        <label className="label">Period From</label>
-                                        <input type="date" value={form.market_period_from} onChange={(e) => setForm((f) => ({ ...f, market_period_from: e.target.value }))} className="input-field" />
-                                    </div>
-                                    <div className="field-group">
-                                        <label className="label">Period To</label>
-                                        <input type="date" value={form.market_period_to} onChange={(e) => setForm((f) => ({ ...f, market_period_to: e.target.value }))} className="input-field" />
-                                    </div>
-                                </div>
-                                <div className="field-group">
-                                    <label className="label">Service Providers (3 required)</label>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {[1, 2, 3].map((i) => (
-                                            <input key={i} type="text" value={form[`market_service_provider_${i}`]} onChange={(e) => setForm((f) => ({ ...f, [`market_service_provider_${i}`]: e.target.value }))} className="input-field" placeholder={`Service Provider ${i}`} />
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="field-group">
-                                    <label className="label">Upload File</label>
-                                    <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files[0] }))} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
-                                </div>
-                            </div>
-                        )}
-
-                        {selectedDoc?.subDoc === 'Requisition and Issue Slip' && (
-                            <div className="space-y-4">
-                                <div className="field-group">
-                                    <label className="label">Purpose</label>
-                                    <textarea value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="input-field min-h-[5rem] resize-none py-3" placeholder="Purpose of the requisition" />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="field-group">
-                                        <label className="label">Office/Division</label>
-                                        <input type="text" value={form.office_division} onChange={(e) => setForm((f) => ({ ...f, office_division: e.target.value }))} className="input-field" placeholder="Office or division" />
-                                    </div>
-                                    <div className="field-group">
-                                        <label className="label">Received By</label>
-                                        <input type="text" value={form.received_by} onChange={(e) => setForm((f) => ({ ...f, received_by: e.target.value }))} className="input-field" placeholder="Name of recipient" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="field-group">
-                                        <label className="label">Date</label>
-                                        <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="input-field" />
-                                    </div>
-                                    <div className="field-group">
-                                        <label className="label">Upload File</label>
-                                        <input type="file" onChange={(e) => setForm((f) => ({ ...f, file: e.target.files[0] }))} className="input-field py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:text-white file:text-[10px] file:font-bold file:uppercase cursor-pointer" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx" />
-                                    </div>
                                 </div>
                             </div>
                         )}

@@ -75,7 +75,7 @@ function AppContent() {
             if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
                 setUser(null);
-                setLoginInfoMessage('Your session has ended due to inactivity. Please sign in again.');
+                setLoginInfoMessage('Your session has ended due to inactivity. Please log in again.');
                 navigate('/');
             }, timeoutMs);
         };

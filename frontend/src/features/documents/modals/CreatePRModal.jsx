@@ -6,7 +6,7 @@ import {
 } from 'react-icons/md';
 import Modal from '../../../components/Modal';
 import { documentService } from '../../../services/api';
-import { generatePR_Excel } from '../../../utils/prGenerator';
+import { createPR_PDFFile, generatePR_Excel } from '../../../utils/prGenerator';
 
 const CreatePRModal = ({
     show,
@@ -35,11 +35,6 @@ const CreatePRModal = ({
         title: ''
     });
 
-    const [supportingFiles, setSupportingFiles] = useState({
-        activityDesign: null,
-        ris: null,
-        marketScoping: null
-    });
     const [showAttachmentsPopover, setShowAttachmentsPopover] = useState(false);
 
     useEffect(() => {
@@ -127,6 +122,7 @@ const CreatePRModal = ({
             formData.append('ppmp_no', form.ppmp_no);
             formData.append('prNo', form.prNo);
             formData.append('total_amount', calculateTotal());
+            formData.append('date', new Date().toISOString().slice(0, 10));
 
             // Save the line items as a JSON string
             formData.append('pr_items', JSON.stringify(items));
@@ -134,39 +130,19 @@ const CreatePRModal = ({
             const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
             formData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
 
-            const prResponse = await documentService.create(formData);
-            const procurementRecordId = prResponse.procurement_record || null;
-
-            // Handle supporting documents
-            const supportDocs = [
-                { file: supportingFiles.activityDesign, subDoc: 'Activity Design' },
-                { file: supportingFiles.ris, subDoc: 'Requisition and Issue Slip' },
-                { file: supportingFiles.marketScoping, subDoc: 'Market Scoping' }
-            ];
-
-            for (const doc of supportDocs) {
-                if (doc.file) {
-                    const supportFormData = new FormData();
-                    supportFormData.append('category', 'Initial Documents');
-                    supportFormData.append('subDoc', doc.subDoc);
-                    supportFormData.append('title', `${doc.subDoc} for ${form.ppmp_no}`);
-                    supportFormData.append('ppmp_no', form.ppmp_no);
-                    supportFormData.append('prNo', form.prNo);
-                    supportFormData.append('file', doc.file);
-                    supportFormData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
-                    
-                    await documentService.create(supportFormData, procurementRecordId);
-                }
-            }
-
             const prData = {
                 items,
                 total: calculateTotal(),
                 ppmp_no: form.ppmp_no,
                 prNo: form.prNo,
                 title: form.title || `PR for ${form.ppmp_no}`,
-                office: selectedPPMP?.end_user_office || ''
+                office: selectedPPMP?.end_user_office || '',
+                date: new Date()
             };
+            const pdfFile = await createPR_PDFFile(prData);
+            formData.append('file', pdfFile);
+
+            await documentService.create(formData);
             setSavedPRData(prData);
             setIsSuccess(true);
 
@@ -344,112 +320,6 @@ const CreatePRModal = ({
                             {errors.ppmp_no && <span className="text-xs text-red-500 font-semibold">{errors.ppmp_no}</span>}
                         </div>
 
-                        {/* Attachments Section (Top Placement) */}
-                        <div className="relative pb-[2px]">
-                            <button
-                                type="button"
-                                onClick={() => setShowAttachmentsPopover(!showAttachmentsPopover)}
-                                className={`
-                                    flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all h-[46px]
-                                    ${Object.values(supportingFiles).some(f => f)
-                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-[var(--primary)]'}
-                                `}
-                            >
-                                <MdAttachFile className="w-4 h-4" />
-                                <span className="hidden sm:inline">
-                                    {Object.values(supportingFiles).filter(f => f).length > 0 
-                                        ? `${Object.values(supportingFiles).filter(f => f).length} Files`
-                                        : 'Upload'}
-                                </span>
-                            </button>
-
-                            <AnimatePresence>
-                                {showAttachmentsPopover && (
-                                    <>
-                                        <div 
-                                            className="fixed inset-0 z-[60]" 
-                                            onClick={() => setShowAttachmentsPopover(false)} 
-                                        />
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                            className="absolute top-full right-0 mt-3 w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 z-[70] space-y-3"
-                                        >
-                                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
-                                                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Supporting Docs</h4>
-                                                <button onClick={() => setShowAttachmentsPopover(false)}>
-                                                    <MdClose className="w-4 h-4 text-slate-400" />
-                                                </button>
-                                            </div>
-                                            
-                                            <div className="space-y-2">
-                                                {[
-                                                    { id: 'activityDesign', label: 'Activity Design' },
-                                                    { id: 'ris', label: 'RIS Document' },
-                                                    { id: 'marketScoping', label: 'Market Scoping' }
-                                                ].map((doc) => (
-                                                    <div key={doc.id} className="relative">
-                                                        <input
-                                                            type="file"
-                                                            id={`file-${doc.id}`}
-                                                            className="hidden"
-                                                            onChange={(e) => {
-                                                                const file = e.target.files[0];
-                                                                if (file) {
-                                                                    setSupportingFiles(prev => ({
-                                                                        ...prev,
-                                                                        [doc.id]: file
-                                                                    }));
-                                                                }
-                                                            }}
-                                                        />
-                                                        <div 
-                                                            onClick={() => !supportingFiles[doc.id] && document.getElementById(`file-${doc.id}`).click()}
-                                                            className={`
-                                                                flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer
-                                                                ${supportingFiles[doc.id] 
-                                                                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30' 
-                                                                    : 'bg-slate-50 dark:bg-slate-900/50 border-transparent hover:border-[var(--primary)]'}
-                                                            `}
-                                                        >
-                                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                                <div className={`
-                                                                    w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                                                                    ${supportingFiles[doc.id] ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-white dark:bg-slate-800 text-slate-400'}
-                                                                `}>
-                                                                    {supportingFiles[doc.id] ? <MdDescription className="w-4 h-4" /> : <MdCloudUpload className="w-4 h-4" />}
-                                                                </div>
-                                                                <div className="flex flex-col min-w-0">
-                                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">{doc.label}</span>
-                                                                    <span className="text-[10px] text-slate-400 truncate">
-                                                                        {supportingFiles[doc.id] ? supportingFiles[doc.id].name : 'Not selected'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            {supportingFiles[doc.id] && (
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSupportingFiles(prev => ({ ...prev, [doc.id]: null }));
-                                                                        const el = document.getElementById(`file-${doc.id}`);
-                                                                        if (el) el.value = '';
-                                                                    }}
-                                                                    className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-md transition-colors"
-                                                                >
-                                                                    <MdClose className="w-3.5 h-3.5 text-emerald-600" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </motion.div>
-                                    </>
-                                )}
-                            </AnimatePresence>
-                        </div>
                     </div>
 
                     {/* Table Section */}

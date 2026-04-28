@@ -34,30 +34,41 @@ const Dashboard = ({ user, onLogout }) => {
     if (location.pathname !== '/') return null;
 
     return (
-        <div className="space-y-5 pb-8">
-            <PageHeader
-                title="BAC Dashboard"
-                subtitle={dateLabel}
-                titleSize="default"
-            >
-                <div className="flex items-center gap-3">
+        <div className="space-y-8 pb-12 animate-in fade-in duration-700">
+            {/* High-End Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-1">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        Welcome back, {user?.fullName?.split(' ')[0] || 'User'}
+                    </h1>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-2">
+                        {dateLabel}
+                    </p>
+                </div>
+                <div className="flex items-center gap-4 bg-white p-2 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40">
                     <NotificationBell user={user} />
+                    <div className="h-8 w-px bg-slate-100" />
                     <UserAccountDropdown user={user} onLogout={onLogout} />
                 </div>
-            </PageHeader>
+            </div>
 
-            <div className="content-section overflow-hidden rounded-xl p-0">
-                <div className="p-6 sm:p-7 border-b border-[var(--border-light)]">
-                    <StatsGrid loading={loading} stats={stats} />
-                </div>
+            <div className="space-y-8">
+                {/* Top Stats - Floating Style */}
+                <StatsGrid loading={loading} stats={stats} />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 w-full dashboard-grid">
-                    <DashboardCalendar 
-                        events={stats.calendarEvents} 
-                        isAdmin={isAdmin} 
-                        onOpenAddEvent={(date) => setEventModal({ date })}
-                        onOpenEditEvent={(ev) => setEditEventModal({ ev })}
-                    />
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden transition-all duration-500 hover:shadow-2xl">
+                        <div className="px-8 py-6 border-b border-slate-50">
+                            <p className="text-xl font-black text-slate-800 tracking-tight">Calendar Events</p>
+                        </div>
+                        <DashboardCalendar 
+                            events={stats.calendarEvents} 
+                            isAdmin={isAdmin} 
+                            onOpenAddEvent={(date) => setEventModal({ date })}
+                            onOpenEditEvent={(ev) => setEditEventModal({ ev })}
+                        />
+                    </div>
                     
                     <ProcurementProgress 
                         pieData={stats.pieData} 

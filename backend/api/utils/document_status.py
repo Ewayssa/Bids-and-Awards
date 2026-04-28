@@ -23,6 +23,7 @@ class DocumentStatusCalculator:
     }
 
     NO_FILE_REQUIRED_EXACT = {
+        'Purchase Request',
         'Notice of Award (Posted)',
         'Abstract of Quotation (Posted)',
         'BAC Resolution (Posted)',
@@ -41,15 +42,12 @@ class DocumentStatusCalculator:
     # A mapping of sub-document types to their required fields for 'complete' status.
     # Updated with official BAC checklist names.
     REQUIRED_FIELDS_BY_SUBDOC = {
-        'Purchase Request (with # and received by FAD Records Section)': ['total_amount', 'user_pr_no'],
-        'Purchase Request': ['total_amount', 'user_pr_no'],
-        'Activity Design': ['source_of_fund'],
+        'Purchase Request': ['total_amount'],
         'Project Procurement Management Plan/Supplemental PPMP': ['ppmp_no'],
         'Annual Procurement Plan': lambda doc, is_filled: (
             is_filled(doc.app_type) and
             (not doc.certified_true_copy or is_filled(doc.certified_signed_by))
         ),
-        'Market Scoping': ['market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3'],
         'Market Scoping / Canvass': ['market_budget', 'market_expected_delivery', 'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3'],
         'BAC Resolution': ['resolution_no', 'winning_bidder', 'resolution_option', 'venue'],
         'Abstract of Quotation': lambda doc, is_filled: (
@@ -66,10 +64,9 @@ class DocumentStatusCalculator:
 
     @classmethod
     def is_new_procurement(cls, document) -> bool:
-        """Check if document is new procurement (Procurement category or Requisition and Issue Slip, recent/empty prNo)."""
+        """Check if document is new procurement (Procurement category, recent/empty prNo)."""
         category = (document.category or '').strip()
-        sub_doc = (document.subDoc or '').strip()
-        is_proc_type = category == 'Procurement' or sub_doc == 'Requisition and Issue Slip'
+        is_proc_type = category == 'Procurement'
         if not is_proc_type:
             return False
         pr_no = (document.prNo or '').strip()
@@ -86,45 +83,10 @@ class DocumentStatusCalculator:
         """Calculate document status based on submission requirements."""
         sub_doc = (document.subDoc or '').strip()
 
-        # 1. Fundamental Package Submission Check (Mandatory for key procurement files)
-        package_related = sub_doc in {'Purchase Request', 'Requisition and Issue Slip', 'Market Scoping', 'Activity Design'}
-        if package_related:
-            required_package = {'Requisition and Issue Slip', 'Market Scoping', 'Activity Design'}
-            
-            # Find related documents by Folder or PR/PPMP fallback
-            from api.models import Document
-            pr_no = (document.prNo or '').strip()
-            ppmp_no = (document.ppmp_no or '').strip()
-            folder = document.procurement_record
-            
-            if folder:
-                # Get subDocs that actually have a file attached
-                submitted_docs = set(folder.documents.filter(file__isnull=False).exclude(file='').values_list('subDoc', flat=True))
-            else:
-                from django.db.models import Q
-                filters = Q()
-                if pr_no: filters |= Q(prNo=pr_no)
-                if ppmp_no: filters |= Q(ppmp_no=ppmp_no)
-                submitted_docs = set(Document.objects.filter(filters).filter(file__isnull=False).exclude(file='').values_list('subDoc', flat=True))
+        if cls._has_uploaded_or_generated_file(document, sub_doc):
+            return 'complete'
 
-            # The package is complete if RIS, MS, AD are all SUBMITTED and CURRENT file exists
-            if required_package.issubset(submitted_docs):
-                current_has_file = bool(document.file)
-                if current_has_file and hasattr(document.file, 'name'):
-                    current_has_file = bool(document.file.name and str(document.file.name).strip())
-                
-                if current_has_file:
-                    return 'complete'
-
-            # Otherwise, if it has a file, it's at least 'ongoing'
-            current_has_file = bool(document.file)
-            if current_has_file and hasattr(document.file, 'name'):
-                current_has_file = bool(document.file.name and str(document.file.name).strip())
-            
-            if current_has_file:
-                return 'ongoing'
-
-        # 2. Individual Completeness Fallback (for non-package documents)
+        # 1. Individual Completeness Check
         id_complete = True
         ignore_prno = cls.is_new_procurement(document)
         
@@ -138,7 +100,7 @@ class DocumentStatusCalculator:
         if id_complete:
             return 'complete'
 
-        # 3. Partial Submission Check
+        # 2. Partial Submission Check
         actual_has_file = bool(document.file)
         if actual_has_file and hasattr(document.file, 'name'):
             actual_has_file = bool(document.file.name and str(document.file.name).strip())
@@ -147,6 +109,24 @@ class DocumentStatusCalculator:
             return 'ongoing'
 
         return 'pending'
+
+    @classmethod
+    def _has_uploaded_or_generated_file(cls, document, sub_doc: str) -> bool:
+        """File-first completion rule for user-facing document status."""
+        if sub_doc == 'Purchase Request':
+            return bool(
+                document.file or
+                document.pr_items or
+                document.total_amount or
+                document.title or
+                document.ppmp_no
+            )
+
+        has_file = bool(document.file)
+        if has_file and hasattr(document.file, 'name'):
+            has_file = bool(document.file.name and str(document.file.name).strip())
+
+        return has_file
 
     @classmethod
     def _has_any_subdoc_data(cls, document, sub_doc: str) -> bool:

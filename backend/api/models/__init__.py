@@ -274,6 +274,7 @@ class ProcurementRecord(models.Model):
         ('for_award', 'For Award'),
         ('awarded', 'Awarded'),
         ('for_liquidation', 'For Liquidation'),
+        ('completed', 'Completed'),
         ('closed', 'Closed'),
     ]
 

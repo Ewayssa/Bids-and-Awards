@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { reportService } from '../../services/api';
+import { reportService, getReportPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
 import { ROLES } from '../../utils/auth';
 import { MdUpload, MdChevronLeft, MdChevronRight, MdAdd, MdSearch, MdCheckCircle } from 'react-icons/md';
 import PageHeader from '../../components/PageHeader';
@@ -140,8 +140,10 @@ const Reports = ({ user }) => {
 
     const openPreview = (r) => {
         const fileUrl = r?.file_url ?? r?.file;
-        if (fileUrl) {
-            window.open(toFullUrl(fileUrl), '_blank', 'noopener');
+        if (r?.id && fileUrl) {
+            openPreviewTab(getReportPreviewUrl(r.id), getUploadedFilename(r));
+        } else if (fileUrl) {
+            openPreviewTab(toFullUrl(fileUrl), getUploadedFilename(r));
         } else {
             alert('No file uploaded for this report.');
         }
@@ -152,7 +154,7 @@ const Reports = ({ user }) => {
         if (!fileUrl && !r?.id) return;
         
         try {
-            const res = await fetch(toFullUrl(fileUrl || `/api/reports/${r.id}/preview/`), { 
+            const res = await fetch(toFullUrl(fileUrl || getReportPreviewUrl(r.id)), { 
                 credentials: 'include',
                 headers: getAuthHeaders()
             });
@@ -165,7 +167,7 @@ const Reports = ({ user }) => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (err) {
-            window.open(toFullUrl(fileUrl), '_blank');
+            openPreviewTab(toFullUrl(fileUrl), getUploadedFilename(r));
         }
     };
 

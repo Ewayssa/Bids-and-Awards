@@ -3,6 +3,71 @@ import axios from 'axios';
 /** Same-origin default (Vite dev proxy). Set VITE_API_BASE_URL for a separate API host in production. */
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
+const toAbsoluteApiUrl = (path) => {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    if (/^https?:\/\//i.test(API_BASE_URL)) {
+        return `${API_BASE_URL}${normalizedPath}`;
+    }
+    return `${window.location.origin}${API_BASE_URL}${normalizedPath}`;
+};
+
+export const getDocumentPreviewUrl = (id) => toAbsoluteApiUrl(`/upload/${id}/preview/`);
+export const getReportPreviewUrl = (id) => toAbsoluteApiUrl(`/reports/${id}/preview/`);
+
+const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+export const getUploadedFilename = (record, fallback = 'File Preview') => {
+    const fileValue = record?.file_url || record?.file;
+    if (fileValue instanceof File) return fileValue.name || fallback;
+    if (typeof fileValue !== 'string' || !fileValue) return fallback;
+
+    try {
+        const parsedUrl = new URL(fileValue, window.location.origin);
+        const filename = parsedUrl.pathname.split('/').filter(Boolean).pop();
+        return filename ? decodeURIComponent(filename) : fallback;
+    } catch {
+        const filename = fileValue.split(/[/?#]/).filter(Boolean).pop();
+        return filename ? decodeURIComponent(filename) : fallback;
+    }
+};
+
+export const openPreviewTab = (previewUrl, title = 'File Preview') => {
+    const previewWindow = window.open('', '_blank');
+    if (!previewWindow) {
+        window.open(previewUrl, '_blank', 'noopener');
+        return;
+    }
+
+    try {
+        previewWindow.opener = null;
+        const safeTitle = escapeHtml(title || 'File Preview');
+        const safeUrl = escapeHtml(previewUrl);
+        previewWindow.document.write(`<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${safeTitle}</title>
+    <style>
+        html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #111827; }
+        iframe { display: block; width: 100%; height: 100vh; border: 0; background: #fff; }
+    </style>
+</head>
+<body>
+    <iframe src="${safeUrl}" title="${safeTitle}"></iframe>
+</body>
+</html>`);
+        previewWindow.document.close();
+    } catch {
+        previewWindow.location.href = previewUrl;
+    }
+};
+
 // Create an axios instance
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -109,7 +174,7 @@ export const documentService = {
         const response = await api.patch(`/upload/${id}/`, { status });
         return response.data;
     },
-    
+
     async assignPRNo(id, userPRNo) {
         const response = await api.post(`/upload/${id}/assign_pr_no/`, { user_pr_no: userPRNo });
         return response.data;

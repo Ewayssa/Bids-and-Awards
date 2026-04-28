@@ -5,12 +5,12 @@ import {
     MdDescription, MdOutlineLibraryBooks,
     MdMoreVert, MdLabel, MdCompareArrows,
     MdOutlineAssignmentTurnedIn, MdClose, MdCloudUpload,
-    MdLock, MdDoneAll, MdEdit
+    MdLock, MdDoneAll
 } from 'react-icons/md';
 import { CHECKLIST_CONFIG, DOC_TYPES } from '../../constants/docTypes';
-import { documentService, procurementRecordService } from '../../services/api';
+import { documentService, procurementRecordService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
 import { formatCurrencyValue } from '../../utils/validation';
-import { MdInfo } from 'react-icons/md';
+import { ROLES } from '../../utils/auth';
 
 const ProcurementWorkflowView = ({ 
     record, 
@@ -27,12 +27,9 @@ const ProcurementWorkflowView = ({
     const [selectedFile, setSelectedFile] = useState(null);
     const [completing, setCompleting] = useState(false);
     const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
     const [targetPRDoc, setTargetPRDoc] = useState(null);
     const fileInputRef = useRef(null);
-
-    const [isEditingPR, setIsEditingPR] = useState(false); // Legacy field, keeping for now to avoid breaking header logic immediately
-    const [assignValue, setAssignValue] = useState(record?.user_pr_no || '');
-    const [assigning, setAssigning] = useState(false);
 
     const isAdmin = user?.role === ROLES.ADMIN;
     const isSecretariat = user?.role === ROLES.SECRETARIAT;
@@ -41,18 +38,10 @@ const ProcurementWorkflowView = ({
     const canMarkAsCompleted = isAdmin || isSecretariat || isMember;
     const canUpload = isAdmin || isSecretariat;
 
-    const handleAssignPR = async () => {
-        if (!assignValue.trim() || assigning) return;
-        setAssigning(true);
-        try {
-            await procurementRecordService.update(record.id, { user_pr_no: assignValue.trim() });
-            setIsEditingPR(false);
-            if (onRefresh) onRefresh();
-        } catch (err) {
-            setError('Failed to assign PR number.');
-        } finally {
-            setAssigning(false);
-        }
+    const hasChecklistFile = (doc) => {
+        if (!doc) return false;
+        if (doc.file_url || doc.file) return true;
+        return doc.subDoc === 'Purchase Request' && (doc.pr_items || doc.total_amount || doc.title || doc.ppmp_no);
     };
 
     // Calculate completion status
@@ -66,15 +55,15 @@ const ProcurementWorkflowView = ({
                 if (isPRReq && d.subDoc?.toLowerCase().includes('purchase request')) return true;
                 return false;
             });
-            const count = uploadedDocs.length;
+            const docsWithFiles = uploadedDocs.filter(hasChecklistFile);
+            const count = docsWithFiles.length;
             const isMet = req.minFiles ? count >= req.minFiles : count > 0;
-            return { ...req, count, isMet, docs: uploadedDocs };
+            return { ...req, count, isMet, docs: docsWithFiles };
         });
         
         const allRequiredMet = results.filter(r => r.required).every(r => r.isMet);
-        const hasOfficialPR = !!record?.user_pr_no;
-        return { items: results, allRequiredMet, hasOfficialPR };
-    }, [recordDocs, config, record?.user_pr_no]);
+        return { items: results, allRequiredMet };
+    }, [recordDocs, config]);
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
@@ -87,6 +76,7 @@ const ProcurementWorkflowView = ({
         
         setUploading(true);
         setError(null);
+        setSuccessMessage(null);
         try {
             // Determine category Name
             let categoryName = 'Procurement';
@@ -113,6 +103,7 @@ const ProcurementWorkflowView = ({
             
             setActiveUploadDoc(null);
             setSelectedFile(null);
+            setSuccessMessage(`${docName} uploaded successfully.`);
             if (onRefresh) onRefresh();
         } catch (err) {
             console.error('Upload failed:', err);
@@ -124,7 +115,7 @@ const ProcurementWorkflowView = ({
     };
 
     const handleComplete = async () => {
-        if (!requirements.allRequiredMet || !requirements.hasOfficialPR || isClosed || completing) return;
+        if (!requirements.allRequiredMet || isClosed || completing) return;
         
         if (!window.confirm('Are you sure you want to mark this procurement as COMPLETED? This will lock the record and include it in final reports.')) {
             return;
@@ -132,8 +123,10 @@ const ProcurementWorkflowView = ({
 
         setCompleting(true);
         setError(null);
+        setSuccessMessage(null);
         try {
-            await procurementRecordService.update(record.id, { status: 'closed' });
+            await procurementRecordService.update(record.id, { status: 'completed' });
+            setSuccessMessage('Procurement marked as completed successfully.');
             if (onRefresh) onRefresh();
         } catch (err) {
             console.error('Completion failed:', err);
@@ -145,8 +138,8 @@ const ProcurementWorkflowView = ({
     };
 
     const handleViewDoc = (doc) => {
-        if (doc.file_url) {
-            window.open(doc.file_url, '_blank', 'noopener');
+        if (doc.id && doc.file_url) {
+            openPreviewTab(getDocumentPreviewUrl(doc.id), getUploadedFilename(doc));
         } else if (onOpenDoc) {
             onOpenDoc(doc);
         }
@@ -194,17 +187,10 @@ const ProcurementWorkflowView = ({
                                 <span className="w-1 h-1 rounded-full bg-slate-300" />
                                 <span>{config.name}</span>
                             </p>
-                            {requirements.hasOfficialPR ? (
+                            {record?.user_pr_no && (
                                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
                                     <MdLabel className="w-3.5 h-3.5" />
                                     <span className="text-[10px] font-black uppercase tracking-tight">PR: {record.user_pr_no}</span>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg border border-amber-100">
-                                    <MdInfo className="w-3.5 h-3.5 shadow-sm" />
-                                    <span className="text-[10px] font-black uppercase tracking-tight text-amber-500 italic pb-0.5">
-                                        Pending PR No. Assignment
-                                    </span>
                                 </div>
                             )}
                         </div>
@@ -222,6 +208,21 @@ const ProcurementWorkflowView = ({
                         <p className="text-xs font-bold text-red-800 leading-tight flex-1">{error}</p>
                         <button onClick={() => setError(null)} className="p-1.5 hover:bg-red-100 rounded-lg transition-colors">
                             <MdClose className="w-4 h-4 text-red-400" />
+                        </button>
+                    </motion.div>
+                )}
+
+                {successMessage && (
+                    <motion.div 
+                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                        className="mt-4 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-emerald-600 shadow-sm grow-0 shrink-0">
+                            <MdCheckCircle className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold text-emerald-800 leading-tight flex-1">{successMessage}</p>
+                        <button onClick={() => setSuccessMessage(null)} className="p-1.5 hover:bg-emerald-100 rounded-lg transition-colors">
+                            <MdClose className="w-4 h-4 text-emerald-400" />
                         </button>
                     </motion.div>
                 )}
@@ -410,15 +411,15 @@ const ProcurementWorkflowView = ({
 
                     <button
                         onClick={handleComplete}
-                        disabled={!requirements.allRequiredMet || !requirements.hasOfficialPR || completing || !canMarkAsCompleted}
+                        disabled={!requirements.allRequiredMet || completing || !canMarkAsCompleted}
                         className={`px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-3 ${
-                            requirements.allRequiredMet && requirements.hasOfficialPR && canMarkAsCompleted
+                            requirements.allRequiredMet && canMarkAsCompleted
                                 ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 hover:bg-emerald-700 active:scale-95' 
                                 : 'bg-slate-100 text-slate-400 cursor-not-allowed grayscale'
                         }`}
                     >
                         {completing ? 'Processing...' : 'Mark as Completed'}
-                        {!completing && requirements.allRequiredMet && requirements.hasOfficialPR && <MdCheckCircle className="w-5 h-5" />}
+                        {!completing && requirements.allRequiredMet && <MdCheckCircle className="w-5 h-5" />}
                     </button>
                 </div>
             )}

@@ -3,175 +3,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ notification_type }}</title>
     <style>
         body {
-            font-family: 'Times New Roman', Times, serif; /* Classical formal font fallback */
-            line-height: 1.6;
-            color: #1a202c;
             margin: 0;
             padding: 0;
-            background-color: #f7fafc;
+            background: #eef3ef;
+            color: #1f2933;
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.55;
         }
-        /* Use modern system fonts that look formal */
-        @media screen {
-            body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            }
+        table {
+            border-collapse: collapse;
+        }
+        img {
+            border: 0;
+            display: block;
+            outline: none;
+            text-decoration: none;
+        }
+        .email-shell {
+            width: 100%;
+            background: #eef3ef;
+            padding: 28px 12px;
         }
         .container {
-            max-width: 650px;
-            margin: 30px auto;
+            width: 100%;
+            max-width: 680px;
             background: #ffffff;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #d9e2dc;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 14px 30px rgba(16, 54, 32, 0.12);
         }
-        .header {
-            background-color: #0c2340; /* Navy Blue */
-            padding: 40px 30px;
-            text-align: center;
-            border-bottom: 4px solid #c5a059; /* Gold accent */
+        .masthead {
+            background: #0b5f31;
             color: #ffffff;
         }
-        .header h1 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        .masthead-inner {
+            padding: 24px 30px;
         }
-        .header p {
-            margin: 10px 0 0;
-            font-size: 14px;
-            color: #cbd5e0;
-            font-weight: 400;
+        .seal-cell {
+            width: 78px;
+            vertical-align: middle;
+        }
+        .seal {
+            width: 62px;
+            height: 62px;
+            object-fit: contain;
+            background: #ffffff;
+            border-radius: 50%;
+            padding: 6px;
+        }
+        .agency {
+            margin: 0;
+            color: #dff5e7;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.4px;
             text-transform: uppercase;
+        }
+        .office {
+            margin: 4px 0 0;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+        .system-name {
+            margin: 3px 0 0;
+            color: #ccebd6;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .accent-bar td {
+            height: 5px;
+            font-size: 0;
+            line-height: 0;
+        }
+        .accent-red {
+            background: #b91c1c;
+        }
+        .accent-gold {
+            background: #f2c94c;
+        }
+        .accent-blue {
+            background: #1d4ed8;
         }
         .content {
-            padding: 45px 50px;
+            padding: 34px 38px 36px;
         }
-        .notice-type {
+        .notice-pill {
+            display: inline-block;
+            margin: 0 0 22px;
+            padding: 7px 12px;
+            background: #e8f5ed;
+            border: 1px solid #b7dbc4;
+            border-radius: 999px;
+            color: #0b5f31;
             font-size: 12px;
-            font-weight: 700;
-            color: #0c2340;
+            font-weight: 800;
+            letter-spacing: 1px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 25px;
-            text-align: center;
         }
         .greeting {
+            margin: 0 0 12px;
+            color: #102a1b;
             font-size: 18px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 20px;
+            font-weight: 700;
         }
         .intro {
-            font-size: 16px;
-            color: #4a5568;
-            margin-bottom: 30px;
+            margin: 0 0 26px;
+            color: #425044;
+            font-size: 15px;
         }
-        .event-box {
-            background-color: #f8fafc;
-            border: 1px solid #edf2f7;
-            padding: 30px;
-            margin-bottom: 35px;
+        .event-card {
+            width: 100%;
+            margin: 0 0 28px;
+            background: #fbfdfb;
+            border: 1px solid #d5e5da;
+            border-left: 6px solid #0b5f31;
+            border-radius: 6px;
+        }
+        .event-card td {
+            padding: 0;
+        }
+        .event-row {
+            border-bottom: 1px solid #e5eee8;
         }
         .event-label {
-            font-size: 13px;
-            font-weight: 700;
-            color: #718096;
+            width: 165px;
+            padding: 16px 18px;
+            color: #627066;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
             text-transform: uppercase;
-            margin-bottom: 5px;
-            display: block;
+            vertical-align: top;
         }
         .event-value {
-            font-size: 18px;
-            font-weight: 600;
-            color: #0c2340;
-            margin-bottom: 20px;
+            padding: 16px 18px 16px 0;
+            color: #102a1b;
+            font-size: 16px;
+            font-weight: 700;
+            vertical-align: top;
         }
-        .event-value.last {
-            margin-bottom: 0;
-        }
-        .action-container {
+        .action-wrap {
+            margin: 32px 0 30px;
             text-align: center;
-            margin: 40px 0;
         }
         .action-button {
-            background-color: #0c2340;
-            color: #ffffff !important;
-            padding: 15px 35px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
             display: inline-block;
+            min-width: 180px;
+            padding: 14px 24px;
+            background: #0b5f31;
+            border-radius: 4px;
+            color: #ffffff !important;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.7px;
+            text-decoration: none;
+            text-transform: uppercase;
         }
         .closing {
-            font-size: 15px;
-            color: #4a5568;
-            border-top: 1px solid #edf2f7;
-            padding-top: 30px;
+            margin: 0;
+            padding-top: 24px;
+            border-top: 1px solid #e5eee8;
+            color: #425044;
+            font-size: 14px;
         }
         .signature {
-            margin-top: 20px;
-            font-weight: 700;
-            color: #0c2340;
+            margin: 20px 0 0;
+            color: #0b5f31;
+            font-size: 14px;
+            font-weight: 800;
         }
         .footer {
-            background-color: #edf2f7;
-            padding: 30px;
-            text-align: center;
+            padding: 22px 30px;
+            background: #f7faf8;
+            border-top: 1px solid #d9e2dc;
+            color: #65746a;
             font-size: 12px;
-            color: #718096;
+            text-align: center;
+        }
+        .footer strong {
+            color: #0b5f31;
+        }
+        @media only screen and (max-width: 600px) {
+            .email-shell {
+                padding: 0;
+            }
+            .container {
+                border-radius: 0;
+            }
+            .masthead-inner,
+            .content,
+            .footer {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .seal-cell {
+                width: 64px;
+            }
+            .seal {
+                width: 50px;
+                height: 50px;
+            }
+            .office {
+                font-size: 17px;
+            }
+            .event-label,
+            .event-value {
+                display: block;
+                width: auto;
+                padding: 14px 16px 0;
+            }
+            .event-value {
+                padding-top: 5px;
+                padding-bottom: 14px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Bids and Awards Committee</h1>
-            <p>Official System Correspondence</p>
-        </div>
-        <div class="content">
-            <div class="notice-type">{{ notification_type|upper }}</div>
-            
-            <div class="greeting">{{ greeting|default:"To all concerned personnel," }}</div>
-            
-            <p class="intro">{{ intro_text }}</p>
-            
-            <div class="event-box">
-                <span class="event-label">Agenda/Activity Title</span>
-                <div class="event-value">{{ event.title }}</div>
-                
-                <span class="event-label">Meeting Date</span>
-                <div class="event-value {% if not time_display %}last{% endif %}">{{ event.date|date:"F d, Y" }}</div>
+    <table role="presentation" class="email-shell" width="100%">
+        <tr>
+            <td align="center">
+                <table role="presentation" class="container" width="680">
+                    <tr>
+                        <td class="masthead">
+                            <table role="presentation" width="100%" class="masthead-inner">
+                                <tr>
+                                    <td class="seal-cell">
+                                        <img src="{{ frontend_base_url }}/dilg-logo.png" alt="DILG" class="seal" width="62" height="62">
+                                    </td>
+                                    <td>
+                                        <p class="agency">Republic of the Philippines</p>
+                                        <h1 class="office">Department of the Interior and Local Government</h1>
+                                        <p class="system-name">Bids and Awards Committee Management System</p>
+                                    </td>
+                                    <td class="seal-cell" align="right">
+                                        <img src="{{ frontend_base_url }}/bagong-pilipinas-logo.png" alt="Bagong Pilipinas" class="seal" width="62" height="62">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <table role="presentation" width="100%" class="accent-bar">
+                                <tr>
+                                    <td class="accent-red" width="34%">&nbsp;</td>
+                                    <td class="accent-gold" width="32%">&nbsp;</td>
+                                    <td class="accent-blue" width="34%">&nbsp;</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content">
+                            <div class="notice-pill">{{ notification_type|upper }}</div>
+                            <p class="greeting">{{ greeting|default:"To all concerned personnel," }}</p>
+                            <p class="intro">{{ intro_text }}</p>
 
-                {% if time_display %}
-                <span class="event-label">Start time/End time</span>
-                <div class="event-value last">{{ time_display }}</div>
-                {% endif %}
+                            <table role="presentation" class="event-card" width="100%">
+                                <tr class="event-row">
+                                    <td class="event-label">Activity</td>
+                                    <td class="event-value">{{ event.title }}</td>
+                                </tr>
+                                <tr class="event-row">
+                                    <td class="event-label">Date</td>
+                                    <td class="event-value">{{ event.date|date:"F d, Y" }}</td>
+                                </tr>
+                                {% if time_display %}
+                                <tr class="event-row">
+                                    <td class="event-label">Time</td>
+                                    <td class="event-value">{{ time_display }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td class="event-label">Access</td>
+                                    <td class="event-value">View complete details through the official BAC portal.</td>
+                                </tr>
+                            </table>
 
-                <span class="event-label">Details / Access</span>
-                <div class="event-value last">Access through the official portal for complete documentation.</div>
-            </div>
-            
-            <div class="action-container">
-                <a href="{{ login_url }}" class="action-button">Access BAC Portal</a>
-            </div>
-            
-            <div class="closing">
-                <p>This serves as an official automated notice from the BAC Management System. Your presence and preparation for the aforementioned activity are requested as applicable.</p>
-                
-                <div class="signature">
-                    BAC Secretariat<br>
-                    Official System Notification
-                </div>
-            </div>
-        </div>
-        <div class="footer">
-            &copy; 2026 Bids and Awards Committee System. This is a system-generated email. Please do not reply directly to this message. For inquiries, please contact the BAC Secretariat office.
-        </div>
-    </div>
+                            <div class="action-wrap">
+                                <a href="{{ login_url }}" class="action-button">Open BAC Portal</a>
+                            </div>
+
+                            <div class="closing">
+                                <p>This is a system-generated official notice from the DILG BAC Management System. Kindly take note of the scheduled activity and make the necessary preparations.</p>
+                                <p class="signature">
+                                    BAC Secretariat<br>
+                                    Department of the Interior and Local Government
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="footer">
+                            <strong>DILG BAC Management System</strong><br>
+                            This email was sent automatically. Please do not reply directly to this message.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

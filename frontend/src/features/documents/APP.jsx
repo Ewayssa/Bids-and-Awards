@@ -4,10 +4,12 @@ import { MdDateRange, MdUpload, MdVisibility, MdDelete } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import UploadAPPModal from './modals/UploadAPPModal';
 import PreviewModal from './modals/PreviewModal';
-import { documentService } from '../../services/api';
+import AlertModal from './modals/AlertModal';
+import { documentService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
 
 const APP = ({ user }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
     const [apps, setApps] = useState([]);
     const [loading, setLoading] = useState(false);
     const [previewDoc, setPreviewDoc] = useState(null);
@@ -33,7 +35,7 @@ const APP = ({ user }) => {
         if (!docId) {
             // Fallback: If no ID, try to open the file URL directly
             if (item.file_url) {
-                window.open(item.file_url, '_blank', 'noopener,noreferrer');
+                openPreviewTab(item.file_url, getUploadedFilename(item));
             } else {
                 alert('Cannot view this document: No file found.');
             }
@@ -41,8 +43,7 @@ const APP = ({ user }) => {
         }
 
         // Use the new preview endpoint for better viewing (inline)
-        const previewUrl = `${window.location.origin}/api/upload/${docId}/preview/`;
-        window.open(previewUrl, '_blank', 'noopener,noreferrer');
+        openPreviewTab(getDocumentPreviewUrl(docId), getUploadedFilename(item));
     };
 
     const handleDelete = async (id) => {
@@ -153,8 +154,14 @@ const APP = ({ user }) => {
                 onClose={() => setShowUploadModal(false)}
                 onSuccess={(data) => {
                     fetchAPPs();
+                    setSuccessMessage('APP saved successfully.');
                     setShowUploadModal(false);
                 }}
+            />
+
+            <AlertModal
+                message={successMessage}
+                onClose={() => setSuccessMessage('')}
             />
 
             {/* Preview logic removed as per user preference for new tab viewing */}

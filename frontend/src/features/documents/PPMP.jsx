@@ -3,10 +3,12 @@ import PageHeader from '../../components/PageHeader';
 import { MdAssignment, MdUpload } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
 import UploadPPMPModal from './modals/UploadPPMPModal';
-import { documentService } from '../../services/api';
+import AlertModal from './modals/AlertModal';
+import { documentService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
 
 const PPMP = ({ user }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
     const [ppmps, setPpmps] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -31,7 +33,7 @@ const PPMP = ({ user }) => {
         if (!docId) {
             // Fallback: If no ID, try to open the file URL directly
             if (item.file_url) {
-                window.open(item.file_url, '_blank', 'noopener,noreferrer');
+                openPreviewTab(item.file_url, getUploadedFilename(item));
             } else {
                 alert('Cannot view this document: No file found.');
             }
@@ -39,8 +41,7 @@ const PPMP = ({ user }) => {
         }
 
         // Use the new preview endpoint for better viewing (inline)
-        const previewUrl = `${window.location.origin}/api/upload/${docId}/preview/`;
-        window.open(previewUrl, '_blank', 'noopener,noreferrer');
+        openPreviewTab(getDocumentPreviewUrl(docId), getUploadedFilename(item));
     };
 
     const handleDelete = async (id) => {
@@ -151,8 +152,14 @@ const PPMP = ({ user }) => {
                 onClose={() => setShowUploadModal(false)}
                 onSuccess={(data) => {
                     fetchPPMPs();
+                    setSuccessMessage('PPMP saved successfully.');
                     setShowUploadModal(false);
                 }}
+            />
+
+            <AlertModal
+                message={successMessage}
+                onClose={() => setSuccessMessage('')}
             />
         </div>
     );

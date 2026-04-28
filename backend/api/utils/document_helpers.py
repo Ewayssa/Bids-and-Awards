@@ -77,6 +77,9 @@ def get_document_missing_count(document):
         
     count = 0
     sub_doc = (document.subDoc or '').strip()
+
+    if DocumentStatusCalculator._has_uploaded_or_generated_file(document, sub_doc):
+        return 0
     
     # Core identifying fields for any document
     if not (document.title and str(document.title).strip()): count += 1
@@ -108,6 +111,7 @@ def get_document_missing_count(document):
                 
     # File requirement check
     no_file_required_list = (
+        'Purchase Request',
         'Lease of Venue',
         'Lease of Venue: Table Rating Factor',
         'Minutes of the Meeting',

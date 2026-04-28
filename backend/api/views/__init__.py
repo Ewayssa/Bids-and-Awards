@@ -9,7 +9,9 @@ from django.utils import timezone
 from datetime import timedelta
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.conf import settings as django_settings
+from django.utils.http import content_disposition_header
 import mimetypes
+import os
 
 from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog, ProcurementRecord, ProcurementStageStatus
 from ..permissions import (
@@ -34,7 +36,8 @@ from ..serializers import (
     ProcurementStageStatusSerializer,
 )
 from ..services.dashboard_service import DashboardService
-from ..utils.workflow_logic import is_stage_ready_to_advance
+from ..services.notification_service import EmailNotificationService
+from ..utils.workflow_logic import get_missing_required_files, is_stage_ready_to_advance, sync_procurement_completion
 from ..models import AuditLog
 import logging
 from ..constants import DEFAULT_USER_PASSWORD
@@ -44,6 +47,23 @@ from ..utils.document_helpers import get_next_transaction_number
 
 def _create_notification(message, link='/procurement', admin_only=False):
     Notification.objects.create(message=message, link=link, admin_only=admin_only)
+
+def _inline_file_response(file_field):
+    """
+    Return an inline file preview response while preserving the uploaded filename.
+    Browsers commonly use the Content-Disposition filename as the preview tab title.
+    """
+    content_type, _ = mimetypes.guess_type(file_field.name)
+    content_type = content_type or 'application/octet-stream'
+    filename = os.path.basename(file_field.name)
+
+    response = HttpResponse(file_field.read(), content_type=content_type)
+    response['Content-Disposition'] = content_disposition_header(
+        as_attachment=False,
+        filename=filename,
+    )
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 def _log_audit(action, actor='System', target_type='', target_id='', description=''):
     """Record an important action in the audit trail."""
@@ -177,7 +197,7 @@ def forgot_password(request):
     """Generate a temporary password and require change on next login."""
     _forgot_msg = (
         'If an account exists for this identifier, recovery steps allowed by your administrator '
-        'have been applied. Contact your administrator if you still cannot sign in.'
+        'have been applied. Contact your administrator if you still cannot log in.'
     )
     identifier = (request.data.get('username') or request.data.get('email') or '').strip()
     if not identifier:
@@ -277,11 +297,12 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def recalculate_status(self, request, pk=None):
         record = self.get_object()
-        new_status = record.calculate_status()
-        if record.status != new_status:
-            record.status = new_status
-            record.save(update_fields=['status', 'updated_at'])
-        return Response({'status': new_status})
+        sync_procurement_completion(record)
+        record.refresh_from_db()
+        return Response({
+            'status': record.status,
+            'missing': get_missing_required_files(record),
+        })
 
     @action(detail=True, methods=['post'])
     def next_stage(self, request, pk=None):
@@ -521,9 +542,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
                     procurement_record__isnull=True
                 ).update(procurement_record=record, prNo=record.pr_no)
 
+                sync_procurement_completion(record)
+
         title = (doc.title or doc.prNo or 'Document')[:80]
         _log_audit('document_created', doc.uploadedBy or 'Unknown', 'document', str(doc.id), title)
         _create_notification(f'New BAC document submitted: {title}', admin_only=False)
+        if doc.procurement_record:
+            sync_procurement_completion(doc.procurement_record)
 
     def perform_update(self, serializer):
         old_status = serializer.instance.calculate_status()
@@ -536,6 +561,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if doc.status == 'complete' and old_status != 'complete':
             _log_audit('document_completed', actor, 'document', str(doc.id), title)
             _create_notification(f'BAC document completed: {title}', admin_only=True)
+
+        if doc.procurement_record:
+            sync_procurement_completion(doc.procurement_record)
 
         return Response(DocumentSerializer(doc).data)
 
@@ -551,6 +579,16 @@ class DocumentViewSet(viewsets.ModelViewSet):
         
         if not user_pr_no:
             return Response({'error': 'PR Number is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if doc.user_pr_no:
+            return Response({'error': 'PR No. is already assigned and cannot be updated.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing_record = doc.procurement_record
+        if not existing_record and doc.ppmp_no:
+            existing_record = ProcurementRecord.objects.filter(ppmp_no=doc.ppmp_no).first()
+
+        if existing_record and existing_record.user_pr_no:
+            return Response({'error': 'PR No. is already assigned to this procurement record and cannot be updated.'}, status=status.HTTP_400_BAD_REQUEST)
             
         # Global Uniqueness Check for PR No
         if ProcurementRecord.objects.filter(user_pr_no=user_pr_no).exists() or \
@@ -605,6 +643,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
                  doc.prNo = record.pr_no
                  doc.save(update_fields=['procurement_record', 'prNo'])
 
+            sync_procurement_completion(record)
+
         return Response(DocumentSerializer(doc).data)
 
     @action(detail=True, methods=['get'], url_path='preview', permission_classes=[AllowAny])
@@ -613,23 +653,17 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if not doc.file:
             return Response({'detail': 'No file uploaded.'}, status=status.HTTP_404_NOT_FOUND)
         try:
-            content_type, _ = mimetypes.guess_type(doc.file.name)
-            content_type = content_type or 'application/octet-stream'
-            
-            # Using HttpResponse instead of FileResponse to prevent Django from 
-            # automatically adding download headers.
-            response = HttpResponse(doc.file.read(), content_type=content_type)
-            response['Content-Disposition'] = 'inline'
-            # Prevent browser from trying to guess and download
-            response['X-Content-Type-Options'] = 'nosniff'
-            return response
+            return _inline_file_response(doc.file)
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_destroy(self, instance):
         doc_id, title = str(instance.id), (instance.title or instance.prNo or 'Document')[:80]
         actor = self.request.user.username
+        record = instance.procurement_record
         super().perform_destroy(instance)
+        if record:
+            sync_procurement_completion(record)
         _log_audit('document_deleted', actor, 'document', doc_id, title)
 
 class ReportViewSet(viewsets.ModelViewSet):
@@ -648,12 +682,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         report = self.get_object()
         if not report.file: return Response({'detail': 'No file.'}, status=status.HTTP_404_NOT_FOUND)
         try:
-            content_type, _ = mimetypes.guess_type(report.file.name)
-            content_type = content_type or 'application/octet-stream'
-            response = HttpResponse(report.file.read(), content_type=content_type)
-            response['Content-Disposition'] = 'inline'
-            response['X-Content-Type-Options'] = 'nosniff'
-            return response
+            return _inline_file_response(report.file)
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -681,7 +710,6 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
             admin_only=True,
         )
         try:
-            from .services.notification_service import EmailNotificationService
             EmailNotificationService.send_calendar_event_notification(event)
         except Exception as email_err:
             import logging
@@ -714,7 +742,6 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             # 2. Email notification (if not already sent by management command or previous run)
             if not e.reminder_sent:
                 try:
-                    from ..services.notification_service import EmailNotificationService
                     if EmailNotificationService.send_upcoming_reminder(e):
                         e.reminder_sent = True
                         e.save(update_fields=['reminder_sent'])

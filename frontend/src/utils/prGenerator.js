@@ -1,20 +1,48 @@
 import ExcelJS from 'exceljs';
+import { jsPDF } from 'jspdf';
+
+const safePrFilenamePart = (value) => String(value || 'Document').replace(/[/\\?%*:|"<>]/g, '_');
+
+const formatPrDate = (date) => {
+    if (!date) return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return String(date);
+    return parsed.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+};
+
+const normalizePrData = (data = {}) => {
+    const items = Array.isArray(data.items) ? data.items : [];
+    const computedTotal = items.reduce((sum, item) => {
+        const quantity = Number(item.quantity || 0);
+        const unitCost = Number(item.unit_cost || 0);
+        return sum + (quantity * unitCost);
+    }, 0);
+
+    return {
+        items,
+        total: Number(data.total || computedTotal || 0),
+        ppmp_no: data.ppmp_no || '',
+        prNo: data.prNo || '',
+        title: data.title || '',
+        date: formatPrDate(data.date),
+        office: data.office || '',
+        section: data.section || ''
+    };
+};
+
+const formatAmount = (value) => Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
+const PR_PURPOSE = 'For official use of DILG R1';
 
 /**
  * Generates a formal Purchase Request Excel file based on the official DILG template (Appendix 60).
  * @param {Object} data - The PR data containing items, prNo, date, etc.
  */
 export const generatePR_Excel = async (data) => {
-    const {
-        items = [],
-        total = 0,
-        ppmp_no = '',
-        prNo = '',
-        title = '',
-        date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        office = '',
-        section = ''
-    } = data;
+    const { items, total, prNo, title, date, office } = normalizePrData(data);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Purchase Request');
@@ -206,7 +234,7 @@ export const generatePR_Excel = async (data) => {
     // Purpose Row
     worksheet.mergeCells(`A${currentRow}:F${currentRow + 1}`);
     const purposeCell = worksheet.getCell(`A${currentRow}`);
-    purposeCell.value = 'Purpose: ';
+    purposeCell.value = `Purpose: ${PR_PURPOSE}`;
     purposeCell.font = { name: 'Arial', size: 10, bold: true };
     purposeCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 };
     applyRangeBorder(`A${currentRow}`, `F${currentRow + 1}`);
@@ -272,4 +300,132 @@ export const generatePR_Excel = async (data) => {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+};
+
+export const generatePR_PDFBlob = async (data) => {
+    const { items, total, prNo, title, date, office } = normalizePrData(data);
+
+    const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 36;
+    const tableWidth = pageWidth - (margin * 2);
+    const colWidths = [62, 52, 205, 58, 72, tableWidth - 449];
+    const colX = colWidths.reduce((acc, width) => {
+        acc.push(acc[acc.length - 1] + width);
+        return acc;
+    }, [margin]);
+
+    const drawCell = (x, y, width, height, text = '', options = {}) => {
+        const {
+            bold = false,
+            italic = false,
+            fontSize = 9,
+            align = 'left',
+            valign = 'middle',
+            padding = 4,
+            maxWidth = width - (padding * 2),
+            lineHeight = fontSize + 2
+        } = options;
+        doc.rect(x, y, width, height);
+        doc.setFont('helvetica', italic ? 'italic' : bold ? 'bold' : 'normal');
+        doc.setFontSize(fontSize);
+        const lines = doc.splitTextToSize(String(text || ''), maxWidth);
+        const textHeight = lines.length * lineHeight;
+        let textY = y + padding + fontSize;
+        if (valign === 'middle') textY = y + ((height - textHeight) / 2) + fontSize;
+        if (valign === 'bottom') textY = y + height - padding;
+        const textX = align === 'center' ? x + (width / 2) : align === 'right' ? x + width - padding : x + padding;
+        doc.text(lines, textX, textY, { align });
+    };
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.text('Appendix 60', pageWidth - margin, 28, { align: 'right' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('PURCHASE REQUEST', pageWidth / 2, 54, { align: 'center' });
+
+    let y = 72;
+    drawCell(margin, y, tableWidth - colWidths[5], 28, 'Entity Name: DILG RI', { bold: true, fontSize: 10 });
+    drawCell(colX[5], y, colWidths[5], 28, 'Fund Cluster:', { bold: true, fontSize: 9, valign: 'top' });
+    doc.line(colX[5] + 6, y + 21, colX[5] + colWidths[5] - 6, y + 21);
+    y += 28;
+
+    drawCell(margin, y, colWidths[0] + colWidths[1], 44, `Office/Section :\n${office || ''}`, { bold: true, fontSize: 9, valign: 'top' });
+    drawCell(colX[2], y, colWidths[2] + colWidths[3] + colWidths[4], 22, `PR No.: ${prNo || '________________'}`, { bold: true, fontSize: 9 });
+    drawCell(colX[5], y, colWidths[5], 44, `Date: ${date || '___________'}`, { bold: true, fontSize: 8, valign: 'top', maxWidth: colWidths[5] - 6, padding: 3, lineHeight: 9 });
+    y += 22;
+    drawCell(colX[2], y, colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5], 22, 'Responsibility Center Code : ________________', { bold: true, fontSize: 9 });
+    y += 22;
+
+    const headerHeight = 38;
+    ['Stock/\nProperty\nNo.', 'Unit', 'Item Description', 'Quantity', 'Unit Cost', 'Total Cost'].forEach((label, index) => {
+        drawCell(colX[index], y, colWidths[index], headerHeight, label, { bold: true, align: 'center', fontSize: 9 });
+    });
+    y += headerHeight;
+
+    const rows = [...items];
+    while (rows.length < 15) rows.push({});
+
+    rows.forEach((item) => {
+        const quantity = Number(item.quantity || 0);
+        const unitCost = Number(item.unit_cost || 0);
+        const rowTotal = quantity * unitCost;
+        const descriptionLines = doc.splitTextToSize(String(item.description || ''), colWidths[2] - 8);
+        const rowHeight = Math.max(22, descriptionLines.length * 11 + 8);
+        if (y + rowHeight > 650) {
+            doc.addPage();
+            y = 36;
+        }
+
+        const rowValues = [
+            '',
+            item.unit || '',
+            item.description || '',
+            quantity || '',
+            unitCost ? formatAmount(unitCost) : '',
+            rowTotal ? formatAmount(rowTotal) : ''
+        ];
+        rowValues.forEach((value, index) => {
+            drawCell(colX[index], y, colWidths[index], rowHeight, value, {
+                align: index >= 3 ? 'right' : index < 2 ? 'center' : 'left',
+                fontSize: 9,
+                valign: 'top'
+            });
+        });
+        y += rowHeight;
+    });
+
+    drawCell(margin, y, tableWidth - colWidths[5], 24, 'TOTAL', { bold: true, align: 'right', fontSize: 10 });
+    drawCell(colX[5], y, colWidths[5], 24, formatAmount(total), { bold: true, align: 'right', fontSize: 10 });
+    y += 24;
+
+    drawCell(margin, y, tableWidth, 42, `Purpose: ${PR_PURPOSE}`, { bold: true, fontSize: 10, valign: 'top' });
+    y += 42;
+
+    drawCell(margin, y, colWidths[0], 24, '', { fontSize: 9 });
+    drawCell(colX[1], y, colWidths[1] + colWidths[2] + colWidths[3], 24, 'Requested by:', { fontSize: 9 });
+    drawCell(colX[4], y, colWidths[4] + colWidths[5], 24, 'Approved by:', { fontSize: 9 });
+    y += 24;
+
+    [
+        { label: 'Signature', height: 34 },
+        { label: 'Printed\nName :', height: 26 },
+        { label: 'Designati\non :', height: 26 }
+    ].forEach((row) => {
+        drawCell(margin, y, colWidths[0], row.height, row.label, { fontSize: 8 });
+        drawCell(colX[1], y, colWidths[1] + colWidths[2] + colWidths[3], row.height, '', { fontSize: 9 });
+        drawCell(colX[4], y, colWidths[4] + colWidths[5], row.height, '', { fontSize: 9 });
+        y += row.height;
+    });
+
+    return doc.output('blob');
+};
+
+export const createPR_PDFFile = async (data) => {
+    const blob = await generatePR_PDFBlob(data);
+    return new File([blob], `PR_${safePrFilenamePart(data?.prNo || data?.ppmp_no || data?.title)}.pdf`, {
+        type: 'application/pdf'
+    });
 };

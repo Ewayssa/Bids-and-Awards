@@ -441,7 +441,7 @@ const Profile = ({ user, onUserUpdated }) => {
                         <MdLock className="w-8 h-8 shrink-0" aria-hidden />
                         <div>
                             <p className="text-sm font-semibold m-0 mb-1">Password change</p>
-                            <p className="text-sm font-medium m-0">You may need to sign in again after updating your password.</p>
+                            <p className="text-sm font-medium m-0">You may need to log in again after updating your password.</p>
                         </div>
                     </div>
                     <div className="modal-footer !p-0 !border-0 flex gap-3">

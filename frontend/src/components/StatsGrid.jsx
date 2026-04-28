@@ -1,67 +1,57 @@
 import { Link } from 'react-router-dom';
-import { MdCheckCircle, MdSchedule, MdWarning } from 'react-icons/md';
+import { MdCheckCircle, MdSchedule } from 'react-icons/md';
 import { formatNumber } from '../utils/helpers';
 
 export const StatsGrid = ({ loading, stats }) => {
     const { pieData = [0, 0, 0, 0] } = stats;
-    const [total, completed, ongoing, pending] = pieData.map(Number);
+    const [, completed, ongoing] = pieData.map(Number);
 
     const statCards = [
         { 
             value: completed, 
-            label: 'Completed Documents', 
+            label: 'Completed', 
             icon: MdCheckCircle,
-            iconBg: 'bg-green-500/10', 
-            iconColor: 'text-green-600', 
+            color: 'from-emerald-500 to-emerald-600',
+            bg: 'bg-emerald-50/50',
+            text: 'text-emerald-700',
             link: '/encode?status=complete',
-            accentClass: 'stat-card--complete'
         },
         { 
             value: ongoing, 
-            label: 'On going', 
+            label: 'On-going', 
             icon: MdSchedule,
-            iconBg: 'bg-orange-500/10', 
-            iconColor: 'text-orange-600', 
+            color: 'from-amber-500 to-amber-600',
+            bg: 'bg-amber-50/50',
+            text: 'text-amber-700',
             link: '/encode?status=ongoing',
-            accentClass: 'stat-card--ongoing'
-        },
-        { 
-            value: pending, 
-            label: 'Pending', 
-            icon: MdWarning,
-            iconBg: 'bg-rose-500/10', 
-            iconColor: 'text-rose-600', 
-            link: '/encode?status=pending',
-            accentClass: 'stat-card--pending'
         },
     ];
 
-    const renderCardContent = (card) => (
-        <div className="flex items-center gap-4">
-            <div className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${card.iconBg} ${card.iconColor} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-inner`}>
-                <card.icon className="w-6 h-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-[var(--text-subtle)] uppercase tracking-wider mb-0.5">{card.label}</p>
-                <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-[var(--text)] tabular-nums tracking-tight">
-                        {loading ? '—' : formatNumber(card.value)}
-                    </h3>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 dashboard-stat-cards">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {statCards.map((card, i) => (
                 <Link 
                     key={card.label} 
                     to={card.link} 
-                    className={`card stat-card ${card.accentClass} group relative p-5 sm:p-6 bg-white overflow-hidden`} 
-                    style={{ animationDelay: `${i * 0.08}s` }}
+                    className="group relative overflow-hidden p-6 rounded-3xl bg-white border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-300/50 transition-all duration-500 hover:-translate-y-1"
+                    style={{ animationDelay: `${i * 0.1}s` }}
                 >
-                    {renderCardContent(card)}
+                    <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${card.color} opacity-[0.03] rounded-full -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150`} />
+                    
+                    <div className="flex items-center gap-5 relative z-10">
+                        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${card.color} flex items-center justify-center text-white shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+                            <card.icon className="w-7 h-7" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{card.label}</p>
+                            <div className="flex items-baseline gap-2">
+                                <h3 className="text-3xl font-black text-slate-800 tabular-nums tracking-tighter">
+                                    {loading ? '—' : formatNumber(card.value)}
+                                </h3>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Records</span>
+                            </div>
+                        </div>
+                    </div>
                 </Link>
             ))}
         </div>

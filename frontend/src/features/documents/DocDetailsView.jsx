@@ -9,8 +9,8 @@ const DocDetailItem = ({ label, value, isPRNo = false }) => {
     return (
         <div className="flex flex-col gap-1">
             <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{label}</span>
-            <span className={`text-sm font-medium ${isMissing ? 'text-amber-500 italic' : 'text-[var(--text)]'}`}>
-                {isMissing ? 'Pending PR No. Assignment' : String(value)}
+            <span className={`text-sm font-medium ${isMissing ? 'text-[var(--text-muted)]' : 'text-[var(--text)]'}`}>
+                {isMissing ? 'N/A' : String(value)}
             </span>
         </div>
     );
@@ -30,14 +30,6 @@ const DocDetailsView = ({ doc }) => {
                         <DocDetailItem label="PR No." value={doc.user_pr_no} isPRNo={true} />
                     </>
                 );
-            case 'Activity Design':
-                return (
-                    <>
-                        <DocDetailItem label="Title" value={doc.title} />
-                        <DocDetailItem label="PR No." value={doc.user_pr_no} isPRNo={true} />
-                        <DocDetailItem label="Source of Fund" value={doc.source_of_fund} />
-                    </>
-                );
             case 'Project Procurement Management Plan/Supplemental PPMP':
                 return (
                     <>
@@ -53,24 +45,6 @@ const DocDetailsView = ({ doc }) => {
                         <DocDetailItem label="APP Type" value={doc.app_type} />
                         <DocDetailItem label="Certified True Copy" value={doc.certified_true_copy ? 'Yes' : 'No'} />
                         <DocDetailItem label="Signed By" value={doc.certified_signed_by} />
-                    </>
-                );
-            case 'Market Scopping':
-                return (
-                    <>
-                        <DocDetailItem label="Title" value={doc.title} />
-                        <DocDetailItem label="Budget" value={doc.market_budget ? `₱${Number(doc.market_budget).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : null} />
-                        <DocDetailItem label="Period" value={`${formatDisplayDate(doc.market_period_from) || '—'} to ${formatDisplayDate(doc.market_period_to) || '—'}`} />
-                        <DocDetailItem label="Expected Delivery" value={doc.market_expected_delivery} />
-                        <DocDetailItem label="Service Providers" value={[doc.market_service_provider_1, doc.market_service_provider_2, doc.market_service_provider_3].filter(Boolean).join(', ')} />
-                    </>
-                );
-            case 'Requisition and Issue Slip':
-                return (
-                    <>
-                        <DocDetailItem label="Purpose" value={doc.title} />
-                        <DocDetailItem label="Office/Division" value={doc.office_division} />
-                        <DocDetailItem label="Received By" value={doc.received_by} />
                     </>
                 );
             case 'Notice of BAC Meeting':
