@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MdSave, MdInfo, MdLabel, MdAdd, MdDelete, MdReceipt,
@@ -36,6 +36,31 @@ const CreatePRModal = ({
     });
 
     const [showAttachmentsPopover, setShowAttachmentsPopover] = useState(false);
+    const [optionalFiles, setOptionalFiles] = useState({
+        'Activity Design': null,
+        'Market Scoping': null,
+        'Requisition and Issue Slip': null
+    });
+    const fileInputRef = useRef(null);
+    const [activeUploadType, setActiveUploadType] = useState(null);
+
+    const handleFileSelect = (type) => {
+        setActiveUploadType(type);
+        if (fileInputRef.current) fileInputRef.current.click();
+    };
+
+    const onFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file && activeUploadType) {
+            setOptionalFiles(prev => ({ ...prev, [activeUploadType]: file }));
+        }
+        e.target.value = null; // reset
+        setShowAttachmentsPopover(false);
+    };
+
+    const removeFile = (type) => {
+        setOptionalFiles(prev => ({ ...prev, [type]: null }));
+    };
 
     useEffect(() => {
         if (isModalOpen) {
@@ -44,6 +69,11 @@ const CreatePRModal = ({
             setErrors({});
             setSelectedPPMP(null);
             setForm({ ppmp_no: '', prNo: '', title: '' });
+            setOptionalFiles({
+                'Activity Design': null,
+                'Market Scoping': null,
+                'Requisition and Issue Slip': null
+            });
 
             // Fetch PPMPs for dropdown
             setLoadingPPMPs(true);
@@ -143,6 +173,27 @@ const CreatePRModal = ({
             formData.append('file', pdfFile);
 
             await documentService.create(formData);
+
+            // Upload optional files
+            for (const [subDocType, file] of Object.entries(optionalFiles)) {
+                if (file) {
+                    const optFormData = new FormData();
+                    optFormData.append('category', 'Initial Documents');
+                    optFormData.append('subDoc', subDocType);
+                    optFormData.append('title', `${subDocType} for ${form.ppmp_no}`);
+                    optFormData.append('ppmp_no', form.ppmp_no);
+                    optFormData.append('prNo', form.prNo || '');
+                    optFormData.append('file', file);
+                    optFormData.append('date', new Date().toISOString().slice(0, 10));
+                    optFormData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
+                    try {
+                        await documentService.create(optFormData);
+                    } catch (optErr) {
+                        console.error(`Failed to upload ${subDocType}:`, optErr);
+                    }
+                }
+            }
+
             setSavedPRData(prData);
             setIsSuccess(true);
 
@@ -320,7 +371,87 @@ const CreatePRModal = ({
                             {errors.ppmp_no && <span className="text-xs text-red-500 font-semibold">{errors.ppmp_no}</span>}
                         </div>
 
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setShowAttachmentsPopover(!showAttachmentsPopover)}
+                                className="h-12 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                            >
+                                <MdAttachFile className="w-5 h-5 text-slate-400" />
+                                Upload
+                                {Object.values(optionalFiles).filter(Boolean).length > 0 && (
+                                    <span className="ml-1 w-5 h-5 rounded-full bg-[var(--primary)] text-white text-[10px] flex items-center justify-center">
+                                        {Object.values(optionalFiles).filter(Boolean).length}
+                                    </span>
+                                )}
+                            </button>
+
+                            <AnimatePresence>
+                                {showAttachmentsPopover && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className="absolute right-0 top-[calc(100%+8px)] w-64 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-2xl z-50 overflow-hidden"
+                                    >
+                                        <div className="p-2 space-y-1">
+                                            {['Activity Design', 'Market Scoping', 'Requisition and Issue Slip']
+                                                .filter(type => !optionalFiles[type])
+                                                .map((type) => (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onClick={() => handleFileSelect(type)}
+                                                    className="w-full text-left px-3 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors flex justify-between items-center group"
+                                                >
+                                                    <span className="truncate">{type === 'Requisition and Issue Slip' ? 'RIS' : type}</span>
+                                                    <MdCloudUpload className="w-4 h-4 text-slate-400 group-hover:text-[var(--primary)] transition-colors" />
+                                                </button>
+                                            ))}
+                                            {['Activity Design', 'Market Scoping', 'Requisition and Issue Slip'].every(type => optionalFiles[type]) && (
+                                                <div className="px-3 py-2 text-xs font-bold text-slate-400 text-center">
+                                                    All documents attached
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                                onChange={onFileChange}
+                            />
+                        </div>
                     </div>
+
+                    {/* Show selected optional files */}
+                    {Object.entries(optionalFiles).some(([_, file]) => file) && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                            {Object.entries(optionalFiles).map(([type, file]) => {
+                                if (!file) return null;
+                                return (
+                                    <div key={type} className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg max-w-[200px]">
+                                        <MdAttachFile className="w-4 h-4 text-slate-400 shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">{type === 'Requisition and Issue Slip' ? 'RIS' : type}</p>
+                                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{file.name}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeFile(type)}
+                                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded-md transition-colors"
+                                        >
+                                            <MdClose className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* Table Section */}
                     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">

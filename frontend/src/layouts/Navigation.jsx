@@ -12,6 +12,9 @@ import {
     MdAssignment,
     MdDateRange,
     MdReceipt,
+    MdPostAdd,
+    MdHistory,
+    MdLogout,
 } from 'react-icons/md';
 import { canAccessRoute, ROLES } from '../utils/auth';
 import NotificationBell from '../features/notifications/NotificationBell';
@@ -22,6 +25,7 @@ const NAV_ITEMS = [
     { path: '/ppmp', label: 'PPMP', icon: MdAssignment },
     { path: '/app', label: 'APP', icon: MdDateRange },
     { path: '/pr', label: 'Purchase Request', icon: MdReceipt },
+    { path: '/supply/generate-po', label: 'Purchase Orders', icon: MdPostAdd },
     { path: '/reports', label: 'Reports', icon: MdTableChart },
     { path: '/personnel', label: 'User Management', icon: MdGroup },
     { path: '/audit-trail', label: 'Activity Logs', icon: MdHistoryToggleOff },
@@ -33,7 +37,7 @@ const canAccessNavItem = (item, role) => {
     return canAccessRoute(role, item.path);
 };
 
-const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
+const Navigation = ({ user, sidebarOpen, setSidebarOpen, onLogout }) => {
     const location = useLocation();
     const closeSidebar = () => setSidebarOpen?.(false);
     const toggleSidebar = () => setSidebarOpen?.((prev) => !prev);
@@ -100,7 +104,6 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen }) => {
                         })}
                     </div>
                 </nav>
-
             </div>
         </>
 

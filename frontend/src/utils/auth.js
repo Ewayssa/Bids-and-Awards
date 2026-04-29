@@ -8,12 +8,16 @@ export const ROLES = {
     ADMIN: 'admin',
     SECRETARIAT: 'bac_secretariat',
     MEMBER: 'bac_member',
+    SUPPLY: 'supply',
+    END_USER: 'end_user',
 };
 
 export const ROLE_DISPLAY_NAMES = {
     [ROLES.ADMIN]: 'Admin',
     [ROLES.SECRETARIAT]: 'BAC Secretariat',
     [ROLES.MEMBER]: 'BAC Member',
+    [ROLES.SUPPLY]: 'Supply Officer',
+    [ROLES.END_USER]: 'End User',
 };
 
 export const PERMISSIONS = {
@@ -28,6 +32,7 @@ export const PERMISSIONS = {
     UPLOAD_REPORTS: 'upload_reports',
     VIEW_DASHBOARD: 'view_dashboard',
     MANAGE_EVENTS: 'manage_events',
+    MANAGE_PO: 'manage_po',
 };
 
 const ROLE_PERMISSIONS = {
@@ -44,17 +49,27 @@ const ROLE_PERMISSIONS = {
         PERMISSIONS.VIEW_REPORTS,
         PERMISSIONS.VIEW_DASHBOARD,
     ],
+    [ROLES.SUPPLY]: [
+        PERMISSIONS.VIEW_DASHBOARD,
+        PERMISSIONS.MANAGE_PO,
+    ],
+    [ROLES.END_USER]: [
+        PERMISSIONS.VIEW_ALL_DOCUMENTS,
+        PERMISSIONS.VIEW_REPORTS,
+        PERMISSIONS.VIEW_DASHBOARD,
+    ],
 };
 
 export const NAV_ACCESS_RULES = {
-    '/': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
-    '/encode': [ROLES.ADMIN, ROLES.SECRETARIAT],
-    '/ppmp': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
-    '/app': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
-    '/pr': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
-    '/reports': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER],
+    '/': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.SUPPLY, ROLES.END_USER],
+    '/encode': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
+    '/ppmp': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
+    '/app': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
+    '/pr': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
+    '/reports': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
     '/personnel': [ROLES.ADMIN],
     '/audit-trail': [ROLES.ADMIN],
+    '/supply/generate-po': [ROLES.ADMIN, ROLES.SUPPLY],
 };
 
 /**
@@ -70,7 +85,7 @@ export const canAccessRoute = (userRole, route) => {
     return allowed.includes(normalizedRole);
 };
 
-const ROUTES_ORDER = ['/', '/encode', '/ppmp', '/app', '/pr', '/reports', '/personnel', '/audit-trail'];
+const ROUTES_ORDER = ['/', '/supply/generate-po', '/encode', '/ppmp', '/app', '/pr', '/reports', '/personnel', '/audit-trail'];
 
 /**
  * Get the default landing page for a role
@@ -107,6 +122,8 @@ export const getAvailableRoles = () => [
     { value: ROLES.ADMIN, label: ROLE_DISPLAY_NAMES[ROLES.ADMIN] },
     { value: ROLES.SECRETARIAT, label: ROLE_DISPLAY_NAMES[ROLES.SECRETARIAT] },
     { value: ROLES.MEMBER, label: ROLE_DISPLAY_NAMES[ROLES.MEMBER] },
+    { value: ROLES.SUPPLY, label: ROLE_DISPLAY_NAMES[ROLES.SUPPLY] },
+    { value: ROLES.END_USER, label: ROLE_DISPLAY_NAMES[ROLES.END_USER] },
 ];
 
 /**
@@ -122,6 +139,7 @@ export const mapOldRoleToNew = (oldRole, position = '') => {
     // Position-based mapping (Preferred)
     if (p === 'bac secretariat') return ROLES.SECRETARIAT;
     if (p === 'bac member') return ROLES.MEMBER;
+    if (p === 'supply officer') return ROLES.SUPPLY;
     
     // Legacy mapping
     if (r.includes('secretariat') || r.includes('encoder')) return ROLES.SECRETARIAT;

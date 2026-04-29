@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from '../../components/PageHeader';
 import { MdReceipt, MdAdd, MdCheck, MdClose, MdVisibility, MdDownload } from 'react-icons/md';
 import { ROLES } from '../../utils/auth';
@@ -98,8 +98,31 @@ const PR = ({ user }) => {
             const data = await documentService.getAll({ 
                 subDoc: 'Purchase Request'
             });
-            setPrs(data);
+            
+            const relatedData = await documentService.getAll({
+                category: 'Initial Documents'
+            });
+            
+            const enhancedData = data.map(pr => {
+                const prDocs = relatedData.filter(d => 
+                    (d.ppmp_no && pr.ppmp_no && d.ppmp_no === pr.ppmp_no) || 
+                    (d.prNo && pr.prNo && d.prNo === pr.prNo) ||
+                    (d.id === pr.id)
+                );
+                const hasAD = prDocs.some(d => d.subDoc === 'Activity Design' && (d.file || d.file_url));
+                const hasRIS = prDocs.some(d => (d.subDoc === 'Requisition and Issue Slip' || d.subDoc === 'RIS') && (d.file || d.file_url));
+                const hasMS = prDocs.some(d => (d.subDoc === 'Market Scoping' || d.subDoc === 'Market Scoping / Canvass') && (d.file || d.file_url));
+                
+                const isComplete = hasAD && hasRIS && hasMS;
+                return {
+                    ...pr,
+                    displayStatus: isComplete ? 'COMPLETE' : 'ONGOING'
+                };
+            });
+            
+            setPrs(enhancedData);
         } catch (err) {
+            console.error('Failed to fetch PRs:', err);
         } finally {
             setLoading(false);
         }
@@ -132,6 +155,8 @@ const PR = ({ user }) => {
         fetchPRs();
     }, []);
 
+
+
     return (
         <div className="min-h-full pb-12">
             <PageHeader
@@ -150,6 +175,8 @@ const PR = ({ user }) => {
                 )}
             </PageHeader>
 
+
+
             <div className="content-section overflow-hidden rounded-xl w-full max-w-[96rem] mx-auto min-w-0 p-0 shadow-lg shadow-slate-200/50">
 
 
@@ -157,14 +184,16 @@ const PR = ({ user }) => {
                     <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
                                 <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden text-center">
                                     <colgroup>
-                                        <col className="w-[30%]" />
-                                        <col className="w-[30%]" />
-                                        <col className="w-[40%]" />
+                                        <col className="w-[20%]" />
+                                        <col className="w-[25%]" />
+                                        <col className="w-[20%]" />
+                                        <col className="w-[35%]" />
                                     </colgroup>
                                     <thead className="table-header">
                                         <tr>
                                             <th className="table-th !text-center !px-4">PR No.</th>
                                             <th className="table-th !text-center !px-4">PPMP No.</th>
+                                            <th className="table-th !text-center !px-4">Status</th>
                                             <th className="table-th !text-center !px-4">Actions</th>
                                         </tr>
                                     </thead>
@@ -183,6 +212,15 @@ const PR = ({ user }) => {
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                                         <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700 font-mono">
                                                             {item.ppmp_no || 'UNLINKED'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                            item.displayStatus === 'COMPLETE' 
+                                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' 
+                                                                : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                                        }`}>
+                                                            {item.displayStatus || 'ONGOING'}
                                                         </span>
                                                     </td>
                                                     <td className="table-td !text-center !px-3 !py-3 border-b border-slate-50 dark:border-slate-800/50 min-w-[280px]">

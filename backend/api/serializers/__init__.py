@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
 from rest_framework import serializers
 
-from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog, ProcurementRecord, ProcurementStageStatus
+from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog, ProcurementRecord, PurchaseOrder
 from ..constants import DEFAULT_USER_PASSWORD
 from ..utils.document_helpers import get_document_missing_count, get_next_transaction_number
 
@@ -116,7 +116,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             'oss_authorized_rep', 'secretary_service_provider', 'secretary_owner_rep', 
             'pr_items',
             'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at', 
-            'status', 'file_url', 'missing_count', 'procurement_record'
+            'status', 'po_status', 'file_url', 'missing_count', 'procurement_record'
         )
         extra_kwargs = {
             'file': {'required': False},
@@ -169,6 +169,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             'category': {'required': False, 'allow_blank': True},
             'subDoc': {'required': False, 'allow_blank': True},
             'pr_items': {'required': False, 'allow_blank': True},
+            'po_status': {'required': False, 'allow_blank': True},
         }
 
     def validate_category(self, value):
@@ -432,15 +433,8 @@ class AuditLogSerializer(serializers.ModelSerializer):
         fields = ('id', 'action', 'actor', 'target_type', 'target_id', 'description', 'created_at')
         read_only_fields = fields
 
-class ProcurementStageStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProcurementStageStatus
-        fields = '__all__'
-
-
 class ProcurementRecordSerializer(serializers.ModelSerializer):
     documents = DocumentSerializer(many=True, read_only=True)
-    stage_statuses = ProcurementStageStatusSerializer(many=True, read_only=True)
     procurement_type_display = serializers.CharField(source='get_procurement_type_display', read_only=True)
 
     class Meta:
@@ -448,8 +442,8 @@ class ProcurementRecordSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'pr_no', 'ppmp_no', 'year', 'quarter', 'user_pr_no', 'rfq_no', 'title', 'procurement_type',
             'procurement_type_display', 'mode_of_procurement', 'source_of_fund', 'total_amount',
-            'end_user_office', 'current_stage', 'status', 'remarks',
-            'created_by', 'created_at', 'updated_at', 'documents', 'stage_statuses'
+            'end_user_office', 'status', 'remarks',
+            'created_by', 'created_at', 'updated_at', 'documents'
         )
         extra_kwargs = {
             'total_amount': {'required': False, 'allow_null': True},
@@ -469,3 +463,14 @@ class ProcurementRecordSerializer(serializers.ModelSerializer):
             return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         except (InvalidOperation, ValueError, TypeError):
             return None
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    pr_document_details = DocumentSerializer(source='pr_document', read_only=True)
+    date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
+    date_of_ors_burs = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
+
+    class Meta:
+        model = PurchaseOrder
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at', 'created_by')
+

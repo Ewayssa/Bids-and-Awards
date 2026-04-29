@@ -13,7 +13,7 @@ from django.utils.http import content_disposition_header
 import mimetypes
 import os
 
-from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog, ProcurementRecord, ProcurementStageStatus
+from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog, ProcurementRecord, PurchaseOrder
 from ..permissions import (
     IsBACSecretariat, 
     IsBACSecretariatOrReadOnly, 
@@ -33,7 +33,7 @@ from ..serializers import (
     NotificationSerializer,
     AuditLogSerializer,
     ProcurementRecordSerializer,
-    ProcurementStageStatusSerializer,
+    PurchaseOrderSerializer,
 )
 from ..services.dashboard_service import DashboardService
 from ..services.notification_service import EmailNotificationService
@@ -303,65 +303,6 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
             'status': record.status,
             'missing': get_missing_required_files(record),
         })
-
-    @action(detail=True, methods=['post'])
-    def next_stage(self, request, pk=None):
-        record = self.get_object()
-        
-        # Validation: Check if the current stage is complete
-        ready, missing = is_stage_ready_to_advance(record)
-        if not ready and not is_bac_secretariat(request.user): # Allow admin to bypass?
-            return Response({
-                'error': f'Cannot advance stage. Missing required documents: {", ".join(missing)}',
-                'missing': missing
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
-        if record.current_stage < 12:
-            record.current_stage += 1
-            # Update status based on the new stage
-            stage_status_map = {
-                2: 'preparing',
-                3: 'under_review',
-                4: 'approved', # or for_revision
-                5: 'for_input',
-                6: 'for_posting',
-                7: 'for_float',
-                8: 'for_schedule',
-                9: 'under_evaluation',
-                10: 'for_award',
-                11: 'awarded',
-                12: 'for_liquidation'
-            }
-            new_status = stage_status_map.get(record.current_stage)
-            if new_status:
-                record.status = new_status
-            record.save(update_fields=['current_stage', 'status', 'updated_at'])
-            _log_audit('stage_advanced', request.user.username, 'procurement_record', str(record.id), f'{record.pr_no} moved to stage {record.current_stage}')
-        return Response(ProcurementRecordSerializer(record).data)
-
-    @action(detail=True, methods=['post'])
-    def set_stage(self, request, pk=None):
-        record = self.get_object()
-        stage = request.data.get('stage')
-        status_val = request.data.get('status')
-        if stage is not None:
-            record.current_stage = int(stage)
-        if status_val:
-            record.status = status_val
-        record.save()
-        _log_audit('stage_set', request.user.username, 'procurement_record', str(record.id), f'{record.pr_no} set to stage {record.current_stage}, status {record.status}')
-        return Response(ProcurementRecordSerializer(record).data)
-
-
-class ProcurementStageStatusViewSet(viewsets.ModelViewSet):
-    queryset = ProcurementStageStatus.objects.all()
-    serializer_class = ProcurementStageStatusSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        instance = serializer.save()
-        _log_audit('stage_status_updated', self.request.user.username, 'stage_status', str(instance.id), 
-                   f'Stage {instance.stage_number} for {instance.procurement_record.pr_no} - Completed: {instance.is_completed}')
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -794,5 +735,58 @@ def get_dashboard_data(request):
     data['is_bac_secretariat'] = is_admin
     data['is_bac_chair'] = is_bac_chair(user)
     return Response(data, headers={'Cache-Control': 'no-store, no-cache, must-revalidate'})
+
+class PurchaseOrderViewSet(viewsets.ModelViewSet):
+    queryset = PurchaseOrder.objects.all().order_by('-created_at')
+    serializer_class = PurchaseOrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        # Supply role and Admin can manage, BAC Member can only view
+        # This check is more about data visibility if needed, but for now we return all
+        return qs
+
+    def perform_create(self, serializer):
+        # When creating a PO, update the PR document's po_status
+        po = serializer.save(created_by=self.request.user.fullName or self.request.user.username)
+        pr_doc = po.pr_document
+        pr_doc.po_status = 'po_generated'
+        pr_doc.save(update_fields=['po_status'])
+        
+        _log_audit('purchase_order_generated', self.request.user.username, 'purchase_order', str(po.id), f'PO {po.po_no} generated for PR {pr_doc.prNo}')
+        _create_notification(f'New Purchase Order generated: {po.po_no}', admin_only=True)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_supply_dashboard_data(request):
+    """
+    Dashboard data specifically for the Supply user.
+    """
+    # Counts
+    ready_for_po_count = Document.objects.filter(subDoc='Purchase Request', po_status='ready_for_po').count()
+    pending_po_count = Document.objects.filter(subDoc='Purchase Request', po_status='pending').count()
+    po_generated_count = PurchaseOrder.objects.count()
+
+    # Recent PRs ready for PO
+    recent_ready_prs = Document.objects.filter(
+        subDoc='Purchase Request', 
+        po_status='ready_for_po'
+    ).order_by('-uploaded_at')[:5]
+    
+    # Recent generated Purchase Orders
+    recent_pos = PurchaseOrder.objects.all().order_by('-created_at')[:5]
+
+    return Response({
+        'stats': {
+            'ready_for_po': ready_for_po_count,
+            'pending_po': pending_po_count,
+            'po_generated': po_generated_count,
+        },
+        'recent_ready_prs': DocumentSerializer(recent_ready_prs, many=True).data,
+        'recent_pos': PurchaseOrderSerializer(recent_pos, many=True).data
+    })
+
 
 

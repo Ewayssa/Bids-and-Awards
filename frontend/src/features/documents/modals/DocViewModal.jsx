@@ -20,11 +20,17 @@ const DocViewModal = ({
     const [activePreviewId, setActivePreviewId] = useState(currentDoc.id);
     const [generatedPrPreviewUrl, setGeneratedPrPreviewUrl] = useState(null);
 
-    const requiredSupportingDocs = useMemo(() => ([
-        { subDoc: 'Activity Design', label: 'Activity Design', aliases: ['Activity Design'] },
-        { subDoc: 'Requisition and Issue Slip', label: 'RIS', aliases: ['Requisition and Issue Slip', 'RIS'] },
-        { subDoc: 'Market Scoping', label: 'Market Scoping', aliases: ['Market Scoping', 'Market Scoping / Canvass'] }
-    ]), []);
+    const requiredSupportingDocs = useMemo(() => {
+        if (currentDoc.subDoc === 'Purchase Request') {
+            return [
+                { subDoc: 'Activity Design', label: 'Activity Design', aliases: ['Activity Design'] },
+                { subDoc: 'Requisition and Issue Slip', label: 'RIS', aliases: ['Requisition and Issue Slip', 'RIS'] },
+                { subDoc: 'Market Scoping', label: 'Market Scoping', aliases: ['Market Scoping', 'Market Scoping / Canvass'] }
+            ];
+        }
+        return [];
+    }, [currentDoc.subDoc]);
+
     const supportDocLabels = useMemo(() => ({
         'Purchase Request': 'Purchase Request',
         'Activity Design': 'Activity Design',
@@ -166,13 +172,24 @@ const DocViewModal = ({
 
     if (!doc) return null;
 
+    const isMissingAnyDoc = useMemo(() => {
+        return documentsForPreview.some(doc => doc.isMissingPlaceholder);
+    }, [documentsForPreview]);
+
+    const displayStatus = useMemo(() => {
+        if (currentDoc.subDoc === 'Purchase Request') {
+            return isMissingAnyDoc ? 'ONGOING' : 'COMPLETE';
+        }
+        return currentDoc.status || 'ACTIVE';
+    }, [currentDoc.subDoc, currentDoc.status, isMissingAnyDoc]);
+
     return (
         <Modal
             isOpen={true}
             onClose={onClose}
-            title={null}
+            title={currentDoc.title || 'Document View'}
             size="2xl"
-            showCloseButton={false}
+            header={<></>}
             containerClassName="!h-[86vh] !max-h-[86vh] overflow-hidden !max-w-7xl !rounded-2xl"
             bodyClassName="!p-0 !overflow-hidden min-h-0 !flex !flex-col w-full"
         >
@@ -185,10 +202,10 @@ const DocViewModal = ({
                         <div className="min-w-0">
                             <div className="flex items-center gap-3 min-w-0">
                                 <h2 className="text-[15px] font-black text-slate-950 dark:text-white uppercase tracking-[0.16em] truncate">
-                                    Purchase Request
+                                    {currentDoc.subDoc || 'Document'}
                                 </h2>
-                                <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0">
-                                    {currentDoc.status}
+                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 ${displayStatus === 'COMPLETE' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>
+                                    {displayStatus}
                                 </span>
                             </div>
                             <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1 truncate">

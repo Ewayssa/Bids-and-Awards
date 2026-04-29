@@ -45,6 +45,7 @@ class User(AbstractUser):
     POSITION_CHOICES = (
         ('BAC Secretariat', 'BAC Secretariat'),
         ('BAC Member', 'BAC Member'),
+        ('Supply Officer', 'Supply Officer'),
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
     fullName = models.CharField(max_length=255, blank=True)
@@ -141,6 +142,14 @@ class Document(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)  # Track last update time
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    PO_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('ready_for_po', 'Ready for PO'),
+        ('po_generated', 'PO Generated'),
+    )
+    po_status = models.CharField(max_length=20, choices=PO_STATUS_CHOICES, default='pending', help_text='Status of Purchase Order generation for this PR')
+
 
     def calculate_status(self):
         """
@@ -154,12 +163,18 @@ class Document(models.Model):
         # This ensures status reflects current document completeness
         calculated_status = self.calculate_status()
         self.status = calculated_status
+
+        # Supply Role: Automatically flag as Ready for PO if complete
+        if self.subDoc == 'Purchase Request' and self.status == 'complete' and self.po_status == 'pending':
+            self.po_status = 'ready_for_po'
         
-        # If update_fields is specified, add status to it so it gets saved
+        # If update_fields is specified, add status and po_status to it
         if 'update_fields' in kwargs and kwargs['update_fields'] is not None:
             update_fields = list(kwargs['update_fields'])
             if 'status' not in update_fields:
                 update_fields.append('status')
+            if 'po_status' not in update_fields:
+                update_fields.append('po_status')
             kwargs['update_fields'] = update_fields
         
         super().save(*args, **kwargs)
@@ -188,11 +203,18 @@ def recalculate_document_status(sender, instance, created, **kwargs):
     calculated_status = instance.calculate_status()
     
     # Always update status if it differs (ensures real-time accuracy)
+    updates = {}
     if instance.status != calculated_status:
-        # Use update() to avoid triggering save signal again (prevents infinite loop)
-        # update() bypasses the model's save() method and signals
-        Document.objects.filter(pk=instance.pk).update(status=calculated_status)
-        # Update instance attribute so it's in sync
+        updates['status'] = calculated_status
+        instance.status = calculated_status
+
+    # Supply Role: transition logic
+    if instance.subDoc == 'Purchase Request' and calculated_status == 'complete' and instance.po_status == 'pending':
+        updates['po_status'] = 'ready_for_po'
+        instance.po_status = 'ready_for_po'
+
+    if updates:
+        Document.objects.filter(pk=instance.pk).update(**updates)
         instance.status = calculated_status
 
 
@@ -291,7 +313,6 @@ class ProcurementRecord(models.Model):
     source_of_fund = models.CharField(max_length=255, blank=True, help_text='Fund Source')
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='ABC / Total Amount')
     end_user_office = models.CharField(max_length=255, blank=True, help_text='End-User / Office')
-    current_stage = models.IntegerField(default=1, help_text='Current workflow stage (1-12)')
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='draft')
     remarks = models.TextField(blank=True, help_text='General Remarks')
     created_by = models.CharField(max_length=255, blank=True)
@@ -301,25 +322,6 @@ class ProcurementRecord(models.Model):
     def __str__(self):
         return f"{self.pr_no} - {self.title}"
 
-
-
-
-class ProcurementStageStatus(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    procurement_record = models.ForeignKey(ProcurementRecord, on_delete=models.CASCADE, related_name='stage_statuses')
-    stage_number = models.IntegerField()
-    stage_name = models.CharField(max_length=100)
-    is_completed = models.BooleanField(default=False)
-    approved_by = models.CharField(max_length=255, blank=True)
-    approved_at = models.DateTimeField(null=True, blank=True)
-    remarks = models.TextField(blank=True)
-
-    class Meta:
-        unique_together = ('procurement_record', 'stage_number')
-        ordering = ['stage_number']
-
-    def __str__(self):
-        return f"Stage {self.stage_number} - {self.procurement_record.pr_no}"
 
 
 # Single synchronization: When ProcurementRecord.user_pr_no is updated, 
@@ -336,3 +338,49 @@ def sync_pr_number_to_documents(sender, instance, created, **kwargs):
         instance.documents.filter(
             subDoc='Purchase Request'
         ).update(user_pr_no=instance.user_pr_no)
+
+class PurchaseOrder(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pr_document = models.ForeignKey(
+        Document, 
+        on_delete=models.CASCADE, 
+        related_name='purchase_orders',
+        limit_choices_to={'subDoc': 'Purchase Request'}
+    )
+    
+    # Supplier Details
+    supplier_name = models.CharField(max_length=255)
+    supplier_address = models.CharField(max_length=500, blank=True)
+    tin = models.CharField(max_length=100, blank=True)
+    
+    # PO Details
+    po_no = models.CharField(max_length=100)
+    date = models.DateField()
+    mode_of_procurement = models.CharField(max_length=100, blank=True)
+    
+    # Delivery & Payment
+    place_of_delivery = models.CharField(max_length=255, blank=True)
+    date_of_delivery = models.CharField(max_length=255, blank=True)
+    payment_term = models.CharField(max_length=100, blank=True)
+    
+    # Items Snapshot
+    po_items = models.TextField(blank=True, help_text='JSON array of {unit, description, quantity, final_unit_cost, amount}')
+    
+    # Totals
+    final_total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    amount_in_words = models.CharField(max_length=500, blank=True)
+    
+    # Funds / BURS
+    fund_cluster = models.CharField(max_length=100, blank=True)
+    funds_available = models.CharField(max_length=255, blank=True)
+    ors_burs_no = models.CharField(max_length=100, blank=True)
+    date_of_ors_burs = models.DateField(null=True, blank=True)
+    ors_burs_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"PO {self.po_no} for PR {self.pr_document.prNo}"
+
