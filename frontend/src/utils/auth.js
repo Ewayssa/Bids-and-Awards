@@ -13,7 +13,7 @@ export const ROLES = {
 };
 
 export const ROLE_DISPLAY_NAMES = {
-    [ROLES.ADMIN]: 'Admin',
+    [ROLES.ADMIN]: 'BAC Secretariat',
     [ROLES.SECRETARIAT]: 'BAC Secretariat',
     [ROLES.MEMBER]: 'BAC Member',
     [ROLES.SUPPLY]: 'Supply Officer',
@@ -136,6 +136,12 @@ export const mapOldRoleToNew = (oldRole, position = '') => {
     // Admin variants
     if (r === 'admin' || r === 'administrator') return ROLES.ADMIN;
     
+    // Direct mapping for new roles
+    if (r === ROLES.SUPPLY) return ROLES.SUPPLY;
+    if (r === ROLES.MEMBER) return ROLES.MEMBER;
+    if (r === ROLES.SECRETARIAT) return ROLES.SECRETARIAT;
+    if (r === ROLES.END_USER) return ROLES.END_USER;
+
     // Position-based mapping (Preferred)
     if (p === 'bac secretariat') return ROLES.SECRETARIAT;
     if (p === 'bac member') return ROLES.MEMBER;

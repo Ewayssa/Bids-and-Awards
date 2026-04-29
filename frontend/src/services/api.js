@@ -408,3 +408,63 @@ export const userService = {
     },
 };
 
+export const purchaseRequestService = {
+    async getAll(params = {}) {
+        let all = [];
+        let nextUrl = `/purchase-requests/`;
+        const queryParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value) queryParams.append(key, value);
+        });
+        const queryString = queryParams.toString();
+        if (queryString) nextUrl += `?${queryString}`;
+
+        while (nextUrl) {
+            const response = await api.get(nextUrl);
+            const body = response.data;
+            const page = Array.isArray(body) ? body : (body?.results ?? []);
+            all = all.concat(page);
+            const next = body?.next;
+            if (!next) break;
+            nextUrl = next.includes(API_BASE_URL) ? next.split(API_BASE_URL)[1] : next;
+        }
+        return all;
+    },
+    async getById(id) {
+        const response = await api.get(`/purchase-requests/${id}/`);
+        return response.data;
+    },
+    async create(data) {
+        const response = await api.post(`/purchase-requests/`, data);
+        return response.data;
+    },
+    async update(id, data) {
+        const response = await api.patch(`/purchase-requests/${id}/`, data);
+        return response.data;
+    },
+    async delete(id) {
+        await api.delete(`/purchase-requests/${id}/`);
+    }
+};
+
+export const purchaseOrderService = {
+    async getAll() {
+        const response = await api.get(`/purchase-orders/`);
+        return response.data;
+    },
+    async getById(id) {
+        const response = await api.get(`/purchase-orders/${id}/`);
+        return response.data;
+    },
+    async create(data) {
+        const response = await api.post(`/purchase-orders/`, data);
+        return response.data;
+    },
+    async update(id, data) {
+        const response = await api.patch(`/purchase-orders/${id}/`, data);
+        return response.data;
+    },
+    async delete(id) {
+        await api.delete(`/purchase-orders/${id}/`);
+    }
+};

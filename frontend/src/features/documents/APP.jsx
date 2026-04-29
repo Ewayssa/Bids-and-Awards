@@ -95,10 +95,10 @@ const APP = ({ user }) => {
                             </colgroup>
                             <thead className="table-header">
                                 <tr>
-                                    <th className="table-th !text-center !px-4">PPMP No.</th>
+                                    <th className="table-th !text-center !px-4">Folder / PR No.</th>
                                     <th className="table-th !text-center !px-4">Year</th>
                                     <th className="table-th !text-center !px-4">Quarter</th>
-                                    <th className="table-th !text-center !px-4">Date Uploaded</th>
+                                    <th className="table-th !text-center !px-4">APP No.</th>
                                     <th className="table-th !text-center !px-4">Actions</th>
                                 </tr>
                             </thead>
@@ -106,8 +106,23 @@ const APP = ({ user }) => {
                                 {apps.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight truncate block">
-                                                {item.ppmp_no || 'No APP #'}
+                                            <span className={`text-[10px] font-black uppercase tracking-tight truncate block ${item.pr_no ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                {item.pr_no || 'No PR No. Assigned'}
+                                            </span>
+                                        </td>
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700">
+                                                {item.year || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="inline-block text-[10px] font-black text-[var(--primary)] uppercase tracking-widest px-3 py-1 bg-[var(--primary)]/10 rounded-lg border border-[var(--primary)]/20 shadow-sm">
+                                                {item.quarter || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                                {item.ppmp_no || 'N/A'}
                                             </span>
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">

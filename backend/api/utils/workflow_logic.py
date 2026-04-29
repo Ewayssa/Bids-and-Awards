@@ -88,35 +88,7 @@ REQUIRED_CHECKLIST_BY_TYPE = {
     ],
 }
 
-# Mapping of stages to required documents for that stage to be "complete"
-STAGE_REQUIREMENTS = {
-    3: lambda type: [d for d in REQUIREMENTS_BY_TYPE.get(type, []) if d in BASE_PREP or d in LOV_ADDITIONAL[:2] or d in SUPPLIES_ADDITIONAL],
-    6: lambda type: [d for d in REQUIREMENTS_BY_TYPE.get(type, []) if 'Posting' in d],
-    7: lambda type: [d for d in REQUIREMENTS_BY_TYPE.get(type, []) if 'Quotation' in d or 'RFQ Issued' in d],
-    8: lambda type: [d for d in REQUIREMENTS_BY_TYPE.get(type, []) if d in BASE_MEETING],
-    10: lambda type: [d for d in REQUIREMENTS_BY_TYPE.get(type, []) if d in BASE_AWARD or 'Rating Factor' in d],
-}
 
-def is_stage_ready_to_advance(record):
-    """
-    Check if the current stage has all required documents uploaded and completed.
-    Returns (bool, list_of_missing)
-    """
-    stage_id = record.current_stage
-    p_type = record.procurement_type
-    
-    # Stages that don't require documents yet or are administrative
-    if stage_id in [1, 2, 4, 5, 9, 11, 12]:
-        return True, []
-        
-    required_docs = STAGE_REQUIREMENTS.get(stage_id, lambda t: [])(p_type)
-    if not required_docs:
-        return True, []
-        
-    uploaded_docs = record.documents.filter(status='complete').values_list('subDoc', flat=True)
-    missing = [d for d in required_docs if d not in uploaded_docs]
-    
-    return len(missing) == 0, missing
 
 
 def document_matches_requirement(document, requirement_name):
@@ -178,15 +150,12 @@ def sync_procurement_status(record):
     is_complete = has_required_files_completed(record)
     if is_complete and record.status != 'completed':
         record.status = 'completed'
-        record.current_stage = max(record.current_stage or 1, 12)
-        record.save(update_fields=['status', 'current_stage', 'updated_at'])
+        record.save(update_fields=['status', 'updated_at'])
         return True
 
     if not is_complete and record.status == 'completed':
         record.status = 'preparing' if record.documents.exists() else 'draft'
-        if (record.current_stage or 1) >= 12:
-            record.current_stage = 2 if record.documents.exists() else 1
-        record.save(update_fields=['status', 'current_stage', 'updated_at'])
+        record.save(update_fields=['status', 'updated_at'])
         return True
 
     return False
@@ -197,3 +166,61 @@ def sync_procurement_completion(record):
     Backward-compatible wrapper for existing callers.
     """
     return sync_procurement_status(record)
+
+
+def check_folder_readiness(record):
+    """
+    Checks if a procurement record (folder) is ready for PR No. assignment.
+    Ready if all mandatory initial documents are present:
+    1. Purchase Request
+    2. Activity Design
+    3. Requisition and Issue Slip (RIS)
+    4. Market Scoping / Canvass
+    """
+    if not record or record.user_pr_no:
+        return False
+        
+    required_groups = [
+        ['Activity Design'],
+        ['Requisition and Issue Slip', 'RIS'],
+        ['Market Scoping', 'Market Scoping / Canvass']
+    ]
+    
+    docs = record.documents.all()
+    present_subdocs = [str(doc.subDoc or '').strip() for doc in docs]
+    
+    # Check for PR either as a Document or via the PurchaseRequest relation
+    has_pr = 'Purchase Request' in present_subdocs or record.purchase_requests.exists()
+    
+    if not has_pr:
+        return False
+        
+    # Check for the other 3 groups
+    for group in required_groups:
+        group_found = any(alias in present_subdocs for alias in group)
+        if not group_found:
+            return False
+            
+    # All present! Create notification if not already done
+    msg = f"Procurement Folder '{record.title}' (PPMP No: {record.ppmp_no}) is now complete and ready for PR No. assignment."
+    
+    # Update the is_ready field on the record for easy filtering
+    if not record.is_ready:
+        record.is_ready = True
+        record.save(update_fields=['is_ready'])
+
+    # Import inside to avoid circular dependency
+    from ..models import Notification
+    
+    # Use a specific link for the PR assignment page if available
+    # Assuming /pr is where BAC assigns PR numbers
+    if not Notification.objects.filter(message=msg).exists():
+        Notification.objects.create(
+            message=msg,
+            link='/pr',
+            admin_only=True # Visible to BAC Secretariat and BAC Members
+        )
+        return True
+    return False
+
+

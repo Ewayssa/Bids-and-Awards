@@ -50,15 +50,19 @@ const DocUploadModal = ({
             const formData = new FormData();
             formData.append('file', file);
             formData.append('subDoc', docType);
-            formData.append('title', `${docType} for ${targetDoc.user_pr_no || targetDoc.prNo}`);
+            formData.append('title', `${docType} for ${targetDoc.user_pr_no || targetDoc.prNo || targetDoc.pr_no || 'Document'}`);
             formData.append('category', targetDoc.category || 'General');
             formData.append('uploadedBy', user?.fullName || 'User');
             
             // Linking logic
-            if (targetDoc.procurement_record) {
-                formData.append('procurement_record', targetDoc.procurement_record);
+            const recordId = targetDoc.procurement_record || targetDoc.ppmp;
+            if (recordId) {
+                formData.append('procurement_record', recordId);
             }
-            if (targetDoc.prNo) formData.append('prNo', targetDoc.prNo);
+            
+            const folderNo = targetDoc.prNo || targetDoc.pr_no;
+            if (folderNo) formData.append('prNo', folderNo);
+            
             if (targetDoc.ppmp_no) formData.append('ppmp_no', targetDoc.ppmp_no);
             if (targetDoc.year) formData.append('year', targetDoc.year);
             if (targetDoc.quarter) formData.append('quarter', targetDoc.quarter);

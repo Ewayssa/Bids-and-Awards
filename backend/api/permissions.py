@@ -118,7 +118,7 @@ class IsPlanningUnit(permissions.BasePermission):
 
 class IsSupplyOfficer(permissions.BasePermission):
     def has_permission(self, request, view):
-        return get_user_role(request.user) == 'supply_officer'
+        return get_user_role(request.user) == 'supply'
 
 class IsEndUser(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -144,7 +144,8 @@ def is_bac_secretariat(user):
     """Check if user is BAC Secretariat (Admin)."""
     if getattr(user, 'is_superuser', False):
         return True
-    return get_user_role(user) == 'bac_secretariat' or getattr(user, 'position', '') == 'BAC Secretariat'
+    role = get_user_role(user)
+    return role in ['bac_secretariat', 'admin'] or getattr(user, 'position', '') == 'BAC Secretariat'
 
 
 def is_bac_chair(user):
@@ -160,7 +161,7 @@ def is_planning_unit(user):
     return get_user_role(user) == 'planning_unit'
 
 def is_supply_officer(user):
-    return get_user_role(user) == 'supply_officer'
+    return get_user_role(user) == 'supply' or getattr(user, 'position', '') == 'Supply Officer'
 
 def is_end_user(user):
     return get_user_role(user) == 'end_user'

@@ -11,6 +11,7 @@ router.register(r'calendar-events', views.CalendarEventViewSet, basename='calend
 router.register(r'notifications', views.NotificationViewSet, basename='notification')
 router.register(r'audit-log', views.AuditLogViewSet, basename='audit-log')
 router.register(r'purchase-orders', views.PurchaseOrderViewSet, basename='purchase-order')
+router.register(r'purchase-requests', views.PurchaseRequestViewSet, basename='purchase-request')
 
 urlpatterns = [
     path('login/', views.login),

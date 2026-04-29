@@ -8,6 +8,7 @@ from rest_framework import serializers
 from ..models import User, Document, Report, CalendarEvent, Notification, AuditLog, ProcurementRecord, PurchaseOrder
 from ..constants import DEFAULT_USER_PASSWORD
 from ..utils.document_helpers import get_document_missing_count, get_next_transaction_number
+from .purchase_request import PurchaseRequestSerializer, PurchaseRequestItemSerializer
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -272,51 +273,62 @@ class DocumentSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError(f'BAC Folder No. format "{val}" is invalid.')
 
     def create(self, validated_data):
-        # Remove status if provided (it will be auto-calculated)
-        validated_data.pop('status', None)
-        
-        ppmp_no = validated_data.get('ppmp_no', '').strip()
-        pr_no = validated_data.get('prNo', '').strip()
-        doc_date = validated_data.get('date')
+        try:
+            # Remove status if provided (it will be auto-calculated)
+            validated_data.pop('status', None)
+            
+            ppmp_no = validated_data.get('ppmp_no', '').strip()
+            pr_no = validated_data.get('prNo', '').strip()
+            doc_date = validated_data.get('date')
 
-        # 1. Logic for grouping by PPMP No.
-        if ppmp_no:
-            # Try to find an existing folder for this PPMP No.
-            record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
-            if record:
-                # Use existing folder's number and link
-                validated_data['prNo'] = record.pr_no
-                validated_data['procurement_record'] = record
-                
-                # If inheritance is needed
-                if not validated_data.get('year') and record.year:
-                    validated_data['year'] = record.year
-                if not validated_data.get('quarter') and record.quarter:
-                    validated_data['quarter'] = record.quarter
-            else:
-                # Create a NEW folder for this PPMP No.
+            # 1. Logic for grouping by PPMP No.
+            if ppmp_no:
+                # Try to find an existing folder for this PPMP No.
+                record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
+                if record:
+                    # Use existing folder's number and link
+                    validated_data['prNo'] = record.pr_no
+                    validated_data['procurement_record'] = record
+                    
+                    # If inheritance is needed
+                    if not validated_data.get('year') and record.year:
+                        validated_data['year'] = record.year
+                    if not validated_data.get('quarter') and record.quarter:
+                        validated_data['quarter'] = record.quarter
+                else:
+                    # Create a NEW folder for this PPMP No.
+                    if not pr_no:
+                        pr_no = get_next_transaction_number(date=doc_date)
+                    
+                    # Check for existing folder with same pr_no string (non-unique now)
+                    # but we want to create a NEW record for this NEW ppmp_no
+                    record = ProcurementRecord.objects.create(
+                        pr_no=pr_no,
+                        ppmp_no=ppmp_no,
+                        year=validated_data.get('year', ''),
+                        quarter=validated_data.get('quarter', ''),
+                        title=validated_data.get('title', f'Procurement for {ppmp_no}'),
+                        created_by=validated_data.get('uploadedBy', 'System')
+                    )
+                    validated_data['prNo'] = pr_no
+                    validated_data['procurement_record'] = record
+            
+            # 2. Fallback for documents without PPMP No.
+            if not validated_data.get('procurement_record'):
                 if not pr_no:
                     pr_no = get_next_transaction_number(date=doc_date)
                 
-                # Check for existing folder with same pr_no string (non-unique now)
-                # but we want to create a NEW record for this NEW ppmp_no
-                record = ProcurementRecord.objects.create(
-                    pr_no=pr_no,
-                    ppmp_no=ppmp_no,
-                    year=validated_data.get('year', ''),
-                    quarter=validated_data.get('quarter', ''),
-                    title=validated_data.get('title', f'Procurement for {ppmp_no}'),
-                    created_by=validated_data.get('uploadedBy', 'System')
-                )
-                validated_data['prNo'] = pr_no
-                validated_data['procurement_record'] = record
-        
-        # 2. Fallback for documents without PPMP No.
-        if not validated_data.get('procurement_record'):
-            if not pr_no:
-                pr_no = get_next_transaction_number(date=doc_date)
+                # Find or create record by pr_no if no PPMP grouping
+                # ... (rest of legacy logic handled by model defaults or super().create)
             
-            # Find or create record by pr_no if no PPMP grouping
+            return super().create(validated_data)
+        except Exception as e:
+            import traceback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in DocumentSerializer.create: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise serializers.ValidationError({"error": str(e)})
             # (Note: pr_no is no longer unique, so we'll look for or create)
             record = ProcurementRecord.objects.filter(pr_no=pr_no, ppmp_no='').first()
             if not record:
@@ -435,6 +447,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 class ProcurementRecordSerializer(serializers.ModelSerializer):
     documents = DocumentSerializer(many=True, read_only=True)
+    purchase_requests = PurchaseRequestSerializer(many=True, read_only=True)
     procurement_type_display = serializers.CharField(source='get_procurement_type_display', read_only=True)
 
     class Meta:
@@ -443,7 +456,7 @@ class ProcurementRecordSerializer(serializers.ModelSerializer):
             'id', 'pr_no', 'ppmp_no', 'year', 'quarter', 'user_pr_no', 'rfq_no', 'title', 'procurement_type',
             'procurement_type_display', 'mode_of_procurement', 'source_of_fund', 'total_amount',
             'end_user_office', 'status', 'remarks',
-            'created_by', 'created_at', 'updated_at', 'documents'
+            'created_by', 'created_at', 'updated_at', 'documents', 'purchase_requests'
         )
         extra_kwargs = {
             'total_amount': {'required': False, 'allow_null': True},
@@ -465,8 +478,8 @@ class ProcurementRecordSerializer(serializers.ModelSerializer):
             return None
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
-    pr_document_details = DocumentSerializer(source='pr_document', read_only=True)
-    date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
+    purchase_request_details = PurchaseRequestSerializer(source='purchase_request', read_only=True)
+    po_date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
     date_of_ors_burs = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
 
     class Meta:

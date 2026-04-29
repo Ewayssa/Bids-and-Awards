@@ -5,7 +5,7 @@ import {
     MdCloudUpload, MdClose, MdDescription, MdAttachFile
 } from 'react-icons/md';
 import Modal from '../../../components/Modal';
-import { documentService } from '../../../services/api';
+import { documentService, procurementRecordService, purchaseRequestService } from '../../../services/api';
 import { createPR_PDFFile, generatePR_Excel } from '../../../utils/prGenerator';
 
 const CreatePRModal = ({
@@ -30,8 +30,9 @@ const CreatePRModal = ({
     const [loadingPPMPs, setLoadingPPMPs] = useState(false);
     const [selectedPPMP, setSelectedPPMP] = useState(null);
     const [form, setForm] = useState({
+        ppmp_id: '',
         ppmp_no: '',
-        prNo: '',
+        purpose: '',
         title: ''
     });
 
@@ -67,8 +68,7 @@ const CreatePRModal = ({
             setItems([{ id: Date.now(), unit: '', description: '', quantity: 1, unit_cost: 0 }]);
             setError('');
             setErrors({});
-            setSelectedPPMP(null);
-            setForm({ ppmp_no: '', prNo: '', title: '' });
+            setForm({ ppmp_id: '', ppmp_no: '', purpose: '', title: '' });
             setOptionalFiles({
                 'Activity Design': null,
                 'Market Scoping': null,
@@ -77,24 +77,9 @@ const CreatePRModal = ({
 
             // Fetch PPMPs for dropdown
             setLoadingPPMPs(true);
-            documentService.getAll({
-                subDoc: 'Project Procurement Management Plan/Supplemental PPMP'
-            })
+            procurementRecordService.getAll()
                 .then(data => {
-                    const uniquePPMPs = [];
-                    const seen = new Set();
-                    data.forEach(item => {
-                        if (item.ppmp_no && !seen.has(item.ppmp_no)) {
-                            seen.add(item.ppmp_no);
-                            uniquePPMPs.push({
-                                ppmp_no: item.ppmp_no,
-                                prNo: item.prNo,
-                                title: item.title,
-                                end_user_office: item.end_user_office
-                            });
-                        }
-                    });
-                    setAvailablePPMPs(uniquePPMPs);
+                    setAvailablePPMPs(data);
                 })
                 .catch(err => console.error('Failed to fetch PPMPs:', err))
                 .finally(() => setLoadingPPMPs(false));
@@ -127,7 +112,8 @@ const CreatePRModal = ({
     const validateForm = () => {
         const errs = {};
 
-        if (!form.ppmp_no) errs.ppmp_no = 'Please select an associated PPMP';
+        if (!form.ppmp_id) errs.ppmp_id = 'Please select an associated PPMP';
+        if (!form.purpose.trim()) errs.purpose = 'Please provide a purpose for this request';
 
         const hasEmptyItems = items.some(item => !item.description.trim() || !item.unit.trim() || item.quantity <= 0 || item.unit_cost <= 0);
         if (hasEmptyItems) {
@@ -145,34 +131,73 @@ const CreatePRModal = ({
         setError('');
 
         try {
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const created_by = currentUser.fullName || currentUser.username || 'Unknown';
+
+            // 1. Create the structured Purchase Request
+            const prPayload = {
+                ppmp: form.ppmp_id,
+                pr_no: '', // Will be assigned later by BAC member
+                purpose: form.purpose,
+                grand_total: calculateTotal(),
+                status: 'approved',
+                items: items.map(item => ({
+                    unit: item.unit,
+                    description: item.description,
+                    quantity: parseFloat(item.quantity),
+                    unit_cost: parseFloat(item.unit_cost),
+                    total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)
+                }))
+            };
+
+            let newPR;
+            try {
+                newPR = await purchaseRequestService.create(prPayload);
+            } catch (prErr) {
+                console.error('Purchase Request (Relational) Error:', prErr);
+                const backendMsg = prErr.response?.data?.error || prErr.response?.data?.detail || prErr.message;
+                throw new Error(`Failed to create database record: ${typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : backendMsg}`);
+            }
+
+            // 2. Prepare legacy Document for PDF storage
             const formData = new FormData();
             formData.append('category', 'Initial Documents');
             formData.append('subDoc', 'Purchase Request');
             formData.append('title', form.title || `PR for ${form.ppmp_no}`);
             formData.append('ppmp_no', form.ppmp_no);
-            formData.append('prNo', form.prNo);
+            formData.append('prNo', ''); 
+            formData.append('user_pr_no', ''); 
             formData.append('total_amount', calculateTotal());
             formData.append('date', new Date().toISOString().slice(0, 10));
-
-            // Save the line items as a JSON string
             formData.append('pr_items', JSON.stringify(items));
-
-            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-            formData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
+            formData.append('uploadedBy', created_by);
 
             const prData = {
                 items,
                 total: calculateTotal(),
                 ppmp_no: form.ppmp_no,
-                prNo: form.prNo,
+                prNo: '', // Not assigned yet
+                purpose: form.purpose,
                 title: form.title || `PR for ${form.ppmp_no}`,
                 office: selectedPPMP?.end_user_office || '',
                 date: new Date()
             };
-            const pdfFile = await createPR_PDFFile(prData);
-            formData.append('file', pdfFile);
 
-            await documentService.create(formData);
+            try {
+                const pdfFile = await createPR_PDFFile(prData);
+                formData.append('file', pdfFile);
+            } catch (pdfErr) {
+                console.error('PDF Generation Error:', pdfErr);
+                throw new Error('Failed to generate the formal PR document (PDF).');
+            }
+
+            try {
+                await documentService.create(formData);
+            } catch (docErr) {
+                console.error('Document Upload (Legacy) Error:', docErr);
+                const backendMsg = docErr.response?.data?.error || docErr.response?.data?.detail || docErr.message;
+                throw new Error(`Failed to upload PR document to storage: ${typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : backendMsg}`);
+            }
 
             // Upload optional files
             for (const [subDocType, file] of Object.entries(optionalFiles)) {
@@ -182,10 +207,11 @@ const CreatePRModal = ({
                     optFormData.append('subDoc', subDocType);
                     optFormData.append('title', `${subDocType} for ${form.ppmp_no}`);
                     optFormData.append('ppmp_no', form.ppmp_no);
-                    optFormData.append('prNo', form.prNo || '');
+                    optFormData.append('prNo', '');
+                    optFormData.append('user_pr_no', '');
                     optFormData.append('file', file);
                     optFormData.append('date', new Date().toISOString().slice(0, 10));
-                    optFormData.append('uploadedBy', currentUser.fullName || currentUser.username || 'Unknown');
+                    optFormData.append('uploadedBy', created_by);
                     try {
                         await documentService.create(optFormData);
                     } catch (optErr) {
@@ -202,7 +228,8 @@ const CreatePRModal = ({
             }
         } catch (err) {
             console.error('Submission error:', err);
-            setError(err.response?.data?.error || 'Failed to create PR and supporting documents. Please try again.');
+            const msg = err.response?.data?.error || err.message || 'Failed to create PR and supporting documents.';
+            setError(typeof msg === 'object' ? JSON.stringify(msg) : msg);
         } finally {
             setSubmitting(false);
         }
@@ -238,19 +265,20 @@ const CreatePRModal = ({
                                     items: items,
                                     total: savedPRData.total,
                                     ppmp_no: savedPRData.ppmp_no,
-                                    prNo: savedPRData.prNo || '',
+                                    prNo: '',
                                     title: savedPRData.title,
-                                    office: savedPRData.office || ''
+                                    office: savedPRData.office || '',
+                                    purpose: savedPRData.purpose || ''
                                 };
-                                generatePR_Excel(prData);
+                                generatePR_PDF(prData);
                             } catch (err) {
                                 console.error('Download failed:', err);
-                                alert('Could not generate Excel. You can try downloading it from the PR list later.');
+                                alert('Could not generate PDF. You can try downloading it from the PR list later.');
                             }
                         }}
                         className="btn-primary flex items-center gap-2 shadow-lg shadow-emerald-500/20 px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700"
                     >
-                        Download PR Document (Excel)
+                        Download PR Document (PDF)
                         <MdReceipt className="w-4 h-4" />
                     </button>
                 </div>
@@ -343,32 +371,51 @@ const CreatePRModal = ({
                                 Select PPMP No. <span className="text-red-500">*</span>
                             </label>
                             <select
-                                value={form.ppmp_no}
+                                value={form.ppmp_id}
                                 onChange={(e) => {
                                     const val = e.target.value;
-                                    const found = availablePPMPs.find(p => p.ppmp_no === val);
+                                    const found = availablePPMPs.find(p => String(p.id) === val);
                                     setSelectedPPMP(found);
                                     setForm(prev => ({
                                         ...prev,
-                                        ppmp_no: val,
-                                        prNo: found ? found.prNo : '',
+                                        ppmp_id: val,
+                                        ppmp_no: found ? found.ppmp_no : '',
                                         title: found ? found.title : prev.title
                                     }));
-                                    if (errors.ppmp_no) setErrors(prev => ({ ...prev, ppmp_no: null }));
+                                    if (errors.ppmp_id) setErrors(prev => ({ ...prev, ppmp_id: null }));
                                 }}
                                 disabled={loadingPPMPs}
-                                className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.ppmp_no ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all cursor-pointer font-bold text-sm`}
+                                className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.ppmp_id ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all cursor-pointer font-bold text-sm`}
                             >
                                 <option value="" disabled>
                                     {loadingPPMPs ? 'Loading PPMPs...' : 'Select associated PPMP'}
                                 </option>
                                 {availablePPMPs.map((ppmp, idx) => (
-                                    <option key={idx} value={ppmp.ppmp_no}>
-                                        PPMP No. {ppmp.ppmp_no}
+                                    <option key={ppmp.id} value={ppmp.id}>
+                                        PPMP No. {ppmp.ppmp_no} — {ppmp.title}
                                     </option>
                                 ))}
                             </select>
-                            {errors.ppmp_no && <span className="text-xs text-red-500 font-semibold">{errors.ppmp_no}</span>}
+                            {errors.ppmp_id && <span className="text-xs text-red-500 font-semibold">{errors.ppmp_id}</span>}
+                        </div>
+
+                        {/* Purpose Field */}
+                        <div className="space-y-1 flex-[2]">
+                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                                <MdDescription className="w-4 h-4" />
+                                Purpose <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={form.purpose}
+                                onChange={(e) => {
+                                    setForm(prev => ({ ...prev, purpose: e.target.value }));
+                                    if (errors.purpose) setErrors(prev => ({ ...prev, purpose: null }));
+                                }}
+                                className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.purpose ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all font-bold text-sm`}
+                                placeholder="Enter the purpose of this request..."
+                            />
+                            {errors.purpose && <span className="text-xs text-red-500 font-semibold">{errors.purpose}</span>}
                         </div>
 
                         <div className="relative">

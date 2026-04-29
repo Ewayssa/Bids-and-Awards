@@ -26,7 +26,8 @@ const normalizePrData = (data = {}) => {
         title: data.title || '',
         date: formatPrDate(data.date),
         office: data.office || '',
-        section: data.section || ''
+        section: data.section || '',
+        purpose: data.purpose || ''
     };
 };
 
@@ -35,14 +36,13 @@ const formatAmount = (value) => Number(value || 0).toLocaleString(undefined, {
     maximumFractionDigits: 2
 });
 
-const PR_PURPOSE = 'For official use of DILG R1';
 
 /**
  * Generates a formal Purchase Request Excel file based on the official DILG template (Appendix 60).
  * @param {Object} data - The PR data containing items, prNo, date, etc.
  */
 export const generatePR_Excel = async (data) => {
-    const { items, total, prNo, title, date, office } = normalizePrData(data);
+    const { items, total, prNo, title, date, office, purpose } = normalizePrData(data);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Purchase Request');
@@ -234,7 +234,7 @@ export const generatePR_Excel = async (data) => {
     // Purpose Row
     worksheet.mergeCells(`A${currentRow}:F${currentRow + 1}`);
     const purposeCell = worksheet.getCell(`A${currentRow}`);
-    purposeCell.value = `Purpose: ${PR_PURPOSE}`;
+    purposeCell.value = `Purpose: ${purpose || ''}`;
     purposeCell.font = { name: 'Arial', size: 10, bold: true };
     purposeCell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 };
     applyRangeBorder(`A${currentRow}`, `F${currentRow + 1}`);
@@ -303,7 +303,7 @@ export const generatePR_Excel = async (data) => {
 };
 
 export const generatePR_PDFBlob = async (data) => {
-    const { items, total, prNo, title, date, office } = normalizePrData(data);
+    const { items, total, prNo, title, date, office, purpose } = normalizePrData(data);
 
     const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -401,7 +401,7 @@ export const generatePR_PDFBlob = async (data) => {
     drawCell(colX[5], y, colWidths[5], 24, formatAmount(total), { bold: true, align: 'right', fontSize: 10 });
     y += 24;
 
-    drawCell(margin, y, tableWidth, 42, `Purpose: ${PR_PURPOSE}`, { bold: true, fontSize: 10, valign: 'top' });
+    drawCell(margin, y, tableWidth, 42, `Purpose: ${purpose || ''}`, { bold: true, fontSize: 10, valign: 'top' });
     y += 42;
 
     drawCell(margin, y, colWidths[0], 24, '', { fontSize: 9 });
@@ -428,4 +428,16 @@ export const createPR_PDFFile = async (data) => {
     return new File([blob], `PR_${safePrFilenamePart(data?.prNo || data?.ppmp_no || data?.title)}.pdf`, {
         type: 'application/pdf'
     });
+};
+
+export const generatePR_PDF = async (data) => {
+    const blob = await generatePR_PDFBlob(data);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `PR_${safePrFilenamePart(data?.prNo || 'Document')}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 };

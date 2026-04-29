@@ -91,6 +91,7 @@ const ProcurementWorkflowView = ({
             formData.append('file', selectedFile);
             formData.append('title', record.title);
             formData.append('prNo', record.pr_no);
+            formData.append('user_pr_no', record.user_pr_no || '');
             formData.append('year', record.year || '');
             formData.append('quarter', record.quarter || '');
             formData.append('category', categoryName);

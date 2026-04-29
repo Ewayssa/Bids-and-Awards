@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-    MdSave, 
-    MdCheckCircle, 
-    MdInventory, 
+import {
+    MdSave,
+    MdCheckCircle,
+    MdInventory,
     MdAssignment,
     MdSearch,
     MdClose,
@@ -22,6 +22,7 @@ import Modal from '../../components/Modal';
 import POPrintLayout from './POPrintLayout';
 import NotificationBell from '../notifications/NotificationBell';
 import UserAccountDropdown from '../../layouts/UserAccountDropdown';
+import { purchaseRequestService, purchaseOrderService } from '../../services/api';
 
 const GeneratePO = ({ user, onLogout }) => {
     const navigate = useNavigate();
@@ -33,7 +34,7 @@ const GeneratePO = ({ user, onLogout }) => {
     const [showPreview, setShowPreview] = useState(false);
     const [selectedPo, setSelectedPo] = useState(null);
     const [selectedPoItems, setSelectedPoItems] = useState([]);
-    
+
     // Form State
     const [selectedPrId, setSelectedPrId] = useState('');
     const [prDetails, setPrDetails] = useState(null);
@@ -45,7 +46,7 @@ const GeneratePO = ({ user, onLogout }) => {
         po_no: `2026-${new Date().getMonth() + 1}-`,
         supplier_name: '',
         supplier_address: '',
-        date: new Date().toISOString().split('T')[0],
+        po_date: new Date().toISOString().split('T')[0],
         mode_of_procurement: '',
         delivery_terms: '7 Working Days upon receipt of PO',
         tin: '',
@@ -80,8 +81,9 @@ const GeneratePO = ({ user, onLogout }) => {
     const fetchPOs = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/purchase-orders/');
-            setPos(response.data);
+            const data = await purchaseOrderService.getAll();
+            const poList = Array.isArray(data) ? data : (data?.results || []);
+            setPos(poList);
         } catch (error) {
             console.error('Error fetching POs:', error);
         } finally {
@@ -91,8 +93,9 @@ const GeneratePO = ({ user, onLogout }) => {
 
     const fetchReadyPrs = async () => {
         try {
-            const response = await axios.get('/api/upload/?subDoc=Purchase Request&po_status=ready_for_po');
-            setReadyPrs(response.data);
+            const data = await purchaseRequestService.getAll({ status: 'approved' });
+            const prList = Array.isArray(data) ? data : (data?.results || []);
+            setReadyPrs(prList);
         } catch (error) {
             console.error('Error fetching PRs:', error);
         }
@@ -100,15 +103,9 @@ const GeneratePO = ({ user, onLogout }) => {
 
     const fetchPrDetails = async (id) => {
         try {
-            const response = await axios.get(`/api/upload/${id}/`);
-            const doc = response.data;
+            const doc = await purchaseRequestService.getById(id);
             setPrDetails(doc);
-            
-            let prItems = [];
-            try {
-                prItems = typeof doc.pr_items === 'string' ? JSON.parse(doc.pr_items || '[]') : (doc.pr_items || []);
-            } catch (e) { prItems = []; }
-            setItems(prItems);
+            setItems(doc.items || []);
 
             if (doc.mode_of_procurement) {
                 setPoData(prev => ({ ...prev, mode_of_procurement: doc.mode_of_procurement }));
@@ -126,7 +123,7 @@ const GeneratePO = ({ user, onLogout }) => {
     const triggerPrint = (po) => {
         setSelectedPo(po);
         try {
-            const poItems = typeof po.po_items === 'string' ? JSON.parse(po.po_items || '[]') : (po.po_items || []);
+            const poItems = po.purchase_request_details?.items || [];
             setSelectedPoItems(poItems);
             setTimeout(() => handlePrint(), 100);
         } catch (e) {
@@ -137,7 +134,7 @@ const GeneratePO = ({ user, onLogout }) => {
     const viewPo = (po) => {
         setSelectedPo(po);
         try {
-            const poItems = typeof po.po_items === 'string' ? JSON.parse(po.po_items || '[]') : (po.po_items || []);
+            const poItems = po.purchase_request_details?.items || [];
             setSelectedPoItems(poItems);
             setShowPreview(true);
         } catch (e) {
@@ -148,13 +145,13 @@ const GeneratePO = ({ user, onLogout }) => {
     const totalAmount = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_cost || 0)), 0);
 
     const isFormValid = () => {
-        return selectedPrId && 
-               poData.po_no && 
-               poData.supplier_name && 
-               poData.supplier_address && 
-               poData.date && 
-               poData.mode_of_procurement && 
-               poData.delivery_terms;
+        return selectedPrId &&
+            poData.po_no &&
+            poData.supplier_name &&
+            poData.supplier_address &&
+            poData.po_date &&
+            poData.mode_of_procurement &&
+            poData.delivery_terms;
     };
 
     const handleSave = async () => {
@@ -162,21 +159,16 @@ const GeneratePO = ({ user, onLogout }) => {
             alert('Please fill in all required fields.');
             return;
         }
-        
+
         try {
             setSaving(true);
-            const payload = { 
-                ...poData, 
-                pr_document: selectedPrId, 
-                po_items: JSON.stringify(items.map(item => ({
-                    ...item,
-                    final_unit_cost: item.unit_cost,
-                    amount: item.quantity * item.unit_cost
-                }))), 
-                final_total_amount: totalAmount 
+            const payload = {
+                ...poData,
+                purchase_request: selectedPrId,
+                total_amount: totalAmount
             };
-            const response = await axios.post('/api/purchase-orders/', payload);
-            
+            await purchaseOrderService.create(payload);
+
             setSuccessMessage('Purchase Order generated successfully!');
             setTimeout(() => {
                 setSuccessMessage('');
@@ -189,7 +181,7 @@ const GeneratePO = ({ user, onLogout }) => {
                     po_no: `2026-${new Date().getMonth() + 1}-`,
                     supplier_name: '',
                     supplier_address: '',
-                    date: new Date().toISOString().split('T')[0],
+                    po_date: new Date().toISOString().split('T')[0],
                     mode_of_procurement: '',
                     delivery_terms: '7 Working Days upon receipt of PO',
                     tin: '',
@@ -211,10 +203,10 @@ const GeneratePO = ({ user, onLogout }) => {
         }
     };
 
-    const filteredPOs = pos.filter(po => 
+    const filteredPOs = pos.filter(po =>
         (po.po_no || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (po.supplier_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (po.pr_document_details?.user_pr_no || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (po.purchase_request_details?.pr_no || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -225,7 +217,7 @@ const GeneratePO = ({ user, onLogout }) => {
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Purchase Order Management</h1>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Generate and track Purchase Orders for approved requests.</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setShowForm(true)}
                     className="flex items-center gap-3 px-8 py-3.5 bg-[#16a34a] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-[#15803d] hover:-translate-y-0.5 transition-all active:scale-95"
                 >
@@ -238,8 +230,8 @@ const GeneratePO = ({ user, onLogout }) => {
                 <div className="flex-1 max-w-md">
                     <div className="relative">
                         <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             placeholder="Search PO No, Supplier, or PR..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -281,17 +273,17 @@ const GeneratePO = ({ user, onLogout }) => {
                                     </td>
                                     <td className="px-8 py-6">
                                         <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider bg-emerald-50 px-2.5 py-1 rounded-lg inline-block border border-emerald-100">
-                                            {po.pr_document_details?.user_pr_no || po.pr_document_details?.prNo}
+                                            {po.purchase_request_details?.pr_no}
                                         </p>
                                     </td>
                                     <td className="px-8 py-6">
                                         <p className="text-sm font-bold text-slate-700 truncate max-w-[200px]">{po.supplier_name}</p>
                                     </td>
                                     <td className="px-8 py-6 text-sm text-slate-500 font-medium whitespace-nowrap">
-                                        {new Date(po.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        {new Date(po.po_date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </td>
                                     <td className="px-8 py-6 text-right whitespace-nowrap">
-                                        <p className="text-sm font-black text-slate-900">₱{Number(po.final_total_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                                        <p className="text-sm font-black text-slate-900">₱{Number(po.total_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
                                     </td>
                                     <td className="px-8 py-6 text-center">
                                         <span className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
@@ -300,14 +292,14 @@ const GeneratePO = ({ user, onLogout }) => {
                                     </td>
                                     <td className="px-8 py-6 text-right whitespace-nowrap">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button 
+                                            <button
                                                 onClick={() => viewPo(po)}
                                                 className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all active:scale-95 shadow-sm"
                                                 title="View"
                                             >
                                                 <MdRemoveRedEye size={20} />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => triggerPrint(po)}
                                                 className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-95 shadow-sm"
                                                 title="Print PDF"
@@ -360,7 +352,7 @@ const GeneratePO = ({ user, onLogout }) => {
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] ml-1">Step 1: Select Approved Purchase Request</label>
                                 <div className="relative group">
-                                    <select 
+                                    <select
                                         value={selectedPrId}
                                         onChange={(e) => setSelectedPrId(e.target.value)}
                                         className="w-full px-6 py-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all appearance-none cursor-pointer"
@@ -368,7 +360,7 @@ const GeneratePO = ({ user, onLogout }) => {
                                         <option value="">Select PR No. + Purpose</option>
                                         {readyPrs.map(pr => (
                                             <option key={pr.id} value={pr.id}>
-                                                {pr.user_pr_no || pr.prNo} — {pr.title}
+                                                {pr.pr_no} — {pr.purpose.substring(0, 50)}...
                                             </option>
                                         ))}
                                     </select>
@@ -422,61 +414,172 @@ const GeneratePO = ({ user, onLogout }) => {
                                             <MdAssignment className="text-emerald-600" size={20} />
                                             <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Step 2: PO Specifications</h3>
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
                                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">PO Number</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={poData.po_no} 
-                                                    onChange={(e) => setPoData({...poData, po_no: e.target.value})} 
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner" 
+                                                <input
+                                                    type="text"
+                                                    value={poData.po_no}
+                                                    onChange={(e) => setPoData({ ...poData, po_no: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
-                                                <input 
-                                                    type="date" 
-                                                    value={poData.date} 
-                                                    onChange={(e) => setPoData({...poData, date: e.target.value})} 
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner" 
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">PO Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={poData.po_date}
+                                                    onChange={(e) => setPoData({ ...poData, po_date: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
                                                 />
                                             </div>
                                             <div className="space-y-2 col-span-full">
                                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier Name</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={poData.supplier_name} 
-                                                    onChange={(e) => setPoData({...poData, supplier_name: e.target.value})} 
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner text-lg" 
+                                                <input
+                                                    type="text"
+                                                    value={poData.supplier_name}
+                                                    onChange={(e) => setPoData({ ...poData, supplier_name: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner text-lg"
                                                     placeholder="Enter Official Supplier Name"
                                                 />
                                             </div>
-                                            <div className="space-y-2 col-span-full">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier Address</label>
-                                                <textarea 
-                                                    value={poData.supplier_address} 
-                                                    onChange={(e) => setPoData({...poData, supplier_address: e.target.value})} 
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-medium text-slate-600 h-24 transition-all shadow-inner resize-none" 
-                                                    placeholder="Enter Full Business Address"
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier TIN</label>
+                                                <input
+                                                    type="text"
+                                                    value={poData.tin}
+                                                    onChange={(e) => setPoData({ ...poData, tin: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    placeholder="000-000-000-000"
                                                 />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Mode of Procurement</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={poData.mode_of_procurement} 
-                                                    onChange={(e) => setPoData({...poData, mode_of_procurement: e.target.value})} 
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner" 
+                                                <input
+                                                    type="text"
+                                                    value={poData.mode_of_procurement}
+                                                    onChange={(e) => setPoData({ ...poData, mode_of_procurement: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2 col-span-full">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier Address</label>
+                                                <textarea
+                                                    value={poData.supplier_address}
+                                                    onChange={(e) => setPoData({ ...poData, supplier_address: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-medium text-slate-600 h-20 transition-all shadow-inner resize-none"
+                                                    placeholder="Enter Full Business Address"
+                                                />
+                                            </div>
+
+                                            {/* DELIVERY & PAYMENT SECTION */}
+                                            <div className="col-span-full pt-4 flex items-center gap-3">
+                                                <div className="h-px flex-1 bg-slate-100"></div>
+                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Delivery & Payment</span>
+                                                <div className="h-px flex-1 bg-slate-100"></div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Place of Delivery</label>
+                                                <input
+                                                    type="text"
+                                                    value={poData.place_of_delivery}
+                                                    onChange={(e) => setPoData({ ...poData, place_of_delivery: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Delivery</label>
+                                                <input
+                                                    type="text"
+                                                    value={poData.date_of_delivery}
+                                                    onChange={(e) => setPoData({ ...poData, date_of_delivery: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    placeholder="e.g. 7 Days upon receipt"
                                                 />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Delivery Terms</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={poData.delivery_terms} 
-                                                    onChange={(e) => setPoData({...poData, delivery_terms: e.target.value})} 
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner" 
+                                                <input
+                                                    type="text"
+                                                    value={poData.delivery_terms}
+                                                    onChange={(e) => setPoData({ ...poData, delivery_terms: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Payment Term</label>
+                                                <input
+                                                    type="text"
+                                                    value={poData.payment_term}
+                                                    onChange={(e) => setPoData({ ...poData, payment_term: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+
+                                            {/* AMOUNT IN WORDS */}
+                                            <div className="space-y-2 col-span-full">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Amount in Words</label>
+                                                <textarea
+                                                    value={poData.amount_in_words}
+                                                    onChange={(e) => setPoData({ ...poData, amount_in_words: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-medium text-slate-600 h-20 transition-all shadow-inner resize-none italic"
+                                                    placeholder="e.g. One Thousand Pesos Only"
+                                                />
+                                            </div>
+
+                                            {/* ACCOUNTING SECTION */}
+                                            <div className="col-span-full pt-4 flex items-center gap-3">
+                                                <div className="h-px flex-1 bg-slate-100"></div>
+                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Accounting Details</span>
+                                                <div className="h-px flex-1 bg-slate-100"></div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fund Cluster</label>
+                                                <input
+                                                    type="text"
+                                                    value={poData.fund_cluster}
+                                                    onChange={(e) => setPoData({ ...poData, fund_cluster: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Funds Available</label>
+                                                <input
+                                                    type="text"
+                                                    value={poData.funds_available}
+                                                    onChange={(e) => setPoData({ ...poData, funds_available: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ORS/BURS No.</label>
+                                                <input
+                                                    type="text"
+                                                    value={poData.ors_burs_no}
+                                                    onChange={(e) => setPoData({ ...poData, ors_burs_no: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ORS/BURS Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={poData.date_of_ors_burs}
+                                                    onChange={(e) => setPoData({ ...poData, date_of_ors_burs: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <div className="space-y-2 col-span-full">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ORS/BURS Amount</label>
+                                                <input
+                                                    type="number"
+                                                    value={poData.ors_burs_amount}
+                                                    onChange={(e) => setPoData({ ...poData, ors_burs_amount: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    placeholder="0.00"
                                                 />
                                             </div>
                                         </div>
@@ -484,14 +587,14 @@ const GeneratePO = ({ user, onLogout }) => {
 
                                     {/* FOOTER ACTIONS */}
                                     <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-4">
-                                        <button 
+                                        <button
                                             onClick={() => setShowPreview(true)}
                                             className="px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-2 border-slate-100 text-slate-600 hover:bg-slate-50 active:scale-95"
                                         >
                                             <MdRemoveRedEye size={18} />
                                             Preview Purchase Order
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={handleSave}
                                             disabled={saving || !isFormValid()}
                                             className={`px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-lg ${saving || !isFormValid() ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 hover:-translate-y-0.5 active:scale-95'}`}
@@ -520,7 +623,7 @@ const GeneratePO = ({ user, onLogout }) => {
                 bodyClassName="!p-0 bg-slate-800"
                 footer={
                     <div className="flex justify-end gap-4">
-                        <button 
+                        <button
                             onClick={() => {
                                 setShowPreview(false);
                                 setSelectedPo(null);
@@ -537,7 +640,7 @@ const GeneratePO = ({ user, onLogout }) => {
                         {selectedPo ? (
                             <POPrintLayout ref={previewPrintRef} data={selectedPo} prItems={selectedPoItems} />
                         ) : (
-                            <POPrintLayout ref={previewPrintRef} data={{...poData, final_total_amount: totalAmount}} prItems={items} />
+                            <POPrintLayout ref={previewPrintRef} data={{ ...poData, total_amount: totalAmount }} prItems={items} />
                         )}
                     </div>
                 </div>

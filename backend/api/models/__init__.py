@@ -40,14 +40,17 @@ class UserManager(AuthUserManager):
 class User(AbstractUser):
     ROLE_CHOICES = (
         ('admin', 'Admin'),
-        ('user', 'User'),
+        ('bac_secretariat', 'BAC Secretariat'),
+        ('bac_member', 'BAC Member'),
+        ('supply', 'Supply Officer'),
+        ('end_user', 'End User'),
     )
     POSITION_CHOICES = (
         ('BAC Secretariat', 'BAC Secretariat'),
         ('BAC Member', 'BAC Member'),
         ('Supply Officer', 'Supply Officer'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='end_user')
     fullName = models.CharField(max_length=255, blank=True)
     position = models.CharField(
         max_length=255, 
@@ -215,7 +218,11 @@ def recalculate_document_status(sender, instance, created, **kwargs):
 
     if updates:
         Document.objects.filter(pk=instance.pk).update(**updates)
-        instance.status = calculated_status
+    
+    # Check if this update makes the folder ready for PR No. assignment
+    if instance.procurement_record:
+        from ..utils.workflow_logic import check_folder_readiness
+        check_folder_readiness(instance.procurement_record)
 
 
 class Report(models.Model):
@@ -303,9 +310,10 @@ class ProcurementRecord(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     pr_no = models.CharField(max_length=100, help_text='BAC Folder No.')
     ppmp_no = models.CharField(max_length=100, blank=True, help_text='Associated PPMP No. for grouping')
+    is_ready = models.BooleanField(default=False, help_text='True if all mandatory docs (PR, Activity Design, RIS, Market Scoping) are uploaded')
+    user_pr_no = models.CharField(max_length=100, blank=True, help_text='Official PR No. assigned by BAC')
     year = models.CharField(max_length=4, blank=True, help_text='Year (e.g. 2024)')
     quarter = models.CharField(max_length=10, blank=True, help_text='Quarter (e.g. Q1, Q2)')
-    user_pr_no = models.CharField(max_length=100, blank=True, help_text='PR No.')
     rfq_no = models.CharField(max_length=100, blank=True, help_text='RFQ No.')
     title = models.CharField(max_length=255, help_text='Title / Purpose')
     procurement_type = models.CharField(max_length=50, choices=PROCUREMENT_TYPE_CHOICES, blank=True, help_text='Type of procurement')
@@ -339,48 +347,106 @@ def sync_pr_number_to_documents(sender, instance, created, **kwargs):
             subDoc='Purchase Request'
         ).update(user_pr_no=instance.user_pr_no)
 
-class PurchaseOrder(models.Model):
+class PurchaseRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('po_generated', 'PO Generated'),
+        ('cancelled', 'Cancelled'),
+    )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    pr_document = models.ForeignKey(
-        Document, 
+    ppmp = models.ForeignKey(
+        ProcurementRecord, 
+        on_delete=models.CASCADE, 
+        related_name='purchase_requests',
+        null=True,
+        blank=True,
+        help_text='Link to the associated PPMP (Procurement Record)'
+    )
+    pr_no = models.CharField(max_length=100, blank=True)
+    purpose = models.TextField(help_text='Purpose of the purchase request')
+    grand_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='approved')
+    created_by = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Sync PR No. to the parent ProcurementRecord (Folder) if linked
+        if self.ppmp and self.pr_no:
+            # Update folder's user_pr_no if it differs
+            if self.ppmp.user_pr_no != self.pr_no:
+                self.ppmp.user_pr_no = self.pr_no
+                self.ppmp.save(update_fields=['user_pr_no'])
+
+    def __str__(self):
+        return f"PR {self.pr_no} - {self.purpose[:50]}"
+
+@receiver(post_save, sender=PurchaseRequest)
+def check_pr_folder_readiness(sender, instance, created, **kwargs):
+    """When a PR is saved, check if the parent folder is now complete."""
+    if instance.ppmp:
+        from ..utils.workflow_logic import check_folder_readiness
+        check_folder_readiness(instance.ppmp)
+
+class PurchaseRequestItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    purchase_request = models.ForeignKey(
+        PurchaseRequest, 
+        on_delete=models.CASCADE, 
+        related_name='items'
+    )
+    unit = models.CharField(max_length=50)
+    description = models.TextField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = models.DecimalField(max_digits=14, decimal_places=2)
+    total = models.DecimalField(max_digits=14, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.description} ({self.quantity} {self.unit})"
+
+class PurchaseOrder(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    purchase_request = models.ForeignKey(
+        PurchaseRequest, 
         on_delete=models.CASCADE, 
         related_name='purchase_orders',
-        limit_choices_to={'subDoc': 'Purchase Request'}
+        null=True,
+        blank=True
     )
-    
-    # Supplier Details
+    po_no = models.CharField(max_length=100, unique=True)
     supplier_name = models.CharField(max_length=255)
     supplier_address = models.CharField(max_length=500, blank=True)
-    tin = models.CharField(max_length=100, blank=True)
-    
-    # PO Details
-    po_no = models.CharField(max_length=100)
-    date = models.DateField()
+    po_date = models.DateField()
     mode_of_procurement = models.CharField(max_length=100, blank=True)
+    delivery_terms = models.CharField(max_length=255, blank=True)
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
-    # Delivery & Payment
+    # Keeping some legacy fields for backward compatibility or if needed by printer
+    tin = models.CharField(max_length=100, blank=True)
     place_of_delivery = models.CharField(max_length=255, blank=True)
     date_of_delivery = models.CharField(max_length=255, blank=True)
     payment_term = models.CharField(max_length=100, blank=True)
-    
-    # Items Snapshot
-    po_items = models.TextField(blank=True, help_text='JSON array of {unit, description, quantity, final_unit_cost, amount}')
-    
-    # Totals
-    final_total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     amount_in_words = models.CharField(max_length=500, blank=True)
-    
-    # Funds / BURS
     fund_cluster = models.CharField(max_length=100, blank=True)
     funds_available = models.CharField(max_length=255, blank=True)
     ors_burs_no = models.CharField(max_length=100, blank=True)
     date_of_ors_burs = models.DateField(null=True, blank=True)
     ors_burs_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     
+    created_by = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
-        return f"PO {self.po_no} for PR {self.pr_document.prNo}"
+        return f"PO {self.po_no}"
 

@@ -85,8 +85,10 @@ const SupplyDashboard = ({ user, onLogout }) => {
                         {data.recent_ready_prs.length > 0 ? data.recent_ready_prs.map(pr => (
                             <div key={pr.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
                                 <div className="space-y-1">
-                                    <p className="text-sm font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors">{pr.title}</p>
-                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded inline-block">{pr.user_pr_no || pr.prNo}</p>
+                                    <p className="text-sm font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors truncate max-w-[250px]">{pr.purpose}</p>
+                                    <p className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded inline-block ${pr.pr_no ? 'text-indigo-500 bg-indigo-50' : 'text-slate-400 bg-slate-50 italic'}`}>
+                                        {pr.pr_no || 'No assigned PR No.'}
+                                    </p>
                                 </div>
                                 <Link to="/supply/generate-po" className="flex items-center gap-2 text-[10px] font-black text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white px-4 py-2 rounded-xl transition-all uppercase tracking-widest active:scale-95 shadow-sm">
                                     Generate PO <MdArrowForward size={14} />
@@ -118,7 +120,7 @@ const SupplyDashboard = ({ user, onLogout }) => {
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate max-w-[150px]">{po.supplier_name}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-black text-slate-900 tracking-tighter">₱{Number(po.final_total_amount).toLocaleString()}</p>
+                                    <p className="text-sm font-black text-slate-900 tracking-tighter">₱{Number(po.total_amount).toLocaleString()}</p>
                                     <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Success</p>
                                 </div>
                             </div>

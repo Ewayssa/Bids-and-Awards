@@ -120,7 +120,7 @@ const Personnel = ({ user }) => {
                 fullName: fullName.trim() || undefined,
                 position: autoPosition,
                 office: office.trim() || undefined,
-                role: (role === ROLES.ADMIN) ? 'admin' : 'user',
+                role: role,
                 created_by: (user?.username || user?.fullName || 'System').trim(),
             });
             setCreatedUser({
@@ -194,7 +194,7 @@ const Personnel = ({ user }) => {
                 fullName: editForm.fullName.trim() || undefined,
                 position: autoPosition,
                 office: editForm.office.trim() || undefined,
-                role: (editForm.role === ROLES.ADMIN) ? 'admin' : 'user',
+                role: editForm.role,
                 is_active: editForm.is_active,
                 updated_by: (user?.username || user?.fullName || 'System').trim(),
             });

@@ -20,8 +20,12 @@ const DocViewModal = ({
     const [activePreviewId, setActivePreviewId] = useState(currentDoc.id);
     const [generatedPrPreviewUrl, setGeneratedPrPreviewUrl] = useState(null);
 
+    const isPR = useMemo(() => {
+        return currentDoc.subDoc === 'Purchase Request' || currentDoc.grand_total !== undefined;
+    }, [currentDoc]);
+
     const requiredSupportingDocs = useMemo(() => {
-        if (currentDoc.subDoc === 'Purchase Request') {
+        if (isPR) {
             return [
                 { subDoc: 'Activity Design', label: 'Activity Design', aliases: ['Activity Design'] },
                 { subDoc: 'Requisition and Issue Slip', label: 'RIS', aliases: ['Requisition and Issue Slip', 'RIS'] },
@@ -29,7 +33,7 @@ const DocViewModal = ({
             ];
         }
         return [];
-    }, [currentDoc.subDoc]);
+    }, [isPR]);
 
     const supportDocLabels = useMemo(() => ({
         'Purchase Request': 'Purchase Request',
@@ -41,25 +45,39 @@ const DocViewModal = ({
     }), []);
 
     const isGeneratedPRFile = (target) => {
-        if (!target || target.subDoc !== 'Purchase Request') return false;
-        return !!(target.pr_items || target.total_amount || target.title || target.ppmp_no);
+        if (!target) return false;
+        const targetIsPR = target.subDoc === 'Purchase Request' || target.grand_total !== undefined;
+        if (!targetIsPR) return false;
+        // Check for either legacy or new structured fields
+        return !!(target.pr_items || target.items || target.total_amount || target.grand_total || target.title || target.purpose || target.ppmp_no);
     };
     const hasUploadedFile = (target) => !!(target?.file_url || target?.file || isGeneratedPRFile(target));
+    
+    // Normalization helpers
+    const getNormalizedTotal = (target) => target?.grand_total || target?.total_amount || 0;
+    const getNormalizedItems = (target) => {
+        if (!target) return [];
+        if (target.items) return target.items;
+        try {
+            return typeof target.pr_items === 'string' ? JSON.parse(target.pr_items || '[]') : (target.pr_items || []);
+        } catch (e) {
+            return [];
+        }
+    };
+    const getNormalizedPrNo = (target) => target?.pr_no || target?.user_pr_no || target?.prNo || 'Pending';
+    const getNormalizedTitle = (target) => target?.purpose || target?.title || 'General Procurement';
+
     const matchesRequiredDoc = (docItem, required) => {
         if (!docItem || !required) return false;
         const aliases = required.aliases || [required.subDoc];
         return aliases.some(alias => docItem.subDoc === alias || (docItem.subDoc || '').includes(alias));
     };
 
-    const parseItems = (target) => {
-        try {
-            return typeof target?.pr_items === 'string' ? JSON.parse(target.pr_items || '[]') : (target?.pr_items || []);
-        } catch (e) {
-            return [];
-        }
-    };
 
-    const items = parseItems(currentDoc);
+    const items = getNormalizedItems(currentDoc);
+    const totalAmount = getNormalizedTotal(currentDoc);
+    const prNo = getNormalizedPrNo(currentDoc);
+    const title = getNormalizedTitle(currentDoc);
 
     const relatedDocuments = useMemo(() => {
         const docs = Array.isArray(currentDoc.related_documents) ? currentDoc.related_documents : [currentDoc];
@@ -73,13 +91,29 @@ const DocViewModal = ({
 
     const documentsForPreview = useMemo(() => {
         const wanted = new Set(requiredSupportingDocs.map(item => item.subDoc));
-        const previewDocs = relatedDocuments.filter(item => (
+        
+        // Filter to relevant docs
+        const filtered = relatedDocuments.filter(item => (
             item.id === currentDoc.id
             || wanted.has(item.subDoc)
             || requiredSupportingDocs.some(required => matchesRequiredDoc(item, required))
             || hasUploadedFile(item)
         ));
 
+        // De-duplicate by subDoc name to avoid double "Purchase Request" etc.
+        const deDuped = new Map();
+        
+        filtered.forEach(docItem => {
+            const label = docItem.subDoc || (docItem.grand_total !== undefined ? 'Purchase Request' : 'Other');
+            // If we already have this type, only replace if the new one has a file
+            if (!deDuped.has(label) || (!hasUploadedFile(deDuped.get(label)) && hasUploadedFile(docItem))) {
+                deDuped.set(label, docItem);
+            }
+        });
+
+        const previewDocs = Array.from(deDuped.values());
+
+        // Add missing placeholders
         requiredSupportingDocs.forEach(required => {
             const existing = previewDocs.some(item => matchesRequiredDoc(item, required));
             if (!existing) {
@@ -93,7 +127,7 @@ const DocViewModal = ({
         });
 
         return previewDocs;
-    }, [relatedDocuments, requiredSupportingDocs]);
+    }, [relatedDocuments, requiredSupportingDocs, currentDoc.id]);
 
     useEffect(() => {
         const selectedDoc = documentsForPreview.find(item => item.id === activePreviewId);
@@ -144,11 +178,11 @@ const DocViewModal = ({
             }
 
             const blob = await generatePR_PDFBlob({
-                items: parseItems(activePreviewDoc),
-                total: activePreviewDoc.total_amount,
+                items: getNormalizedItems(activePreviewDoc),
+                total: getNormalizedTotal(activePreviewDoc),
                 ppmp_no: activePreviewDoc.ppmp_no,
-                prNo: activePreviewDoc.user_pr_no || activePreviewDoc.prNo || '',
-                title: activePreviewDoc.title,
+                prNo: getNormalizedPrNo(activePreviewDoc),
+                title: getNormalizedTitle(activePreviewDoc),
                 office: activePreviewDoc.end_user_office || '',
                 date: activePreviewDoc.date || activePreviewDoc.uploaded_at
             });
@@ -164,7 +198,7 @@ const DocViewModal = ({
             cancelled = true;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [activePreviewDoc?.id, activePreviewDoc?.file_url, activePreviewDoc?.file, activePreviewDoc?.pr_items, activePreviewDoc?.total_amount]);
+    }, [activePreviewDoc?.id, activePreviewDoc?.file_url, activePreviewDoc?.file, activePreviewDoc?.pr_items, activePreviewDoc?.items, activePreviewDoc?.total_amount, activePreviewDoc?.grand_total]);
 
     const previewUrl = getPreviewUrl(activePreviewDoc);
     const previewFrameUrl = previewUrl ? `${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : null;
@@ -177,11 +211,11 @@ const DocViewModal = ({
     }, [documentsForPreview]);
 
     const displayStatus = useMemo(() => {
-        if (currentDoc.subDoc === 'Purchase Request') {
+        if (isPR) {
             return isMissingAnyDoc ? 'ONGOING' : 'COMPLETE';
         }
         return currentDoc.status || 'ACTIVE';
-    }, [currentDoc.subDoc, currentDoc.status, isMissingAnyDoc]);
+    }, [isPR, currentDoc.status, isMissingAnyDoc]);
 
     return (
         <Modal
@@ -202,14 +236,14 @@ const DocViewModal = ({
                         <div className="min-w-0">
                             <div className="flex items-center gap-3 min-w-0">
                                 <h2 className="text-[15px] font-black text-slate-950 dark:text-white uppercase tracking-[0.16em] truncate">
-                                    {currentDoc.subDoc || 'Document'}
+                                    {isPR || currentDoc.ppmp_no ? (currentDoc.prNo || currentDoc.pr_no || 'No PR No. Assigned') : (currentDoc.subDoc || 'Document')}
                                 </h2>
                                 <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 ${displayStatus === 'COMPLETE' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>
                                     {displayStatus}
                                 </span>
                             </div>
                             <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1 truncate">
-                                PR No. {currentDoc.user_pr_no || currentDoc.prNo || 'Pending'} / {currentDoc.title || 'General Procurement'}
+                                PR No. {prNo} / {title}
                             </p>
                         </div>
                     </div>
@@ -229,7 +263,7 @@ const DocViewModal = ({
                                 <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3">
                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total</p>
                                     <p className="mt-1 text-sm font-black text-emerald-700 dark:text-emerald-400 truncate">
-                                        {formatMoney(currentDoc.total_amount)}
+                                        {formatMoney(totalAmount)}
                                     </p>
                                 </div>
                                 <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3">
@@ -314,27 +348,29 @@ const DocViewModal = ({
                                                 }`}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
-                                                    <div className="min-w-0">
-                                                        <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400'}`}>
-                                                            {hasFile ? 'Uploaded' : 'Missing'}
-                                                        </span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400'}`}>
+                                                                {hasFile ? 'Uploaded' : 'Missing'}
+                                                            </span>
+                                                            {hasFile && <MdCheckCircle className={`w-3 h-3 shrink-0 ${isActive ? 'text-emerald-600' : 'text-emerald-500/60'}`} />}
+                                                        </div>
                                                         <h5 className={`mt-1 text-[11px] font-black truncate ${isActive ? 'text-slate-950 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>
-                                                            {item.label || supportDocLabels[item.subDoc] || item.subDoc}
+                                                            {item.label || supportDocLabels[item.subDoc] || item.subDoc || (item.grand_total !== undefined ? 'Purchase Request' : (item.title || 'Untitled Document'))}
                                                         </h5>
                                                     </div>
-                                                    {hasFile ? (
-                                                        <MdCheckCircle className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-600' : 'text-emerald-500/60'}`} />
-                                                    ) : (
+                                                    {!hasFile && (
                                                         <button
                                                             type="button"
                                                             onClick={(event) => {
                                                                 event.stopPropagation();
                                                                 onUploadMissing?.(item.subDoc, null);
                                                             }}
-                                                            className="shrink-0 inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                                                            className="shrink-0 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20 shadow-sm"
+                                                            title="Upload Document"
                                                         >
-                                                            <MdCloudUpload className="w-3.5 h-3.5" />
-                                                            Upload
+                                                            <MdCloudUpload className="w-4 h-4" />
+                                                            <span>Upload</span>
                                                         </button>
                                                     )}
                                                 </div>
@@ -358,7 +394,7 @@ const DocViewModal = ({
                                 <div className="min-w-0">
                                     <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.18em]">File Preview</h3>
                                     <p className="text-[10px] font-bold text-slate-400 truncate">
-                                        {activePreviewDoc ? (supportDocLabels[activePreviewDoc.subDoc] || activePreviewDoc.subDoc) : 'Supporting documents'}
+                                        {activePreviewDoc ? (supportDocLabels[activePreviewDoc.subDoc] || activePreviewDoc.subDoc || (activePreviewDoc.grand_total !== undefined ? 'Purchase Request' : '')) : 'Supporting documents'}
                                     </p>
                                 </div>
                             </div>

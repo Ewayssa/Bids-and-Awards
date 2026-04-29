@@ -6,8 +6,14 @@ import CreatePRModal from './modals/CreatePRModal';
 import DocViewModal from './modals/DocViewModal';
 import DocUploadModal from './modals/DocUploadModal';
 import AlertModal from './modals/AlertModal';
-import { generatePR_Excel } from '../../utils/prGenerator';
-import { documentService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
+import { generatePR_PDF } from '../../utils/prGenerator';
+import { 
+    documentService, 
+    purchaseRequestService,
+    getDocumentPreviewUrl, 
+    getUploadedFilename, 
+    openPreviewTab 
+} from '../../services/api';
 
 const PR = ({ user }) => {
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -21,9 +27,12 @@ const PR = ({ user }) => {
     const [assignValue, setAssignValue] = useState('');
     const [assigning, setAssigning] = useState(false);
 
+    const pos = (user?.position || '').toLowerCase();
     const isAdmin = user?.role === ROLES.ADMIN;
-    const isMember = user?.role === ROLES.MEMBER;
-    const canAssignPR = isAdmin || isMember;
+    const isMember = pos === 'bac member';
+    const isSecretariat = pos === 'bac secretariat';
+    const canAssignPR = isMember;
+    const isEndUser = !isAdmin && !isMember && !isSecretariat;
 
     const loadPRWithRelatedDocs = async (item) => {
         let relatedDocuments = [];
@@ -31,8 +40,8 @@ const PR = ({ user }) => {
         try {
             if (item.ppmp_no) {
                 relatedDocuments = await documentService.getAll({ ppmp_no: item.ppmp_no });
-            } else if (item.prNo) {
-                relatedDocuments = await documentService.getAll({ prNo: item.prNo });
+            } else if (item.pr_no) {
+                relatedDocuments = await documentService.getAll({ prNo: item.pr_no });
             }
         } catch (err) {
             console.error('Failed to load related PR documents:', err);
@@ -46,13 +55,14 @@ const PR = ({ user }) => {
     };
 
     const handleView = async (item) => {
-        const hydrated = await loadPRWithRelatedDocs(item);
-        setSelectedDoc(hydrated);
+        setSelectedDoc(item);
     };
+
+
 
     const refreshSelectedDoc = async (fallbackDoc = selectedDoc) => {
         if (!fallbackDoc) return;
-        const data = await documentService.getAll({ subDoc: 'Purchase Request' });
+        const data = await purchaseRequestService.getAll();
         setPrs(data);
         const updated = data.find(p => p.id === fallbackDoc.id) || fallbackDoc;
         setSelectedDoc(await loadPRWithRelatedDocs(updated));
@@ -60,67 +70,25 @@ const PR = ({ user }) => {
 
     const handleQuickView = (item) => {
         try {
-            if (item.id && item.file_url) {
-                openPreviewTab(getDocumentPreviewUrl(item.id), getUploadedFilename(item));
-            } else {
-                // Defensive parsing for pr_items
-                let items = [];
-                try {
-                    if (typeof item.pr_items === 'string' && item.pr_items.trim()) {
-                        items = JSON.parse(item.pr_items);
-                    } else if (Array.isArray(item.pr_items)) {
-                        items = item.pr_items;
-                    }
-                } catch (e) {
-                    console.error('Data parsing error:', e);
-                }
-
-                const prData = {
-                    items: items,
-                    total: item.total_amount,
-                    ppmp_no: item.ppmp_no,
-                    prNo: item.user_pr_no || '',
-                    title: item.title,
-                    office: item.end_user_office || ''
-                };
-                generatePR_Excel(prData);
-            }
+            const prData = {
+                items: item.items || [],
+                total: item.grand_total,
+                ppmp_no: item.ppmp_no,
+                prNo: item.pr_no,
+                purpose: item.purpose,
+                office: item.end_user_office || item.ppmp_title || ''
+            };
+            generatePR_PDF(prData);
         } catch (err) {
             console.error('Quick view failed:', err);
-            // Fallback: Open the modal if generation fails
-            setSelectedDoc(item);
         }
     };
 
     const fetchPRs = async () => {
         setLoading(true);
         try {
-            const data = await documentService.getAll({ 
-                subDoc: 'Purchase Request'
-            });
-            
-            const relatedData = await documentService.getAll({
-                category: 'Initial Documents'
-            });
-            
-            const enhancedData = data.map(pr => {
-                const prDocs = relatedData.filter(d => 
-                    (d.ppmp_no && pr.ppmp_no && d.ppmp_no === pr.ppmp_no) || 
-                    (d.prNo && pr.prNo && d.prNo === pr.prNo) ||
-                    (d.id === pr.id)
-                );
-                const hasAD = prDocs.some(d => d.subDoc === 'Activity Design' && (d.file || d.file_url));
-                const hasRIS = prDocs.some(d => (d.subDoc === 'Requisition and Issue Slip' || d.subDoc === 'RIS') && (d.file || d.file_url));
-                const hasMS = prDocs.some(d => (d.subDoc === 'Market Scoping' || d.subDoc === 'Market Scoping / Canvass') && (d.file || d.file_url));
-                
-                const isComplete = hasAD && hasRIS && hasMS;
-                return {
-                    ...pr,
-                    displayStatus: isComplete ? 'COMPLETE' : 'ONGOING'
-                };
-            });
-            
-            setPrs(enhancedData);
+            const data = await purchaseRequestService.getAll();
+            setPrs(data);
         } catch (err) {
             console.error('Failed to fetch PRs:', err);
         } finally {
@@ -129,10 +97,10 @@ const PR = ({ user }) => {
     };
 
     const handleAssignPR = async (item) => {
-        if (item.user_pr_no || !assignValue.trim() || assigning) return;
+        if (item.pr_no || !assignValue.trim() || assigning) return;
         setAssigning(true);
         try {
-            await documentService.assignPRNo(item.id, assignValue.trim());
+            await purchaseRequestService.update(item.id, { pr_no: assignValue.trim() });
             await fetchPRs();
             setEditingPrId(null);
             setAssignValue('');
@@ -145,7 +113,7 @@ const PR = ({ user }) => {
     };
 
     const startAssigning = (item) => {
-        if (item.user_pr_no) return;
+        if (item.pr_no) return;
         setEditingPrId(item.id);
         setAssignValue('');
     };
@@ -181,51 +149,64 @@ const PR = ({ user }) => {
 
 
                 {prs.length > 0 ? (
-                    <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
-                                <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden text-center">
-                                    <colgroup>
-                                        <col className="w-[20%]" />
-                                        <col className="w-[25%]" />
-                                        <col className="w-[20%]" />
-                                        <col className="w-[35%]" />
-                                    </colgroup>
+                    <div className="bg-white dark:bg-slate-900 overflow-x-auto rounded-3xl border border-slate-100 dark:border-slate-800/50 shadow-xl shadow-slate-200/40">
+                                <table className="w-full">
                                     <thead className="table-header">
                                         <tr>
                                             <th className="table-th !text-center !px-4">PR No.</th>
                                             <th className="table-th !text-center !px-4">PPMP No.</th>
+                                            <th className="table-th !text-center !px-4">Purpose</th>
+                                            <th className="table-th !text-center !px-4">Total Cost</th>
                                             <th className="table-th !text-center !px-4">Status</th>
+                                            <th className="table-th !text-center !px-4">Date Uploaded</th>
                                             <th className="table-th !text-center !px-4">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                         {prs.map((item, idx) => {
                                             return (
                                                 <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                                         <button 
                                                             onClick={() => handleQuickView(item)}
-                                                            className={`text-xs font-black transition-all truncate text-center hover:text-slate-900 dark:hover:text-white block w-full ${item.user_pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
+                                                            className={`text-xs font-black transition-all truncate text-center hover:text-slate-900 dark:text-white block w-full ${item.pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
                                                         >
-                                                            {item.user_pr_no || 'No PR No. Assigned'}
+                                                            {item.pr_no || 'No assigned PR No.'}
                                                         </button>
                                                     </td>
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                                         <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700 font-mono">
                                                             {item.ppmp_no || 'UNLINKED'}
                                                         </span>
+                                                        <p className="text-[9px] text-slate-400 mt-1 truncate">{item.ppmp_title}</p>
                                                     </td>
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                                        <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                                            item.displayStatus === 'COMPLETE' 
-                                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' 
-                                                                : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                                                            {item.purpose || 'No purpose specified'}
+                                                        </p>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className="text-sm font-black text-emerald-600 font-mono whitespace-nowrap">
+                                                            ₱{parseFloat(item.grand_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className={`status-badge ${
+                                                            item.status === 'po_generated' 
+                                                                ? 'status-badge--complete' 
+                                                                : 'status-badge--ongoing'
                                                         }`}>
-                                                            {item.displayStatus || 'ONGOING'}
+                                                            {item.status === 'po_generated' ? 'COMPLETED' : 'ON GOING'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
+                                                            {item.created_at ? new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                                                         </span>
                                                     </td>
                                                     <td className="table-td !text-center !px-3 !py-3 border-b border-slate-50 dark:border-slate-800/50 min-w-[280px]">
                                                         <div className="flex flex-wrap justify-center items-center gap-2">
-                                                            {editingPrId === item.id && !item.user_pr_no ? (
+                                                            {editingPrId === item.id && !item.pr_no ? (
                                                                 <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
                                                                     <input
                                                                         autoFocus
@@ -250,7 +231,7 @@ const PR = ({ user }) => {
                                                                     </button>
                                                                 </div>
                                                             ) : (
-                                                                canAssignPR && !item.user_pr_no && (
+                                                                canAssignPR && !item.pr_no && (
                                                                     <button
                                                                         onClick={() => startAssigning(item)}
                                                                         className="btn-action-secondary justify-center !text-emerald-700 !border-emerald-200 hover:!bg-emerald-50 !text-[10px] !font-black !uppercase !tracking-wide"
