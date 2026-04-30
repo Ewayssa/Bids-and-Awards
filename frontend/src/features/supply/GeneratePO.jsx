@@ -452,7 +452,14 @@ const GeneratePO = ({ user, onLogout }) => {
                                                     {items.map((item, idx) => (
                                                         <tr key={idx} className="text-xs">
                                                             <td className="px-6 py-4 font-bold text-slate-500 uppercase">{item.unit}</td>
-                                                            <td className="px-6 py-4 font-bold text-slate-700">{item.description}</td>
+                                                            <td className="px-6 py-4">
+                                                                <div className="font-bold text-slate-700">{item.description}</div>
+                                                                {item.pr_no && (
+                                                                    <div className="text-[10px] font-black text-emerald-600/60 uppercase tracking-tighter mt-0.5">
+                                                                        PR #{item.pr_no}
+                                                                    </div>
+                                                                )}
+                                                            </td>
                                                             <td className="px-6 py-4 text-center font-black text-slate-900">{Number(item.quantity).toLocaleString('en-PH', { maximumFractionDigits: 0 })}</td>
                                                             <td className="px-6 py-4 text-right">
                                                                 <div className="flex items-center justify-end gap-1">

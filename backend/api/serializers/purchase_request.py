@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class PurchaseRequestItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseRequestItem
-        fields = ['id', 'unit', 'description', 'quantity', 'unit_cost', 'total']
+        fields = ['id', 'unit', 'description', 'quantity', 'unit_cost', 'total', 'pr_no']
 
 class PurchaseRequestSerializer(serializers.ModelSerializer):
     items = PurchaseRequestItemSerializer(many=True)

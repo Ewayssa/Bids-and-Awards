@@ -404,7 +404,7 @@ const Profile = ({ user, onUserUpdated }) => {
                 </div>
 
                 <div className="lg:col-span-12 text-center py-10 opacity-30">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">Procurement Management System • Registry Phase 2.0</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">Bids and Award Committee Procurement Management System • Registry Phase 2.0</p>
                 </div>
             </div>
 

@@ -133,8 +133,8 @@ const Login = ({ onLogin, infoMessage }) => {
                     </div>
 
                     <h1 className="branding-title">
-                        Bids and <span className="text-gradient-emerald">Awards</span> <br /> 
-                        Tracking Management System
+                        Bids and <span className="text-gradient-emerald">Award</span> <br /> 
+                        Committee Procurement Management System
                     </h1>
                     <p className="branding-subtitle italic font-serif">
                         "Matino, Mahusay at Maaasahan"

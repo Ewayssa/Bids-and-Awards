@@ -193,7 +193,7 @@ const PR = ({ user }) => {
                                                         <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700 font-mono">
                                                             {item.ppmp_no || 'UNLINKED'}
                                                         </span>
-                                                        <p className="text-[9px] text-slate-400 mt-1 truncate">{item.ppmp_title}</p>
+                                                        <p className="text-[9px] text-slate-400 mt-1 truncate" title={item.purpose}>{item.purpose}</p>
                                                     </td>
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                                         <span className="text-sm font-black text-emerald-600 font-mono whitespace-nowrap">

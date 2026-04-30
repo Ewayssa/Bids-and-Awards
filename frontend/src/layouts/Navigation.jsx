@@ -60,8 +60,8 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen, onLogout }) => {
                         <img src="/dilg-logo.png" alt="DILG Logo" className="flex-shrink-0 max-h-12 w-auto select-none sidebar-logo-full" />
                         <img src="/dilg-logo.png" alt="DILG" className="hidden flex-shrink-0 h-8 w-8 object-contain select-none sidebar-logo-collapsed" />
                         <div className="min-w-0 flex-1 sidebar-header-text">
-                            <p className="text-sm font-bold text-[var(--text)] leading-tight tracking-tight">Bids and Awards</p>
-                            <p className="text-xs text-[var(--text-subtle)] leading-snug mt-0.5 font-medium">Document Tracking</p>
+                            <p className="text-sm font-bold text-[var(--text)] leading-tight tracking-tight">Bids and Award Committee</p>
+                            <p className="text-xs text-[var(--text-subtle)] leading-snug mt-0.5 font-medium">Procurement Management System</p>
                         </div>
                     </div>
                 </div>
@@ -124,7 +124,7 @@ const Navigation = ({ user, sidebarOpen, setSidebarOpen, onLogout }) => {
                 </button>
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <img src="/dilg-logo.png" alt="DILG Logo" className="max-h-10 w-auto flex-shrink-0 select-none" />
-                    <span className="text-lg font-bold text-[var(--text)] truncate">Bids and Awards</span>
+                    <span className="text-lg font-bold text-[var(--text)] truncate">Bids and Award Committee</span>
                 </div>
                 <div className="flex-shrink-0">
                     <NotificationBell user={user} />

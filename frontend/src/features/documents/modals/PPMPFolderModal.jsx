@@ -159,7 +159,12 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents }) => {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={`Procurement Documentation: PPMP ${displayPPMP}`}
+            title={(() => {
+                const prDoc = (documents || []).find(d => d.subDoc === 'Purchase Request');
+                const displayPR = (documents || []).find(d => d.user_pr_no)?.user_pr_no || (documents || []).find(d => d.prNo)?.prNo || ppmpNo || 'Unassigned';
+                const purpose = prDoc?.title || (documents || []).find(d => d.title && !d.title.toLowerCase().includes('ppmp'))?.title || 'General Procurement';
+                return `PR # ${displayPR} - ${purpose}`;
+            })()}
             size="2xl"
             showCloseButton={true}
             bodyClassName="!p-0 overflow-hidden"

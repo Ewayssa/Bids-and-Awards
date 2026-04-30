@@ -380,13 +380,30 @@ class PurchaseRequest(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        # Fallback: if PR has no number but folder DOES, adopt the folder's number
+        if not self.pr_no and self.ppmp:
+            self.pr_no = self.ppmp.user_pr_no or self.ppmp.pr_no or ''
+
         super().save(*args, **kwargs)
-        # Sync PR No. to the parent ProcurementRecord (Folder) if linked
-        if self.ppmp and self.pr_no:
+        
+        # Sync PR No. and Purpose to the parent ProcurementRecord (Folder) if linked
+        if self.ppmp:
+            updated = False
             # Update folder's user_pr_no if it differs
-            if self.ppmp.user_pr_no != self.pr_no:
+            if self.pr_no and self.ppmp.user_pr_no != self.pr_no:
                 self.ppmp.user_pr_no = self.pr_no
-                self.ppmp.save(update_fields=['user_pr_no'])
+                updated = True
+            # Update folder's title (Purpose) if it differs
+            if self.purpose and self.ppmp.title != self.purpose:
+                self.ppmp.title = self.purpose
+                updated = True
+            
+            if updated:
+                self.ppmp.save(update_fields=['user_pr_no', 'title'])
+        
+        # Propagate PR No to items
+        if self.pr_no:
+            self.items.all().update(pr_no=self.pr_no)
 
     def __str__(self):
         return f"PR {self.pr_no} - {self.purpose[:50]}"
@@ -405,6 +422,7 @@ class PurchaseRequestItem(models.Model):
         on_delete=models.CASCADE, 
         related_name='items'
     )
+    pr_no = models.CharField(max_length=100, blank=True, null=True, help_text='Denormalized PR No. for reporting')
     unit = models.CharField(max_length=50)
     description = models.TextField()
     quantity = models.DecimalField(max_digits=12, decimal_places=2)
@@ -413,8 +431,13 @@ class PurchaseRequestItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        if self.purchase_request and self.purchase_request.pr_no:
+            self.pr_no = self.purchase_request.pr_no
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.description} ({self.quantity} {self.unit})"
+        return f"[{self.pr_no}] {self.description} ({self.quantity} {self.unit})"
 
 class PurchaseOrder(models.Model):
     STATUS_CHOICES = (

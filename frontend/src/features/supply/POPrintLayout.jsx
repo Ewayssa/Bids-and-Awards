@@ -95,7 +95,10 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
                             <tr key={idx} className="border-b border-dotted border-slate-200">
                                 <td className="border-r-[1.5px] border-black p-1 text-center h-7">{item.stockNo || ''}</td>
                                 <td className="border-r-[1.5px] border-black p-1 text-center">{item.unit}</td>
-                                <td className="border-r-[1.5px] border-black p-1 px-2">{item.description}</td>
+                                <td className="border-r-[1.5px] border-black p-1 px-2 leading-tight">
+                                    <div className="font-bold">{item.description}</div>
+                                    {item.pr_no && <div className="text-[9px] italic text-slate-500 mt-0.5">PR No. {item.pr_no}</div>}
+                                </td>
                                 <td className="border-r-[1.5px] border-black p-1 text-center">{Number(item.quantity).toLocaleString('en-PH', { maximumFractionDigits: 0 })}</td>
                                 <td className="border-r-[1.5px] border-black p-1 text-right pr-2">
                                     {Number(item.unit_cost || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}

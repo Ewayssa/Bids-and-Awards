@@ -163,7 +163,7 @@ const CreatePRModal = ({
             const formData = new FormData();
             formData.append('category', 'Initial Documents');
             formData.append('subDoc', 'Purchase Request');
-            formData.append('title', form.title || `PR for ${form.ppmp_no}`);
+            formData.append('title', form.purpose || form.title || `PR for ${form.ppmp_no}`);
             formData.append('ppmp_no', form.ppmp_no);
             formData.append('prNo', ''); 
             formData.append('user_pr_no', ''); 
@@ -178,7 +178,7 @@ const CreatePRModal = ({
                 ppmp_no: form.ppmp_no,
                 prNo: '', // Not assigned yet
                 purpose: form.purpose,
-                title: form.title || `PR for ${form.ppmp_no}`,
+                title: form.purpose || form.title || `PR for ${form.ppmp_no}`,
                 office: selectedPPMP?.end_user_office || '',
                 date: new Date()
             };

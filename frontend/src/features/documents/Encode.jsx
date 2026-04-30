@@ -245,6 +245,12 @@ const Encode = ({ user }) => {
                                 const prNo = docs.find(d => d.prNo && d.prNo !== 'Unassigned')?.prNo || 'Pending';
                                 const displayPRNo = docs.find(d => d.user_pr_no)?.user_pr_no || prNo;
                                 
+                                // Find the matching procurement record to get the official title/purpose
+                                const record = procurementRecords.find(r => (r.ppmp_no || '').trim() === ppmpNo.trim());
+                                const prDoc = docs.find(d => d.subDoc === 'Purchase Request');
+                                const purpose = prDoc?.title || record?.title || docs.find(d => d.title && !d.title.toLowerCase().includes('ppmp'))?.title || 'General Procurement';
+                                const displayPR = record?.user_pr_no || record?.pr_no || docs.find(d => d.user_pr_no)?.user_pr_no || prNo;
+
                                 return (
                                     <div 
                                         key={ppmpNo}
@@ -254,13 +260,15 @@ const Encode = ({ user }) => {
                                         <div className="absolute top-0 right-0 w-28 h-28 bg-[var(--primary)]/5 rounded-full -mr-14 -mt-14 group-hover:scale-150 transition-transform duration-700" />
                                         
                                         <div className="flex items-start justify-between relative z-10">
-                                            <div className="flex items-center gap-3 min-w-0">
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-base shadow-inner group-hover:scale-110 transition-transform duration-300 shrink-0">
                                                     📂
                                                 </div>
-                                                <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight truncate group-hover:text-[var(--primary)] transition-colors duration-300">
-                                                    PR #: {displayPRNo}
-                                                </h4>
+                                                <div className="flex flex-col min-w-0">
+                                                    <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight truncate group-hover:text-[var(--primary)] transition-colors duration-300" title={`PR # ${displayPR} - ${purpose}`}>
+                                                        PR # {displayPR} - {purpose}
+                                                    </h4>
+                                                </div>
                                             </div>
                                             <div className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 rounded-full text-[8px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-slate-700 shrink-0">
                                                 {docs.length} Documents
