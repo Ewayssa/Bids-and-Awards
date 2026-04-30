@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { documentService, reportService, dashboardService, procurementRecordService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
+import { documentService, dashboardService, procurementRecordService, getDocumentPreviewUrl, getUploadedFilename, openPreviewTab } from '../../services/api';
+import { generatePR_Excel, generatePR_PDFBlob } from '../../utils/prGenerator';
 import { ROLES } from '../../utils/auth';
 import {
     MdUpload,
@@ -28,7 +29,6 @@ import AlertModal from './modals/AlertModal';
 import ConfirmDialog from './modals/ConfirmDialog';
 import PreviewModal from './modals/PreviewModal';
 import ProcurementDocumentModal from "./modals/ProcurementDocumentModal";
-import { generatePR_Excel } from "../../utils/prGenerator";
 import PPMPFolderModal from "./modals/PPMPFolderModal";
 
 const Encode = ({ user }) => {
@@ -85,7 +85,7 @@ const Encode = ({ user }) => {
 
     const formatDate = (d) => (!d ? '—' : typeof d === 'string' ? d.split('T')[0] : d);
 
-    const handleView = (doc) => {
+    const handleView = async (doc) => {
         if (doc?.id && doc?.file_url) {
             openPreviewTab(getDocumentPreviewUrl(doc.id), getUploadedFilename(doc));
             return;
@@ -99,7 +99,7 @@ const Encode = ({ user }) => {
             }
         }
 
-        // For Purchase Requests specifically: directly trigger the layout generation
+        // For Purchase Requests specifically: directly trigger the layout generation in a new tab
         if (doc?.subDoc === 'Purchase Request') {
             try {
                 // Defensive parsing for pr_items
@@ -122,10 +122,14 @@ const Encode = ({ user }) => {
                     title: doc.title,
                     office: doc.end_user_office || ''
                 };
-                generatePR_Excel(prData);
+                
+                // Open PR as a PDF in a new standardized preview tab
+                const blob = await generatePR_PDFBlob(prData);
+                const url = URL.createObjectURL(blob);
+                openPreviewTab(url, `Purchase Request ${doc.user_pr_no || doc.ppmp_no}`);
                 return;
             } catch (err) {
-                console.error('Failed to generate PR quick view:', err);
+                console.error('Failed to generate PR preview tab:', err);
                 // Fallback: Continue to open the modal
                 setSelectedDoc(doc);
                 setActiveModal('view');

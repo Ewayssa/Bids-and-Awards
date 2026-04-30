@@ -12,7 +12,6 @@ const toAbsoluteApiUrl = (path) => {
 };
 
 export const getDocumentPreviewUrl = (id) => toAbsoluteApiUrl(`/upload/${id}/preview/`);
-export const getReportPreviewUrl = (id) => toAbsoluteApiUrl(`/reports/${id}/preview/`);
 
 const escapeHtml = (value) => String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -187,22 +186,6 @@ export const documentService = {
 
     async getComments(id) {
         const response = await api.get(`/upload/${id}/comments/`);
-        return response.data;
-    },
-};
-
-export const reportService = {
-    async getAll() {
-        const response = await api.get(`/reports/`);
-        return response.data;
-    },
-
-    async create(formData) {
-        const response = await api.post(`/reports/`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
         return response.data;
     },
 };
@@ -466,5 +449,11 @@ export const purchaseOrderService = {
     },
     async delete(id) {
         await api.delete(`/purchase-orders/${id}/`);
+    },
+    async getNextSequence(year) {
+        const response = await api.get(`/purchase-orders/next_sequence/`, {
+            params: { year }
+        });
+        return response.data.next_sequence;
     }
 };

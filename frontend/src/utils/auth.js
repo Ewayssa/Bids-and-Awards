@@ -28,8 +28,7 @@ export const PERMISSIONS = {
     DELETE_DOCUMENTS: 'delete_documents',
     VIEW_ALL_DOCUMENTS: 'view_all_documents',
     VIEW_OWN_DOCUMENTS: 'view_own_documents',
-    VIEW_REPORTS: 'view_reports',
-    UPLOAD_REPORTS: 'upload_reports',
+
     VIEW_DASHBOARD: 'view_dashboard',
     MANAGE_EVENTS: 'manage_events',
     MANAGE_PO: 'manage_po',
@@ -40,13 +39,13 @@ const ROLE_PERMISSIONS = {
     [ROLES.SECRETARIAT]: [
         PERMISSIONS.UPLOAD_DOCUMENTS,
         PERMISSIONS.VIEW_ALL_DOCUMENTS,
-        PERMISSIONS.VIEW_REPORTS,
+
         PERMISSIONS.VIEW_DASHBOARD,
         PERMISSIONS.MANAGE_EVENTS,
     ],
     [ROLES.MEMBER]: [
         PERMISSIONS.VIEW_ALL_DOCUMENTS,
-        PERMISSIONS.VIEW_REPORTS,
+
         PERMISSIONS.VIEW_DASHBOARD,
     ],
     [ROLES.SUPPLY]: [
@@ -55,7 +54,7 @@ const ROLE_PERMISSIONS = {
     ],
     [ROLES.END_USER]: [
         PERMISSIONS.VIEW_ALL_DOCUMENTS,
-        PERMISSIONS.VIEW_REPORTS,
+
         PERMISSIONS.VIEW_DASHBOARD,
     ],
 };
@@ -66,7 +65,7 @@ export const NAV_ACCESS_RULES = {
     '/ppmp': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
     '/app': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
     '/pr': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
-    '/reports': [ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.MEMBER, ROLES.END_USER],
+
     '/personnel': [ROLES.ADMIN],
     '/audit-trail': [ROLES.ADMIN],
     '/supply/generate-po': [ROLES.ADMIN, ROLES.SUPPLY],
@@ -85,7 +84,7 @@ export const canAccessRoute = (userRole, route) => {
     return allowed.includes(normalizedRole);
 };
 
-const ROUTES_ORDER = ['/', '/supply/generate-po', '/encode', '/ppmp', '/app', '/pr', '/reports', '/personnel', '/audit-trail'];
+const ROUTES_ORDER = ['/', '/supply/generate-po', '/encode', '/ppmp', '/app', '/pr', '/personnel', '/audit-trail'];
 
 /**
  * Get the default landing page for a role

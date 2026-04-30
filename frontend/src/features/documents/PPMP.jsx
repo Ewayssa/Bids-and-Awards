@@ -85,18 +85,18 @@ const PPMP = ({ user }) => {
                     <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
                         <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden">
                             <colgroup>
-                                <col className="w-[18%]" />
-                                <col className="w-[18%]" />
-                                <col className="w-[18%]" />
-                                <col className="w-[28%]" />
-                                <col className="w-[18%]" />
+                                <col className="w-[25%]" />
+                                <col className="w-[15%]" />
+                                <col className="w-[15%]" />
+                                <col className="w-[25%]" />
+                                <col className="w-[20%]" />
                             </colgroup>
                             <thead className="table-header">
                                 <tr>
-                                    <th className="table-th !text-center !px-4">Folder / PR No.</th>
-                                    <th className="table-th !text-center !px-4">Year</th>
-                                    <th className="table-th !text-center !px-4">Quarter</th>
                                     <th className="table-th !text-center !px-4">PPMP No.</th>
+                                    <th className="table-th !text-center !px-4">Quarter</th>
+                                    <th className="table-th !text-center !px-4">Year</th>
+                                    <th className="table-th !text-center !px-4">Date Uploaded</th>
                                     <th className="table-th !text-center !px-4">Actions</th>
                                 </tr>
                             </thead>
@@ -104,38 +104,23 @@ const PPMP = ({ user }) => {
                                 {ppmps.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className={`text-[10px] font-black uppercase tracking-tight truncate block ${item.pr_no ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                                {item.pr_no || 'No PR No. Assigned'}
-                                            </span>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700">
-                                                {item.year || 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="inline-block text-[10px] font-black text-[var(--primary)] uppercase tracking-widest px-3 py-1 bg-[var(--primary)]/10 rounded-lg border border-[var(--primary)]/20 shadow-sm">
-                                                {item.quarter || 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                                 {item.ppmp_no || 'N/A'}
                                             </span>
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700">
-                                                {item.year || 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                             <span className="inline-block text-[10px] font-black text-[var(--primary)] uppercase tracking-widest px-3 py-1 bg-[var(--primary)]/10 rounded-lg border border-[var(--primary)]/20 shadow-sm">
                                                 {item.quarter || 'N/A'}
                                             </span>
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 tabular-nums">
-                                                {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : item.date}
+                                            <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700">
+                                                {item.year || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
+                                                {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                                             </span>
                                         </td>
                                         <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">

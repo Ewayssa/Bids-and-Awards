@@ -140,7 +140,7 @@ const CreatePRModal = ({
                 pr_no: '', // Will be assigned later by BAC member
                 purpose: form.purpose,
                 grand_total: calculateTotal(),
-                status: 'approved',
+                status: 'ongoing',
                 items: items.map(item => ({
                     unit: item.unit,
                     description: item.description,
@@ -364,10 +364,10 @@ const CreatePRModal = ({
                     </AnimatePresence>
 
                     {/* Connection & Attachments Section */}
-                    <div className="flex flex-col sm:flex-row items-end gap-4">
-                        <div className="space-y-1 flex-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                                <MdLabel className="w-4 h-4" />
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
+                        <div className="space-y-1 sm:col-span-4">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                <MdLabel className="w-3.5 h-3.5" />
                                 Select PPMP No. <span className="text-red-500">*</span>
                             </label>
                             <select
@@ -385,7 +385,7 @@ const CreatePRModal = ({
                                     if (errors.ppmp_id) setErrors(prev => ({ ...prev, ppmp_id: null }));
                                 }}
                                 disabled={loadingPPMPs}
-                                className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.ppmp_id ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all cursor-pointer font-bold text-sm`}
+                                className={`w-full p-4 bg-white dark:bg-slate-900 border-2 ${errors.ppmp_id ? 'border-red-200 bg-red-50/30' : 'border-slate-100 dark:border-slate-800'} rounded-2xl focus:border-[var(--primary)] outline-none transition-all cursor-pointer font-bold text-sm shadow-sm`}
                             >
                                 <option value="" disabled>
                                     {loadingPPMPs ? 'Loading PPMPs...' : 'Select associated PPMP'}
@@ -396,13 +396,13 @@ const CreatePRModal = ({
                                     </option>
                                 ))}
                             </select>
-                            {errors.ppmp_id && <span className="text-xs text-red-500 font-semibold">{errors.ppmp_id}</span>}
+                            {errors.ppmp_id && <span className="text-[10px] text-red-500 font-bold ml-1">{errors.ppmp_id}</span>}
                         </div>
 
                         {/* Purpose Field */}
-                        <div className="space-y-1 flex-[2]">
-                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                                <MdDescription className="w-4 h-4" />
+                        <div className="space-y-1 sm:col-span-6">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                <MdDescription className="w-3.5 h-3.5" />
                                 Purpose <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -412,26 +412,31 @@ const CreatePRModal = ({
                                     setForm(prev => ({ ...prev, purpose: e.target.value }));
                                     if (errors.purpose) setErrors(prev => ({ ...prev, purpose: null }));
                                 }}
-                                className={`w-full p-3 bg-white dark:bg-slate-900 border ${errors.purpose ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'} rounded-xl focus:ring-2 focus:ring-[var(--primary)] outline-none transition-all font-bold text-sm`}
+                                className={`w-full p-4 bg-white dark:bg-slate-900 border-2 ${errors.purpose ? 'border-red-200 bg-red-50/30' : 'border-slate-100 dark:border-slate-800'} rounded-2xl focus:border-[var(--primary)] outline-none transition-all font-bold text-sm shadow-sm`}
                                 placeholder="Enter the purpose of this request..."
                             />
-                            {errors.purpose && <span className="text-xs text-red-500 font-semibold">{errors.purpose}</span>}
+                            {errors.purpose && <span className="text-[10px] text-red-500 font-bold ml-1">{errors.purpose}</span>}
                         </div>
 
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setShowAttachmentsPopover(!showAttachmentsPopover)}
-                                className="h-12 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                            >
-                                <MdAttachFile className="w-5 h-5 text-slate-400" />
-                                Upload
-                                {Object.values(optionalFiles).filter(Boolean).length > 0 && (
-                                    <span className="ml-1 w-5 h-5 rounded-full bg-[var(--primary)] text-white text-[10px] flex items-center justify-center">
-                                        {Object.values(optionalFiles).filter(Boolean).length}
-                                    </span>
-                                )}
-                            </button>
+                        <div className="sm:col-span-2 space-y-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                <MdAttachFile className="w-3.5 h-3.5" />
+                                Attach
+                            </label>
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAttachmentsPopover(!showAttachmentsPopover)}
+                                    className="w-full h-[54px] px-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl font-bold text-sm text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all shadow-sm"
+                                >
+                                    <MdCloudUpload className="w-5 h-5 text-slate-400 group-hover:text-[var(--primary)]" />
+                                    Upload
+                                    {Object.values(optionalFiles).filter(Boolean).length > 0 && (
+                                        <span className="ml-1 w-5 h-5 rounded-full bg-[var(--primary)] text-white text-[10px] flex items-center justify-center">
+                                            {Object.values(optionalFiles).filter(Boolean).length}
+                                        </span>
+                                    )}
+                                </button>
 
                             <AnimatePresence>
                                 {showAttachmentsPopover && (
@@ -474,8 +479,9 @@ const CreatePRModal = ({
                             />
                         </div>
                     </div>
+                </div>
 
-                    {/* Show selected optional files */}
+                {/* Show selected optional files */}
                     {Object.entries(optionalFiles).some(([_, file]) => file) && (
                         <div className="flex flex-wrap gap-2 pt-2">
                             {Object.entries(optionalFiles).map(([type, file]) => {

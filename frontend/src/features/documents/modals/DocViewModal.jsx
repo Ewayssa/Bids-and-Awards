@@ -29,7 +29,9 @@ const DocViewModal = ({
             return [
                 { subDoc: 'Activity Design', label: 'Activity Design', aliases: ['Activity Design'] },
                 { subDoc: 'Requisition and Issue Slip', label: 'RIS', aliases: ['Requisition and Issue Slip', 'RIS'] },
-                { subDoc: 'Market Scoping', label: 'Market Scoping', aliases: ['Market Scoping', 'Market Scoping / Canvass'] }
+                { subDoc: 'Market Scoping', label: 'Market Scoping', aliases: ['Market Scoping', 'Market Scoping / Canvass'] },
+                { subDoc: 'Project Procurement Management Plan', label: 'PPMP', aliases: ['Project Procurement Management Plan', 'PPMP', 'Supplemental PPMP'] },
+                { subDoc: 'Annual Procurement Plan', label: 'APP', aliases: ['Annual Procurement Plan', 'APP'] }
             ];
         }
         return [];

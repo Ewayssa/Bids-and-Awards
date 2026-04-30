@@ -165,7 +165,14 @@ def sync_procurement_completion(record):
     """
     Backward-compatible wrapper for existing callers.
     """
-    return sync_procurement_status(record)
+    if not record:
+        return False
+    # 1. Update overall folder status (Draft -> Completed)
+    sync_procurement_status(record)
+    # 2. Check if mandatory initial documents are present (Sets record.is_ready)
+    # This function also internally calls sync_supply_readiness(record)
+    check_folder_readiness(record)
+    return True
 
 
 def check_folder_readiness(record):
@@ -177,50 +184,132 @@ def check_folder_readiness(record):
     3. Requisition and Issue Slip (RIS)
     4. Market Scoping / Canvass
     """
-    if not record or record.user_pr_no:
+    if not record:
         return False
         
     required_groups = [
         ['Activity Design'],
         ['Requisition and Issue Slip', 'RIS'],
-        ['Market Scoping', 'Market Scoping / Canvass']
+        ['Market Scoping', 'Market Scoping / Canvass'],
+        ['Project Procurement Management Plan', 'PPMP', 'Supplemental PPMP', 'Project Procurement Management Plan/Supplemental PPMP'],
+        ['Annual Procurement Plan', 'APP']
     ]
     
     docs = record.documents.all()
-    present_subdocs = [str(doc.subDoc or '').strip() for doc in docs]
+    # Only count documents that are actually marked as 'complete' (file + metadata)
+    complete_subdocs = [str(doc.subDoc or '').strip() for doc in docs if doc.status == 'complete']
+    present_subdocs = complete_subdocs 
     
     # Check for PR either as a Document or via the PurchaseRequest relation
     has_pr = 'Purchase Request' in present_subdocs or record.purchase_requests.exists()
     
-    if not has_pr:
-        return False
-        
-    # Check for the other 3 groups
+    # Check for the other required groups
+    all_groups_found = True
     for group in required_groups:
-        group_found = any(alias in present_subdocs for alias in group)
+        group_found = False
+        
+        # Strategy A: Check within the folder's documents
+        for subdoc in present_subdocs:
+            if any(alias.lower() in subdoc.lower() for alias in group):
+                group_found = True
+                break
+        
+        # Strategy B: Global check for APP (since it's a yearly/office-wide document)
+        if not group_found and ('Annual Procurement Plan' in group or 'APP' in group):
+            from ..models import Document
+            # Check if any complete APP exists for this record's year
+            if Document.objects.filter(
+                subDoc__icontains='Annual Procurement Plan',
+                year=record.year,
+                status='complete'
+            ).exists():
+                group_found = True
+        
+        # Strategy C: Global check for PPMP (matching ppmp_no)
+        if not group_found and any(k in str(group) for k in ['PPMP', 'Project Procurement Management Plan']):
+            from django.db import models
+            from ..models import Document
+            if Document.objects.filter(
+                ppmp_no=record.ppmp_no,
+                status='complete'
+            ).filter(
+                models.Q(subDoc__icontains='PPMP') | 
+                models.Q(subDoc__icontains='Project Procurement Management Plan')
+            ).exists():
+                group_found = True
+        
         if not group_found:
-            return False
+            all_groups_found = False
+            break
             
-    # All present! Create notification if not already done
-    msg = f"Procurement Folder '{record.title}' (PPMP No: {record.ppmp_no}) is now complete and ready for PR No. assignment."
+    now_ready = has_pr and all_groups_found
     
     # Update the is_ready field on the record for easy filtering
-    if not record.is_ready:
-        record.is_ready = True
+    was_ready = record.is_ready
+    if was_ready != now_ready:
+        record.is_ready = now_ready
         record.save(update_fields=['is_ready'])
-
-    # Import inside to avoid circular dependency
-    from ..models import Notification
     
-    # Use a specific link for the PR assignment page if available
-    # Assuming /pr is where BAC assigns PR numbers
-    if not Notification.objects.filter(message=msg).exists():
-        Notification.objects.create(
-            message=msg,
-            link='/pr',
-            admin_only=True # Visible to BAC Secretariat and BAC Members
-        )
-        return True
-    return False
+    # Notification logic: Only if ready and PR No NOT yet assigned
+    if now_ready and not record.user_pr_no:
+        msg = f"Procurement Folder '{record.title}' (PPMP No: {record.ppmp_no}) is now complete and ready for PR No. assignment."
+        # Import inside to avoid circular dependency
+        from ..models import Notification
+        if not Notification.objects.filter(message=msg).exists():
+            Notification.objects.create(
+                message=msg,
+                link='/pr',
+                admin_only=True # Visible to BAC Secretariat and BAC Members
+            )
+
+    # Always sync supply readiness based on updated record.is_ready and record.user_pr_no
+    sync_supply_readiness(record)
+    return now_ready
+
+def sync_supply_readiness(record):
+    """
+    Synchronizes the Supply Officer's view with the PR readiness.
+    Conditions for a PR to proceed to Supply:
+    1. Mandatory initial documents are uploaded (record.is_ready is True).
+    2. PR No. is assigned by BAC (required for the Supply Dashboard count, but not for PR status).
+    """
+    if not record:
+        return
+        
+    # Document completeness flag
+    is_docs_complete = bool(record.is_ready)
+    # Full readiness (including PR No) for Supply Dashboard
+    is_ready_for_supply_dashboard = bool(record.user_pr_no and record.is_ready)
+    
+    # Update linked PurchaseRequest models
+    from ..models import PurchaseRequest, Document
+    prs = record.purchase_requests.all()
+    
+    for pr in prs:
+        if is_docs_complete:
+            # If documents are complete, move to 'completed' for user feedback
+            if pr.status == 'ongoing':
+                pr.status = 'completed'
+                pr.save(update_fields=['status'])
+        else:
+            # If documents become incomplete, move back to 'ongoing'
+            if pr.status == 'completed':
+                pr.status = 'ongoing'
+                pr.save(update_fields=['status'])
+    
+    # Also sync the po_status on Document objects
+    # This specifically flags documents for the Supply Officer's PO generation list
+    if is_ready_for_supply_dashboard:
+        # Final safety check: ensure the document is actually complete before flagging for PO
+        record.documents.filter(
+            subDoc='Purchase Request', 
+            status='complete', 
+            po_status='pending'
+        ).update(po_status='ready_for_po')
+    else:
+        record.documents.filter(
+            subDoc='Purchase Request', 
+            po_status='ready_for_po'
+        ).update(po_status='pending')
 
 

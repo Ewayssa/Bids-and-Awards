@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from api.models import Document, ProcurementRecord, ProcurementStageStatus
+from api.models import Document, ProcurementRecord
 from api.utils.workflow_logic import sync_procurement_completion
 
 class Command(BaseCommand):
@@ -11,40 +11,16 @@ class Command(BaseCommand):
         deleted_count, _ = Document.objects.filter(subDoc__in=deprecated_types).delete()
         self.stdout.write(self.style.SUCCESS(f'Deleted {deleted_count} deprecated Document(s).'))
 
-        # 2. Ensure ProcurementStageStatus for all ProcurementRecords (1-12)
-        STAGES = [
-            (1, 'Draft / Needs Identification'),
-            (2, 'Preparation of Documents'),
-            (3, 'Under Review'),
-            (4, 'For Revision / Approval'),
-            (5, 'Approved for Input'),
-            (6, 'For Posting'),
-            (7, 'For Float'),
-            (8, 'For Schedule (Meeting)'),
-            (9, 'Under Evaluation'),
-            (10, 'For Award'),
-            (11, 'Awarded / Post-Award'),
-            (12, 'For Liquidation')
-        ]
-        
-        records = ProcurementRecord.objects.all()
-        stage_created_count = 0
-        for record in records:
-            for stage_number, stage_name in STAGES:
-                obj, created = ProcurementStageStatus.objects.get_or_create(
-                    procurement_record=record,
-                    stage_number=stage_number,
-                    defaults={'stage_name': stage_name}
-                )
-                if created:
-                    stage_created_count += 1
-            
-            # 3. Synchronize PR status
-            sync_procurement_completion(record)
+        # 2. Synchronize PR Numbers across all documents in a folder
+        records_with_pr = ProcurementRecord.objects.filter(user_pr_no__isnull=False).exclude(user_pr_no='')
+        sync_count = 0
+        for record in records_with_pr:
+            # Propagate the folder's official PR No. to all its documents
+            updated = record.documents.exclude(user_pr_no=record.user_pr_no).update(user_pr_no=record.user_pr_no)
+            sync_count += updated
+        self.stdout.write(self.style.SUCCESS(f'Synchronized PR No. for {sync_count} Document(s).'))
 
-        self.stdout.write(self.style.SUCCESS(f'Initialized {stage_created_count} ProcurementStageStatus record(s).'))
-
-        # 4. Recalculate Document statuses
+        # 3. Recalculate Document statuses
         docs = Document.objects.all()
         doc_updates = 0
         for doc in docs:

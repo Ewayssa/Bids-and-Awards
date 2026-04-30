@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MdExpandMore, MdLogout } from 'react-icons/md';
 import { getRoleDisplayName } from '../utils/auth';
 
-const UserAccountDropdown = ({ user, onLogout, className = '' }) => {
+const UserAccountDropdown = ({ user, onLogout, className = '', showLogout = true }) => {
     const [open, setOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -61,20 +61,22 @@ const UserAccountDropdown = ({ user, onLogout, className = '' }) => {
                     </div>
 
                     {/* Menu items */}
-                    <div className="py-1.5">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setOpen(false);
-                                onLogout?.();
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left rounded-b-xl"
-                            role="menuitem"
-                        >
-                            <MdLogout className="w-4 h-4 flex-shrink-0" />
-                            Log out
-                        </button>
-                    </div>
+                    {showLogout && (
+                        <div className="py-1.5">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setOpen(false);
+                                    onLogout?.();
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left rounded-b-xl"
+                                role="menuitem"
+                            >
+                                <MdLogout className="w-4 h-4 flex-shrink-0" />
+                                Log out
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

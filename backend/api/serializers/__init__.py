@@ -94,6 +94,8 @@ class DocumentSerializer(serializers.ModelSerializer):
     date_received = serializers.DateField(required=False, allow_null=True, input_formats=['%m-%d-%y', '%m-%d-%Y', '%m/%d/%y', '%m/%d/%Y', '%Y-%m-%d', 'iso-8601'])
     notarized_date = serializers.DateField(required=False, allow_null=True, input_formats=['%m-%d-%y', '%m-%d-%Y', '%m/%d/%y', '%m/%d/%Y', '%Y-%m-%d', 'iso-8601'])
 
+    pr_no = serializers.CharField(source='user_pr_no', read_only=True)
+
     def get_status(self, obj):
         return obj.calculate_status()
 
@@ -103,7 +105,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
-            'id', 'prNo', 'title', 'user_pr_no', 'total_amount', 'source_of_fund', 
+            'id', 'prNo', 'title', 'user_pr_no', 'pr_no', 'total_amount', 'source_of_fund', 
             'ppmp_no', 'year', 'quarter', 'app_no', 'app_type', 'certified_true_copy', 'certified_signed_by', 
             'market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 
             'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3', 
@@ -481,6 +483,25 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     purchase_request_details = PurchaseRequestSerializer(source='purchase_request', read_only=True)
     po_date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
     date_of_ors_burs = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
+
+    def validate_date_of_ors_burs(self, value):
+        if value == '' or value == 'null':
+            return None
+        return value
+
+    def validate_total_amount(self, value):
+        """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
+        if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
+            return 0
+        if isinstance(value, str):
+            value = value.replace(',', '').strip()
+            if value == '' or value == '.':
+                return 0
+        try:
+            d = Decimal(value) if not isinstance(value, Decimal) else value
+            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, ValueError, TypeError):
+            return 0
 
     class Meta:
         model = PurchaseOrder

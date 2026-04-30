@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MdReceipt, MdAssignmentTurnedIn, MdPendingActions, MdHistory, MdArrowForward } from 'react-icons/md';
-import { Link } from 'react-router-dom';
+import { MdReceipt, MdAssignmentTurnedIn, MdHistory } from 'react-icons/md';
 import axios from 'axios';
 import PageHeader from '../../components/PageHeader';
 import NotificationBell from '../notifications/NotificationBell';
@@ -30,9 +29,14 @@ const SupplyDashboard = ({ user, onLogout }) => {
         try {
             setLoading(true);
             const response = await axios.get('/api/supply-dashboard/');
-            setData(response.data);
+            if (response.data && response.data.stats) {
+                setData(response.data);
+            } else {
+                console.error('Malformed response data:', response.data);
+            }
         } catch (error) {
             console.error('Error fetching supply dashboard data:', error);
+            // Optional: alert('Failed to fetch latest dashboard data. Please check your connection.');
         } finally {
             setLoading(false);
         }
@@ -60,79 +64,28 @@ const SupplyDashboard = ({ user, onLogout }) => {
                     </h1>
                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-2">
                         {dateLabel}
+                        <button 
+                            onClick={fetchData}
+                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-all active:scale-95"
+                            title="Refresh Data"
+                        >
+                            <MdHistory className={loading ? "animate-spin" : ""} size={18} />
+                        </button>
                     </p>
+                </div>
+                <div className="flex items-center gap-4 bg-white p-2 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40">
+                    <NotificationBell user={user} />
+                    <div className="h-8 w-px bg-slate-100" />
+                    <UserAccountDropdown user={user} onLogout={onLogout} />
                 </div>
             </div>
 
             {/* Main Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <SupplyStat label="Ready for PO" value={data.stats.ready_for_po} icon={MdAssignmentTurnedIn} colorClass="bg-emerald-500" />
-                <SupplyStat label="In Progress" value={data.stats.pending_po} icon={MdPendingActions} colorClass="bg-amber-500" />
                 <SupplyStat label="Total Issued" value={data.stats.po_generated} icon={MdReceipt} colorClass="bg-indigo-500" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Ready List */}
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/30 overflow-hidden">
-                    <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-                        <div>
-                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Pending PRs</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Ready for Purchase Order Generation</p>
-                        </div>
-                        <MdAssignmentTurnedIn className="text-emerald-500 opacity-20" size={32} />
-                    </div>
-                    <div className="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">
-                        {data.recent_ready_prs.length > 0 ? data.recent_ready_prs.map(pr => (
-                            <div key={pr.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors group">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-black text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors truncate max-w-[250px]">{pr.purpose}</p>
-                                    <p className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded inline-block ${pr.pr_no ? 'text-indigo-500 bg-indigo-50' : 'text-slate-400 bg-slate-50 italic'}`}>
-                                        {pr.pr_no || 'No assigned PR No.'}
-                                    </p>
-                                </div>
-                                <Link to="/supply/generate-po" className="flex items-center gap-2 text-[10px] font-black text-indigo-600 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white px-4 py-2 rounded-xl transition-all uppercase tracking-widest active:scale-95 shadow-sm">
-                                    Generate PO <MdArrowForward size={14} />
-                                </Link>
-                            </div>
-                        )) : (
-                            <div className="p-16 text-center space-y-3">
-                                <MdAssignmentTurnedIn className="mx-auto text-slate-200" size={48} />
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No pending PRs</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* History List */}
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/30 overflow-hidden">
-                    <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-                        <div>
-                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Recent Activity</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Latest Issued Purchase Orders</p>
-                        </div>
-                        <Link to="/supply/generate-po" className="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-widest transition-all">View All Records</Link>
-                    </div>
-                    <div className="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">
-                        {data.recent_pos.length > 0 ? data.recent_pos.map(po => (
-                            <div key={po.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-black text-slate-900 leading-tight">{po.po_no}</p>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate max-w-[150px]">{po.supplier_name}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-black text-slate-900 tracking-tighter">₱{Number(po.total_amount).toLocaleString()}</p>
-                                    <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Success</p>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="p-16 text-center space-y-3">
-                                <MdHistory className="mx-auto text-slate-200" size={48} />
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No recent activity</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };

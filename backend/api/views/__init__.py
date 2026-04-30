@@ -546,7 +546,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
                  doc.procurement_record = record
                  doc.prNo = record.pr_no
                  doc.save(update_fields=['procurement_record', 'prNo'])
-            sync_procurement_completion(record)
+            if record:
+                from ..utils.workflow_logic import check_folder_readiness
+                check_folder_readiness(record)
+                sync_procurement_completion(record)
 
         return Response(DocumentSerializer(doc).data)
 
@@ -722,16 +725,44 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         _log_audit('purchase_order_generated', self.request.user.username, 'purchase_order', str(po.id), f'PO {po.po_no}')
         _create_notification(f'New Purchase Order generated: {po.po_no}', admin_only=True)
 
+    @action(detail=False, methods=['get'])
+    def next_sequence(self, request):
+        year = request.query_params.get('year')
+        if not year:
+            year = timezone.now().year
+        
+        # Fetch all PO numbers for the given year to find the true maximum sequence
+        pos = PurchaseOrder.objects.filter(po_date__year=year).values_list('po_no', flat=True)
+        
+        max_seq = 0
+        for po_no in pos:
+            try:
+                # Expecting format YYYY-MM-SEQ (e.g. 2026-04-001)
+                parts = po_no.split('-')
+                if len(parts) >= 3:
+                    seq = int(parts[-1])
+                    if seq > max_seq:
+                        max_seq = seq
+            except (ValueError, IndexError):
+                continue
+        
+        return Response({'next_sequence': max_seq + 1})
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_supply_dashboard_data(request):
-    ready_for_po_count = PurchaseRequest.objects.filter(status='approved').count()
-    pending_po_count = PurchaseRequest.objects.filter(status='pending').count()
+    # Only PRs that are 'completed' AND have an official PR number assigned by BAC
+    ready_prs_qs = PurchaseRequest.objects.filter(status='completed').exclude(ppmp__user_pr_no='').exclude(ppmp__user_pr_no__isnull=True)
+    
+    ready_for_po_count = ready_prs_qs.count()
+    pending_po_count = PurchaseRequest.objects.filter(status='ongoing').count()
     po_generated_count = PurchaseOrder.objects.count()
-    recent_ready_prs = PurchaseRequest.objects.filter(status='approved').order_by('-created_at')[:5]
+    
+    recent_ready_prs = ready_prs_qs.order_by('-created_at')[:5]
     pr_serializer = PurchaseRequestSerializer(recent_ready_prs, many=True)
     recent_pos = PurchaseOrder.objects.all().order_by('-created_at')[:5]
     po_serializer = PurchaseOrderSerializer(recent_pos, many=True)
+    print(f"DEBUG: Supply Dashboard - Ready: {ready_for_po_count}, Pending: {pending_po_count}, POs: {po_generated_count}")
     return Response({
         'stats': {
             'ready_for_po': ready_for_po_count,
@@ -740,4 +771,4 @@ def get_supply_dashboard_data(request):
         },
         'recent_ready_prs': pr_serializer.data,
         'recent_pos': po_serializer.data
-    })
+    }, headers={'Cache-Control': 'no-store, no-cache, must-revalidate'})

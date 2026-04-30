@@ -114,12 +114,11 @@ class DocumentStatusCalculator:
     def _has_uploaded_or_generated_file(cls, document, sub_doc: str) -> bool:
         """File-first completion rule for user-facing document status."""
         if sub_doc == 'Purchase Request':
+            # For PR, it's complete if it has a file OR it has structured data (items/amount)
+            has_file = bool(document.file and getattr(document.file, 'name', None))
             return bool(
-                document.file or
-                document.pr_items or
-                document.total_amount or
-                document.title or
-                document.ppmp_no
+                has_file or
+                (document.total_amount and document.total_amount > 0)
             )
 
         has_file = bool(document.file)

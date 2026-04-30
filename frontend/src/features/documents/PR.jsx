@@ -6,13 +6,14 @@ import CreatePRModal from './modals/CreatePRModal';
 import DocViewModal from './modals/DocViewModal';
 import DocUploadModal from './modals/DocUploadModal';
 import AlertModal from './modals/AlertModal';
-import { generatePR_PDF } from '../../utils/prGenerator';
+import { generatePR_PDF, generatePR_PDFBlob } from '../../utils/prGenerator';
 import { 
     documentService, 
     purchaseRequestService,
     getDocumentPreviewUrl, 
     getUploadedFilename, 
-    openPreviewTab 
+    openPreviewTab,
+    purchaseOrderService 
 } from '../../services/api';
 
 const PR = ({ user }) => {
@@ -27,12 +28,11 @@ const PR = ({ user }) => {
     const [assignValue, setAssignValue] = useState('');
     const [assigning, setAssigning] = useState(false);
 
-    const pos = (user?.position || '').toLowerCase();
     const isAdmin = user?.role === ROLES.ADMIN;
-    const isMember = pos === 'bac member';
-    const isSecretariat = pos === 'bac secretariat';
-    const canAssignPR = isMember;
-    const isEndUser = !isAdmin && !isMember && !isSecretariat;
+    const isMember = user?.role === ROLES.MEMBER;
+    const isSecretariat = user?.role === ROLES.SECRETARIAT;
+    const canAssignPR = isAdmin || isMember || isSecretariat;
+    const isEndUser = user?.role === ROLES.END_USER;
 
     const loadPRWithRelatedDocs = async (item) => {
         let relatedDocuments = [];
@@ -55,7 +55,23 @@ const PR = ({ user }) => {
     };
 
     const handleView = async (item) => {
-        setSelectedDoc(item);
+        try {
+            const prData = {
+                items: item.items || [],
+                total: item.grand_total,
+                ppmp_no: item.ppmp_no,
+                prNo: item.pr_no,
+                purpose: item.purpose,
+                office: item.end_user_office || item.ppmp_title || ''
+            };
+            const blob = await generatePR_PDFBlob(prData);
+            const url = URL.createObjectURL(blob);
+            openPreviewTab(url, `Purchase Request ${item.pr_no || item.ppmp_no}`);
+        } catch (err) {
+            console.error('Failed to open PR preview:', err);
+            // Fallback: Open modal if preview fails
+            setSelectedDoc(item);
+        }
     };
 
 
@@ -155,7 +171,6 @@ const PR = ({ user }) => {
                                         <tr>
                                             <th className="table-th !text-center !px-4">PR No.</th>
                                             <th className="table-th !text-center !px-4">PPMP No.</th>
-                                            <th className="table-th !text-center !px-4">Purpose</th>
                                             <th className="table-th !text-center !px-4">Total Cost</th>
                                             <th className="table-th !text-center !px-4">Status</th>
                                             <th className="table-th !text-center !px-4">Date Uploaded</th>
@@ -181,22 +196,17 @@ const PR = ({ user }) => {
                                                         <p className="text-[9px] text-slate-400 mt-1 truncate">{item.ppmp_title}</p>
                                                     </td>
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
-                                                            {item.purpose || 'No purpose specified'}
-                                                        </p>
-                                                    </td>
-                                                    <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                                         <span className="text-sm font-black text-emerald-600 font-mono whitespace-nowrap">
                                                             ₱{parseFloat(item.grand_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </span>
                                                     </td>
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
                                                         <span className={`status-badge ${
-                                                            item.status === 'po_generated' 
+                                                            (item.status === 'completed' || item.status === 'po_generated') 
                                                                 ? 'status-badge--complete' 
                                                                 : 'status-badge--ongoing'
                                                         }`}>
-                                                            {item.status === 'po_generated' ? 'COMPLETED' : 'ON GOING'}
+                                                            {(item.status === 'completed' || item.status === 'po_generated') ? 'COMPLETED' : 'ON GOING'}
                                                         </span>
                                                     </td>
                                                     <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">

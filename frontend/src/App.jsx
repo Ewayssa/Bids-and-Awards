@@ -7,12 +7,13 @@ import Encode from './features/documents/Encode';
 import PPMP from './features/documents/PPMP';
 import APP from './features/documents/APP';
 import PR from './features/documents/PR';
-import Reports from './features/reports/ReportsPage';
+
 import Personnel from './features/users/UserManagement';
 import AuditTrail from './features/users/AuditTrail';
 import Navigation from './layouts/Navigation';
 import SupplyDashboard from './features/supply/SupplyDashboard';
 import GeneratePO from './features/supply/GeneratePO';
+import POPreview from './features/supply/POPreview';
 import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/auth';
 import { userService } from './services/api';
 
@@ -121,43 +122,49 @@ function AppContent() {
     const defaultRoute = getDefaultRouteForRole(userRole);
 
     return (
-        <>
-            {!user ? (
-                <Login onLogin={handleLogin} infoMessage={loginInfoMessage} />
-            ) : user.must_change_password ? (
-                <ChangePassword user={user} onPasswordChanged={handlePasswordChanged} />
-            ) : (
-                <div className={`flex flex-nowrap min-h-screen w-full max-w-full bg-[var(--background)] overflow-x-hidden ${sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
-                    <Navigation user={user} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={handleLogout} />
-                    <main className="flex-1 min-w-0 pt-14 md:pt-0 bg-[var(--background)] md:border-l border-[var(--border-light)] min-h-screen overflow-x-hidden" role="main">
-                        <div className="page-container h-full w-full min-w-0 overflow-x-hidden">
-                            <Routes>
-                                <Route path="/" element={
-                                    canAccessRoute(userRole, '/') ? (
-                                        userRole === ROLES.SUPPLY ? (
-                                            <SupplyDashboard user={user} onLogout={handleLogout} />
+        <Routes>
+            {/* Standalone routes (No Navigation/Sidebar) */}
+            <Route path="/po/preview/:id" element={<POPreview />} />
+
+            {/* Main Application Layout */}
+            <Route path="*" element={
+                !user ? (
+                    <Login onLogin={handleLogin} infoMessage={loginInfoMessage} />
+                ) : user.must_change_password ? (
+                    <ChangePassword user={user} onPasswordChanged={handlePasswordChanged} />
+                ) : (
+                    <div className={`flex flex-nowrap min-h-screen w-full max-w-full bg-[var(--background)] overflow-x-hidden ${sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
+                        <Navigation user={user} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={handleLogout} />
+                        <main className="flex-1 min-w-0 pt-14 md:pt-0 bg-[var(--background)] md:border-l border-[var(--border-light)] min-h-screen overflow-x-hidden" role="main">
+                            <div className="page-container h-full w-full min-w-0 overflow-x-hidden">
+                                <Routes>
+                                    <Route path="/" element={
+                                        canAccessRoute(userRole, '/') ? (
+                                            userRole === ROLES.SUPPLY ? (
+                                                <SupplyDashboard user={user} onLogout={handleLogout} />
+                                            ) : (
+                                                <Dashboard user={user} sidebarOpen={true} onLogout={handleLogout} />
+                                            )
                                         ) : (
-                                            <Dashboard user={user} sidebarOpen={true} onLogout={handleLogout} />
+                                            <Navigate to={defaultRoute} replace />
                                         )
-                                    ) : (
-                                        <Navigate to={defaultRoute} replace />
-                                    )
-                                } />
-                                <Route path="/encode" element={canAccessRoute(userRole, '/encode') ? <Encode user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/ppmp" element={canAccessRoute(userRole, '/ppmp') ? <PPMP user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/app" element={canAccessRoute(userRole, '/app') ? <APP user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/pr" element={canAccessRoute(userRole, '/pr') ? <PR user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/reports" element={canAccessRoute(userRole, '/reports') ? <Reports user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/audit-trail" element={canAccessRoute(userRole, '/audit-trail') ? <AuditTrail user={user} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="/supply/generate-po" element={canAccessRoute(userRole, '/supply/generate-po') ? <GeneratePO user={user} onLogout={handleLogout} /> : <Navigate to={defaultRoute} replace />} />
-                                <Route path="*" element={<Navigate to={defaultRoute} replace />} />
-                            </Routes>
-                        </div>
-                    </main>
-                </div>
-            )}
-        </>
+                                    } />
+                                    <Route path="/encode" element={canAccessRoute(userRole, '/encode') ? <Encode user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                    <Route path="/ppmp" element={canAccessRoute(userRole, '/ppmp') ? <PPMP user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                    <Route path="/app" element={canAccessRoute(userRole, '/app') ? <APP user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                    <Route path="/pr" element={canAccessRoute(userRole, '/pr') ? <PR user={user} /> : <Navigate to={defaultRoute} replace />} />
+
+                                    <Route path="/personnel" element={canAccessRoute(userRole, '/personnel') ? <Personnel user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                    <Route path="/audit-trail" element={canAccessRoute(userRole, '/audit-trail') ? <AuditTrail user={user} /> : <Navigate to={defaultRoute} replace />} />
+                                    <Route path="/supply/generate-po" element={canAccessRoute(userRole, '/supply/generate-po') ? <GeneratePO user={user} onLogout={handleLogout} /> : <Navigate to={defaultRoute} replace />} />
+                                    <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+                                </Routes>
+                            </div>
+                        </main>
+                    </div>
+                )
+            } />
+        </Routes>
     );
 }
 

@@ -167,8 +167,13 @@ class Document(models.Model):
         calculated_status = self.calculate_status()
         self.status = calculated_status
 
-        # Supply Role: Automatically flag as Ready for PO if complete
-        if self.subDoc == 'Purchase Request' and self.status == 'complete' and self.po_status == 'pending':
+        # Supply Role: Automatically flag as Ready for PO if complete AND PR No assigned AND Folder Ready
+        if (self.subDoc == 'Purchase Request' and 
+            self.status == 'complete' and 
+            self.user_pr_no and 
+            self.procurement_record and 
+            self.procurement_record.is_ready and 
+            self.po_status == 'pending'):
             self.po_status = 'ready_for_po'
         
         # If update_fields is specified, add status and po_status to it
@@ -211,8 +216,13 @@ def recalculate_document_status(sender, instance, created, **kwargs):
         updates['status'] = calculated_status
         instance.status = calculated_status
 
-    # Supply Role: transition logic
-    if instance.subDoc == 'Purchase Request' and calculated_status == 'complete' and instance.po_status == 'pending':
+    # Supply Role: transition logic (ensure folder readiness and PR no assigned)
+    if (instance.subDoc == 'Purchase Request' and 
+        calculated_status == 'complete' and 
+        instance.user_pr_no and 
+        instance.procurement_record and 
+        instance.procurement_record.is_ready and 
+        instance.po_status == 'pending'):
         updates['po_status'] = 'ready_for_po'
         instance.po_status = 'ready_for_po'
 
@@ -341,16 +351,14 @@ def sync_pr_number_to_documents(sender, instance, created, **kwargs):
     and update their user_pr_no as well for consistency.
     """
     if instance.user_pr_no:
-        # Find all documents linked to this procurement record that are specifically "Purchase Request"
-        # We also update any document that has an empty user_pr_no to match the record's official one
-        instance.documents.filter(
-            subDoc='Purchase Request'
-        ).update(user_pr_no=instance.user_pr_no)
+        # Propagation: When a PR No. is assigned to the folder, 
+        # sync it to all linked documents (APP, PPMP, PR, etc.)
+        instance.documents.all().update(user_pr_no=instance.user_pr_no)
 
 class PurchaseRequest(models.Model):
     STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
+        ('ongoing', 'Ongoing'),
+        ('completed', 'Completed'),
         ('po_generated', 'PO Generated'),
         ('cancelled', 'Cancelled'),
     )
@@ -366,7 +374,7 @@ class PurchaseRequest(models.Model):
     pr_no = models.CharField(max_length=100, blank=True)
     purpose = models.TextField(help_text='Purpose of the purchase request')
     grand_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='approved')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ongoing')
     created_by = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -441,7 +449,7 @@ class PurchaseOrder(models.Model):
     funds_available = models.CharField(max_length=255, blank=True)
     ors_burs_no = models.CharField(max_length=100, blank=True)
     date_of_ors_burs = models.DateField(null=True, blank=True)
-    ors_burs_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    ors_burs_amount = models.CharField(max_length=100, blank=True)
     
     created_by = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
