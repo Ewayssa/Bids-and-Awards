@@ -44,6 +44,7 @@ const CreatePRModal = ({
     });
     const fileInputRef = useRef(null);
     const [activeUploadType, setActiveUploadType] = useState(null);
+    const [inheritedDocs, setInheritedDocs] = useState([]);
 
     const handleFileSelect = (type) => {
         setActiveUploadType(type);
@@ -191,13 +192,17 @@ const CreatePRModal = ({
                 throw new Error('Failed to generate the formal PR document (PDF).');
             }
 
+            let mainDoc;
             try {
-                await documentService.create(formData);
+                mainDoc = await documentService.create(formData);
             } catch (docErr) {
                 console.error('Document Upload (Legacy) Error:', docErr);
                 const backendMsg = docErr.response?.data?.error || docErr.response?.data?.detail || docErr.message;
                 throw new Error(`Failed to upload PR document to storage: ${typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : backendMsg}`);
             }
+
+            // Capture the newly created folder ID so optional files go to the SAME folder
+            const newFolderId = mainDoc?.procurement_record;
 
             // Upload optional files
             for (const [subDocType, file] of Object.entries(optionalFiles)) {
@@ -205,15 +210,17 @@ const CreatePRModal = ({
                     const optFormData = new FormData();
                     optFormData.append('category', 'Initial Documents');
                     optFormData.append('subDoc', subDocType);
-                    optFormData.append('title', `${subDocType} for ${form.ppmp_no}`);
+                    // Use purpose in title to distinguish between multiple PRs in the same folder
+                    optFormData.append('title', `${subDocType} for ${form.purpose || form.ppmp_no}`);
                     optFormData.append('ppmp_no', form.ppmp_no);
-                    optFormData.append('prNo', '');
-                    optFormData.append('user_pr_no', '');
+                    optFormData.append('prNo', mainDoc?.prNo || ''); // Use the new PR No
+                    optFormData.append('user_pr_no', ''); 
                     optFormData.append('file', file);
                     optFormData.append('date', new Date().toISOString().slice(0, 10));
                     optFormData.append('uploadedBy', created_by);
                     try {
-                        await documentService.create(optFormData);
+                        // Pass the folder ID explicitly
+                        await documentService.create(optFormData, newFolderId);
                     } catch (optErr) {
                         console.error(`Failed to upload ${subDocType}:`, optErr);
                     }
@@ -397,6 +404,30 @@ const CreatePRModal = ({
                                 ))}
                             </select>
                             {errors.ppmp_id && <span className="text-[10px] text-red-500 font-bold ml-1">{errors.ppmp_id}</span>}
+
+                            {/* Inheritance Indicators */}
+                            {selectedPPMP && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {['Annual Procurement Plan', 'Project Procurement Management Plan'].map(type => {
+                                        const isAPP = type === 'Annual Procurement Plan';
+                                        const shortLabel = isAPP ? 'APP' : 'PPMP';
+                                        const exists = (selectedPPMP.documents || []).some(d => 
+                                            d.subDoc === type || (d.subDoc || '').includes(shortLabel)
+                                        );
+                                        
+                                        if (!exists) return null;
+
+                                        return (
+                                            <div key={type} className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-lg">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                                                    {shortLabel} Inherited
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                         {/* Purpose Field */}

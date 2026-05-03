@@ -29,6 +29,7 @@ const ProcurementWorkflowView = ({
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [targetPRDoc, setTargetPRDoc] = useState(null);
+    const [globalDocs, setGlobalDocs] = useState([]);
     const fileInputRef = useRef(null);
 
     const isAdmin = user?.role === ROLES.ADMIN;
@@ -44,6 +45,18 @@ const ProcurementWorkflowView = ({
         return doc.subDoc === 'Purchase Request' && (doc.pr_items || doc.total_amount || doc.title || doc.ppmp_no);
     };
 
+    // Fetch all documents for this PPMP No globally to support inheritance across folders
+    React.useEffect(() => {
+        if (record?.ppmp_no) {
+            documentService.getAll({ ppmp_no: record.ppmp_no })
+                .then(data => {
+                    const docs = Array.isArray(data) ? data : (data?.results || []);
+                    setGlobalDocs(docs);
+                })
+                .catch(err => console.error('Failed to fetch global docs for inheritance:', err));
+        }
+    }, [record?.ppmp_no]);
+
     // Calculate completion status
     const requirements = useMemo(() => {
         const flatReqs = config.groups.flatMap(g => g.documents);
@@ -55,10 +68,27 @@ const ProcurementWorkflowView = ({
                 if (isPRReq && d.subDoc?.toLowerCase().includes('purchase request')) return true;
                 return false;
             });
+
+            // Inheritance Logic: For APP and PPMP, look globally if not found in current folder
+            const isSharedDoc = req.name.toLowerCase().includes('annual procurement plan') || 
+                               req.name.toLowerCase().includes('ppmp') || 
+                               req.name.toLowerCase().includes('project procurement management plan');
+            
+            if (isSharedDoc && uploadedDocs.length === 0) {
+                const inherited = globalDocs.filter(d => {
+                    if (d.subDoc === req.name) return true;
+                    const aliases = ['APP', 'PPMP', 'Supplemental PPMP'];
+                    return aliases.some(a => d.subDoc?.includes(a));
+                });
+                if (inherited.length > 0) {
+                    uploadedDocs.push(...inherited);
+                }
+            }
+
             const docsWithFiles = uploadedDocs.filter(hasChecklistFile);
             const count = docsWithFiles.length;
             const isMet = req.minFiles ? count >= req.minFiles : count > 0;
-            return { ...req, count, isMet, docs: docsWithFiles };
+            return { ...req, count, isMet, docs: docsWithFiles, isInherited: isSharedDoc && count > 0 && !recordDocs.some(d => d.subDoc === req.name) };
         });
         
         const allRequiredMet = results.filter(r => r.required).every(r => r.isMet);
@@ -297,7 +327,7 @@ const ProcurementWorkflowView = ({
                                                         <p className={`text-[9px] font-black uppercase tracking-tight transition-colors ${
                                                             uploaded ? 'text-emerald-600' : 'text-slate-400'
                                                         }`}>
-                                                            {uploaded ? 'Submitted' : isBeingUploaded ? 'Ready to Sync' : 'Missing'}
+                                                            {uploaded ? (statusObj.isInherited ? 'Inherited' : 'Submitted') : isBeingUploaded ? 'Ready to Sync' : 'Missing'}
                                                         </p>
                                                         {showCounter && (
                                                             <>

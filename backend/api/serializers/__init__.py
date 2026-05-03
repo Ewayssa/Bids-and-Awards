@@ -285,8 +285,22 @@ class DocumentSerializer(serializers.ModelSerializer):
 
             # 1. Logic for grouping by PPMP No.
             if ppmp_no:
-                # Try to find an existing folder for this PPMP No.
-                record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
+                # Try to find an existing folder for this PPMP No and PR No combination
+                # If pr_no is not provided, it will fallback to the first record for that PPMP No.
+                query = ProcurementRecord.objects.filter(ppmp_no=ppmp_no)
+                if pr_no:
+                    record = query.filter(pr_no=pr_no).first()
+                else:
+                    # If this is a Purchase Request, we want a NEW folder (assigned a new PR No)
+                    # For shared planning docs like APP/PPMP, we can still fallback to the first record.
+                    is_planning_doc = any(term in (validated_data.get('subDoc') or '').lower() 
+                                         for term in ['annual procurement plan', 'ppmp'])
+                    
+                    if is_planning_doc:
+                        record = query.first()
+                    else:
+                        record = None
+
                 if record:
                     # Use existing folder's number and link
                     validated_data['prNo'] = record.pr_no

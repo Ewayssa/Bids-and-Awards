@@ -69,10 +69,29 @@ const DocViewModal = ({
     const getNormalizedPrNo = (target) => target?.pr_no || target?.user_pr_no || target?.prNo || 'Pending';
     const getNormalizedTitle = (target) => target?.purpose || target?.title || 'General Procurement';
 
-    const matchesRequiredDoc = (docItem, required) => {
+    const matchesRequiredDoc = (docItem, required, prContext = null) => {
         if (!docItem || !required) return false;
         const aliases = required.aliases || [required.subDoc];
-        return aliases.some(alias => docItem.subDoc === alias || (docItem.subDoc || '').includes(alias));
+        const subDocMatches = aliases.some(alias => docItem.subDoc === alias || (docItem.subDoc || '').includes(alias));
+        
+        if (!subDocMatches) return false;
+
+        // For specific docs, we also check if they match the current PR's purpose/title
+        const isSpecificDoc = ['Activity Design', 'Market Scoping', 'Requisition and Issue Slip', 'RIS'].some(type => 
+            required.subDoc === type || aliases.includes(type)
+        );
+
+        if (isSpecificDoc && prContext) {
+            const prTitle = prContext.purpose || prContext.title || '';
+            // If the document title contains the PR purpose, it's a direct match
+            if (docItem.title && prTitle && docItem.title.toLowerCase().includes(prTitle.toLowerCase())) {
+                return true;
+            }
+            // If we are looking for a specific doc but this one doesn't match the PR title,
+            // we should be careful. However, for now, we'll return true and let de-duplication handle it.
+        }
+
+        return true;
     };
 
 
@@ -107,8 +126,23 @@ const DocViewModal = ({
         
         filtered.forEach(docItem => {
             const label = docItem.subDoc || (docItem.grand_total !== undefined ? 'Purchase Request' : 'Other');
-            // If we already have this type, only replace if the new one has a file
-            if (!deDuped.has(label) || (!hasUploadedFile(deDuped.get(label)) && hasUploadedFile(docItem))) {
+            
+            // Relevancy score:
+            // 2: Correct subDoc AND title matches PR purpose
+            // 1: Correct subDoc
+            // 0: No match
+            const getScore = (d) => {
+                const prTitle = currentDoc.purpose || currentDoc.title || '';
+                const isSpecific = ['Activity Design', 'Market Scoping', 'Requisition and Issue Slip', 'RIS'].some(t => d.subDoc === t || (d.subDoc || '').includes(t));
+                if (isSpecific && d.title && prTitle && d.title.toLowerCase().includes(prTitle.toLowerCase())) return 2;
+                return 1;
+            };
+
+            const currentScore = getScore(docItem);
+            const existing = deDuped.get(label);
+            const existingScore = existing ? getScore(existing) : -1;
+
+            if (!existing || currentScore > existingScore || (!hasUploadedFile(existing) && hasUploadedFile(docItem))) {
                 deDuped.set(label, docItem);
             }
         });
@@ -117,7 +151,7 @@ const DocViewModal = ({
 
         // Add missing placeholders
         requiredSupportingDocs.forEach(required => {
-            const existing = previewDocs.some(item => matchesRequiredDoc(item, required));
+            const existing = previewDocs.some(item => matchesRequiredDoc(item, required, currentDoc));
             if (!existing) {
                 previewDocs.push({
                     id: `missing-${required.subDoc}`,
