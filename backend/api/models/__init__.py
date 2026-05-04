@@ -77,82 +77,68 @@ class Document(models.Model):
         ('complete', 'Complete'),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    prNo = models.CharField(max_length=100, blank=True, help_text='BAC Folder No. (auto-generated on create, format YYYY-MM-NNN)')
+    prNo = models.CharField(max_length=100, blank=True, help_text='BAC Folder No.')
     title = models.CharField(max_length=255, blank=True)
-    user_pr_no = models.CharField(max_length=100, blank=True, help_text='PR No. (user-entered, for Purchase Request)')
-    total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Total amount (for Purchase Request)')
-    source_of_fund = models.CharField(max_length=255, blank=True, help_text='Source of Fund (for Activity Design, PPMP)')
-    ppmp_no = models.CharField(max_length=100, blank=True, help_text='PPMP No. (user-entered, for Project Procurement Management Plan/Supplemental PPMP)')
-    year = models.CharField(max_length=4, blank=True, help_text='Year (e.g. 2024)')
-    quarter = models.CharField(max_length=10, blank=True, help_text='Quarter (e.g. Q1, Q2)')
-    app_no = models.CharField(max_length=100, blank=True, help_text='APP No. (for Annual Procurement Plan)')
-    app_type = models.CharField(max_length=20, blank=True, help_text='APP type: Final or Updated (for Annual Procurement Plan)')
-    certified_true_copy = models.BooleanField(default=False, help_text='Certified True Copy? (for Annual Procurement Plan)')
-    certified_signed_by = models.CharField(max_length=255, blank=True, help_text='Signed by (when Certified True Copy is Yes)')
-    market_budget = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Budget (for Market Scopping)')
-    market_period_from = models.CharField(max_length=20, blank=True, help_text='Period from MM/YY (for Market Scopping)')
-    market_period_to = models.CharField(max_length=20, blank=True, help_text='Period to MM/YY (for Market Scopping)')
-    market_expected_delivery = models.CharField(max_length=20, blank=True, help_text='Expected Delivery MM/YYYY (for Market Scopping)')
-    market_service_provider_1 = models.CharField(max_length=255, blank=True, help_text='Service Provider 1 (for Market Scopping)')
-    market_service_provider_2 = models.CharField(max_length=255, blank=True, help_text='Service Provider 2 (for Market Scopping)')
-    market_service_provider_3 = models.CharField(max_length=255, blank=True, help_text='Service Provider 3 (for Market Scopping)')
-    office_division = models.CharField(max_length=255, blank=True, help_text='Office/Division (for Requisition and Issue Slip)')
-    received_by = models.CharField(max_length=255, blank=True, help_text='Received By (for Requisition and Issue Slip)')
     date = models.DateField(null=True, blank=True)
-    date_received = models.DateField(null=True, blank=True, help_text='Date received (for Invitation to COA)')
-    attendance_members = models.TextField(blank=True, help_text='JSON array of {name, present} (for Attendance Sheet)')
-    resolution_no = models.CharField(max_length=100, blank=True, help_text='Resolution No. (for BAC Resolution)')
-    winning_bidder = models.CharField(max_length=255, blank=True, help_text='Winning Bidder (for BAC Resolution)')
-    resolution_option = models.CharField(max_length=20, blank=True, help_text='Options: LCB, LCRB, SCB, SCRB (for BAC Resolution)')
-    venue = models.CharField(max_length=255, blank=True, help_text='Venue (for BAC Resolution)')
-    aoq_no = models.CharField(max_length=100, blank=True, help_text='AOQ No. (for Abstract of Quotation)')
-    abstract_bidders = models.TextField(blank=True, help_text='JSON array of {name, amount, remarks} (for Abstract of Quotation), min 3 bidders')
-    table_rating_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for Lease of Venue: Table Rating Factor)')
-    table_rating_address = models.CharField(max_length=500, blank=True, help_text='Address (for Lease of Venue: Table Rating Factor)')
-    table_rating_factor_value = models.CharField(max_length=100, blank=True, help_text='Factor Value (for Lease of Venue: Table Rating Factor)')
-    notice_award_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for Notice of Award)')
-    notice_award_authorized_rep = models.CharField(max_length=255, blank=True, help_text='Authorized Representative/Owner (for Notice of Award)')
-    notice_award_conforme = models.CharField(max_length=255, blank=True, help_text='Conforme (for Notice of Award)')
-    contract_received_by_coa = models.BooleanField(default=False, help_text='Received by COA? Yes/No (for Contract Services/Purchase Order)')
-    contract_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, help_text='Contract Amount (for Contract Services/Purchase Order)')
-    notarized_place = models.CharField(max_length=255, blank=True, help_text='Notarized place (for Contract Services/Purchase Order)')
-    notarized_date = models.DateField(null=True, blank=True, help_text='Notarized date (for Contract Services/Purchase Order)')
-    ntp_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for Notice to Proceed)')
-    ntp_authorized_rep = models.CharField(max_length=255, blank=True, help_text='Authorized Representative/Owner (for Notice to Proceed)')
-    ntp_received_by = models.CharField(max_length=255, blank=True, help_text='Received By (for Notice to Proceed)')
-    oss_service_provider = models.CharField(max_length=255, blank=True, help_text='Service Provider (for OSS)')
-    oss_authorized_rep = models.CharField(max_length=255, blank=True, help_text='Authorized Representative/Owner (for OSS)')
-    secretary_service_provider = models.CharField(max_length=255, blank=True, help_text="Service Provider (for Secretary's Certificate)")
-    secretary_owner_rep = models.CharField(max_length=255, blank=True, help_text="Owner/Authorized Representative (for Secretary's Certificate)")
-    
-    # Storage for line items (e.g. for Purchase Request) stored as JSON array of objects
-    pr_items = models.TextField(blank=True, help_text='JSON array of {unit, description, quantity, unit_cost}')
-
-    # Link to the structured procurement record
-    procurement_record = models.ForeignKey(
-        'ProcurementRecord',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='documents',
-        help_text='Link to procurement record'
-    )
-    
     uploadedBy = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=255)
     subDoc = models.CharField(max_length=255)
+    user_pr_no = models.CharField(max_length=100, blank=True, help_text='Official PR No. assigned by BAC')
+    ppmp_no = models.CharField(max_length=100, blank=True, help_text='Associated PPMP No.')
+    year = models.CharField(max_length=4, blank=True)
+    quarter = models.CharField(max_length=10, blank=True)
+    pr_items = models.TextField(blank=True)
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    source_of_fund = models.CharField(max_length=255, blank=True)
+    app_no = models.CharField(max_length=100, blank=True)
+    app_type = models.CharField(max_length=20, blank=True)
+    
+    # Certification and Market fields
+    certified_signed_by = models.CharField(max_length=255, blank=True)
+    market_period_from = models.CharField(max_length=20, blank=True)
+    market_period_to = models.CharField(max_length=20, blank=True)
+    market_expected_delivery = models.CharField(max_length=20, blank=True)
+    market_service_provider_1 = models.CharField(max_length=255, blank=True)
+    market_service_provider_2 = models.CharField(max_length=255, blank=True)
+    market_service_provider_3 = models.CharField(max_length=255, blank=True)
+    
+    # Office and Process fields
+    office_division = models.CharField(max_length=255, blank=True)
+    received_by = models.CharField(max_length=255, blank=True)
+    attendance_members = models.TextField(blank=True)
+    resolution_no = models.CharField(max_length=100, blank=True)
+    resolution_option = models.CharField(max_length=20, blank=True)
+    venue = models.CharField(max_length=255, blank=True)
+    winning_bidder = models.CharField(max_length=255, blank=True)
+    abstract_bidders = models.TextField(blank=True)
+    aoq_no = models.CharField(max_length=100, blank=True)
+    
+    # Notice and Award fields
+    notice_award_authorized_rep = models.CharField(max_length=255, blank=True)
+    notice_award_conforme = models.CharField(max_length=255, blank=True)
+    notice_award_service_provider = models.CharField(max_length=255, blank=True)
+    table_rating_address = models.CharField(max_length=500, blank=True)
+    table_rating_factor_value = models.CharField(max_length=100, blank=True)
+    table_rating_service_provider = models.CharField(max_length=255, blank=True)
+    
+    # Final strict fields
+    notarized_place = models.CharField(max_length=255, blank=True)
+    ntp_service_provider = models.CharField(max_length=255, blank=True)
+    ntp_authorized_rep = models.CharField(max_length=255, blank=True)
+    ntp_received_by = models.CharField(max_length=255, blank=True)
+    oss_service_provider = models.CharField(max_length=255, blank=True)
+    oss_authorized_rep = models.CharField(max_length=255, blank=True)
+    secretary_service_provider = models.CharField(max_length=255, blank=True)
+    secretary_owner_rep = models.CharField(max_length=255, blank=True)
+    
+    po_status = models.CharField(max_length=20, blank=True)
+    certified_true_copy = models.BooleanField(default=False)
+    contract_received_by_coa = models.BooleanField(default=False)
+    
     file = models.FileField(upload_to=document_file_upload_to, blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)  # Track last update time
+    updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
-    PO_STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('ready_for_po', 'Ready for PO'),
-        ('po_generated', 'PO Generated'),
-    )
-    po_status = models.CharField(max_length=20, choices=PO_STATUS_CHOICES, default='pending', help_text='Status of Purchase Order generation for this PR')
-
 
     def calculate_status(self):
         """
@@ -163,35 +149,14 @@ class Document(models.Model):
 
     def save(self, *args, **kwargs):
         # Always auto-calculate status before saving
-        # This ensures status reflects current document completeness
-        calculated_status = self.calculate_status()
-        self.status = calculated_status
-
-        # Supply Role: Automatically flag as Ready for PO if complete AND PR No assigned AND Folder Ready
-        if (self.subDoc == 'Purchase Request' and 
-            self.status == 'complete' and 
-            self.user_pr_no and 
-            self.procurement_record and 
-            self.procurement_record.is_ready and 
-            self.po_status == 'pending'):
-            self.po_status = 'ready_for_po'
-        
-        # If update_fields is specified, add status and po_status to it
-        if 'update_fields' in kwargs and kwargs['update_fields'] is not None:
-            update_fields = list(kwargs['update_fields'])
-            if 'status' not in update_fields:
-                update_fields.append('status')
-            if 'po_status' not in update_fields:
-                update_fields.append('po_status')
-            kwargs['update_fields'] = update_fields
-        
+        self.status = self.calculate_status()
         super().save(*args, **kwargs)
 
     @property
     def current_status(self):
         """Always return the current calculated status (real-time)"""
         return self.calculate_status()
-    
+
     def __str__(self):
         return f"{self.title} ({self.prNo})"
 
@@ -201,38 +166,17 @@ class Document(models.Model):
 def recalculate_document_status(sender, instance, created, **kwargs):
     """
     Ensure status is always recalculated and saved after any save operation.
-    This catches cases where save() might be bypassed or status wasn't updated.
     Refresh from DB first to get the latest file information.
     """
     # Refresh from DB to get latest file path (file.name is set after save)
     instance.refresh_from_db()
-    
+
     # Recalculate status with fresh data
     calculated_status = instance.calculate_status()
-    
-    # Always update status if it differs (ensures real-time accuracy)
-    updates = {}
+
     if instance.status != calculated_status:
-        updates['status'] = calculated_status
+        Document.objects.filter(pk=instance.pk).update(status=calculated_status)
         instance.status = calculated_status
-
-    # Supply Role: transition logic (ensure folder readiness and PR no assigned)
-    if (instance.subDoc == 'Purchase Request' and 
-        calculated_status == 'complete' and 
-        instance.user_pr_no and 
-        instance.procurement_record and 
-        instance.procurement_record.is_ready and 
-        instance.po_status == 'pending'):
-        updates['po_status'] = 'ready_for_po'
-        instance.po_status = 'ready_for_po'
-
-    if updates:
-        Document.objects.filter(pk=instance.pk).update(**updates)
-    
-    # Check if this update makes the folder ready for PR No. assignment
-    if instance.procurement_record:
-        from ..utils.workflow_logic import check_folder_readiness
-        check_folder_readiness(instance.procurement_record)
 
 
 class Report(models.Model):
@@ -265,7 +209,24 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
     link = models.CharField(max_length=255, blank=True)  # e.g. /encode
-    admin_only = models.BooleanField(default=False, help_text='Only visible to admin users')
+    
+    # Target audience
+    recipient_role = models.CharField(
+        max_length=20, 
+        choices=User.ROLE_CHOICES, 
+        blank=True, 
+        null=True,
+        help_text='If set, only users with this role will see the notification'
+    )
+    recipient = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='notifications',
+        help_text='If set, only this specific user will see the notification'
+    )
+    admin_only = models.BooleanField(default=False, help_text='Deprecated: Use recipient_role="admin" or "bac_secretariat" instead')
 
     class Meta:
         ordering = ['-created_at']
@@ -351,9 +312,8 @@ def sync_pr_number_to_documents(sender, instance, created, **kwargs):
     and update their user_pr_no as well for consistency.
     """
     if instance.user_pr_no:
-        # Propagation: When a PR No. is assigned to the folder, 
-        # sync it to all linked documents (APP, PPMP, PR, etc.)
-        instance.documents.all().update(user_pr_no=instance.user_pr_no)
+        from . import Document
+        Document.objects.filter(prNo=instance.pr_no).update(user_pr_no=instance.user_pr_no)
 
 class PurchaseRequest(models.Model):
     STATUS_CHOICES = (
@@ -380,10 +340,6 @@ class PurchaseRequest(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Fallback: if PR has no number but folder DOES, adopt the folder's number
-        if not self.pr_no and self.ppmp:
-            self.pr_no = self.ppmp.user_pr_no or self.ppmp.pr_no or ''
-
         super().save(*args, **kwargs)
         
         # Sync PR No. and Purpose to the parent ProcurementRecord (Folder) if linked

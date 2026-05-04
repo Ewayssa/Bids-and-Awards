@@ -16,7 +16,7 @@ class Command(BaseCommand):
         sync_count = 0
         for record in records_with_pr:
             # Propagate the folder's official PR No. to all its documents
-            updated = record.documents.exclude(user_pr_no=record.user_pr_no).update(user_pr_no=record.user_pr_no)
+            updated = Document.objects.filter(prNo=record.pr_no).exclude(user_pr_no=record.user_pr_no).update(user_pr_no=record.user_pr_no)
             sync_count += updated
         self.stdout.write(self.style.SUCCESS(f'Synchronized PR No. for {sync_count} Document(s).'))
 

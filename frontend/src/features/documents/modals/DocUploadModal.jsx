@@ -60,7 +60,7 @@ const DocUploadModal = ({
                 formData.append('procurement_record', recordId);
             }
             
-            const folderNo = targetDoc.prNo || targetDoc.pr_no;
+            const folderNo = targetDoc.folder_pr_no || targetDoc.prNo || targetDoc.pr_no;
             if (folderNo) formData.append('prNo', folderNo);
             
             if (targetDoc.ppmp_no) formData.append('ppmp_no', targetDoc.ppmp_no);

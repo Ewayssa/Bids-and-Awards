@@ -17,11 +17,12 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
     ppmp_title = serializers.CharField(source='ppmp.title', read_only=True)
     end_user_office = serializers.CharField(source='ppmp.end_user_office', read_only=True)
     related_documents = serializers.SerializerMethodField()
+    folder_pr_no = serializers.CharField(source='ppmp.pr_no', read_only=True)
 
     class Meta:
         model = PurchaseRequest
         fields = [
-            'id', 'ppmp', 'ppmp_no', 'ppmp_title', 'end_user_office', 'pr_no', 'purpose', 
+            'id', 'ppmp', 'ppmp_no', 'folder_pr_no', 'ppmp_title', 'end_user_office', 'pr_no', 'purpose', 
             'grand_total', 'status', 'created_by', 'created_at', 'updated_at', 
             'items', 'related_documents'
         ]
@@ -29,11 +30,10 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
 
     def get_related_documents(self, obj):
         if obj.ppmp:
-            # Import here to avoid circular dependency
             from . import DocumentSerializer
-            
-            # 1. Get all linked Document model files
-            related_files = list(DocumentSerializer(obj.ppmp.documents.all(), many=True).data)
+            # 1. Get all linked Document model files by matching prNo with parent folder's pr_no
+            from ..models import Document
+            related_files = list(DocumentSerializer(Document.objects.filter(prNo=obj.ppmp.pr_no), many=True).data)
             
             # 2. Get other Purchase Requests in the same folder
             other_prs = obj.ppmp.purchase_requests.exclude(id=obj.id)

@@ -31,46 +31,64 @@ const PR = ({ user }) => {
     const isAdmin = user?.role === ROLES.ADMIN;
     const isMember = user?.role === ROLES.MEMBER;
     const isSecretariat = user?.role === ROLES.SECRETARIAT;
-    const canAssignPR = isAdmin || isMember || isSecretariat;
     const isEndUser = user?.role === ROLES.END_USER;
+    const canAssignPR = isMember || isAdmin || isSecretariat;
 
     const loadPRWithRelatedDocs = async (item) => {
-        let relatedDocuments = [];
+        // Start with the exact documents linked to this specific ProcurementFolder
+        const folderDocs = Array.isArray(item.related_documents) ? [...item.related_documents] : [];
+        let inheritedDocs = [];
 
         try {
+            // Fetch globally by PPMP No to find inherited APP and PPMP ONLY
             if (item.ppmp_no) {
-                relatedDocuments = await documentService.getAll({ ppmp_no: item.ppmp_no });
-            } else if (item.pr_no) {
-                relatedDocuments = await documentService.getAll({ prNo: item.pr_no });
+                const globalDocs = await documentService.getAll({ ppmp_no: item.ppmp_no });
+                inheritedDocs = globalDocs.filter(d => 
+                    d.subDoc === 'Annual Procurement Plan' || 
+                    d.subDoc === 'Project Procurement Management Plan' ||
+                    d.subDoc === 'Supplemental PPMP' ||
+                    d.subDoc === 'APP' ||
+                    d.subDoc === 'PPMP'
+                );
             }
         } catch (err) {
-            console.error('Failed to load related PR documents:', err);
+            console.error('Failed to load inherited PR documents:', err);
         }
 
-        const hasSelf = relatedDocuments.some(doc => doc.id === item.id);
+        // Combine carefully, avoiding duplicates
+        const allDocs = [...folderDocs];
+        const existingIds = new Set(allDocs.map(d => d.id));
+        
+        for (const doc of inheritedDocs) {
+            if (!existingIds.has(doc.id)) {
+                allDocs.push(doc);
+                existingIds.add(doc.id);
+            }
+        }
+
+        // Ensure the PR itself is in the list for the preview
+        const hasSelf = allDocs.some(doc => doc.id === item.id);
+        if (!hasSelf) {
+            allDocs.unshift(item);
+        }
+
         return {
             ...item,
-            related_documents: hasSelf ? relatedDocuments : [item, ...relatedDocuments]
+            related_documents: allDocs
         };
     };
 
     const handleView = async (item) => {
+        setLoading(true);
         try {
-            const prData = {
-                items: item.items || [],
-                total: item.grand_total,
-                ppmp_no: item.ppmp_no,
-                prNo: item.pr_no,
-                purpose: item.purpose,
-                office: item.end_user_office || item.ppmp_title || ''
-            };
-            const blob = await generatePR_PDFBlob(prData);
-            const url = URL.createObjectURL(blob);
-            openPreviewTab(url, `Purchase Request ${item.pr_no || item.ppmp_no}`);
+            const docWithRelated = await loadPRWithRelatedDocs(item);
+            setSelectedDoc(docWithRelated);
         } catch (err) {
-            console.error('Failed to open PR preview:', err);
-            // Fallback: Open modal if preview fails
+            console.error('Failed to load PR details:', err);
+            // Fallback: Open modal with what we have if related docs fail
             setSelectedDoc(item);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -92,7 +110,8 @@ const PR = ({ user }) => {
                 ppmp_no: item.ppmp_no,
                 prNo: item.pr_no,
                 purpose: item.purpose,
-                office: item.end_user_office || item.ppmp_title || ''
+                office: item.end_user_office || item.ppmp_title || '',
+                date: item.created_at
             };
             generatePR_PDF(prData);
         } catch (err) {

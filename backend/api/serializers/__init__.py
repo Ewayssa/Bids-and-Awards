@@ -1,6 +1,4 @@
 import re
-import json
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.utils import timezone
 from rest_framework import serializers
@@ -91,10 +89,6 @@ class DocumentSerializer(serializers.ModelSerializer):
     updated_at = serializers.DateTimeField(read_only=True)
     missing_count = serializers.SerializerMethodField()
     date = serializers.DateField(required=False, allow_null=True, input_formats=['%m-%d-%y', '%m-%d-%Y', '%m/%d/%y', '%m/%d/%Y', '%Y-%m-%d', 'iso-8601'])
-    date_received = serializers.DateField(required=False, allow_null=True, input_formats=['%m-%d-%y', '%m-%d-%Y', '%m/%d/%y', '%m/%d/%Y', '%Y-%m-%d', 'iso-8601'])
-    notarized_date = serializers.DateField(required=False, allow_null=True, input_formats=['%m-%d-%y', '%m-%d-%Y', '%m/%d/%y', '%m/%d/%Y', '%Y-%m-%d', 'iso-8601'])
-
-    pr_no = serializers.CharField(source='user_pr_no', read_only=True)
 
     def get_status(self, obj):
         return obj.calculate_status()
@@ -105,74 +99,16 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
-            'id', 'prNo', 'title', 'user_pr_no', 'pr_no', 'total_amount', 'source_of_fund', 
-            'ppmp_no', 'year', 'quarter', 'app_no', 'app_type', 'certified_true_copy', 'certified_signed_by', 
-            'market_budget', 'market_period_from', 'market_period_to', 'market_expected_delivery', 
-            'market_service_provider_1', 'market_service_provider_2', 'market_service_provider_3', 
-            'office_division', 'received_by', 'date', 'date_received', 'attendance_members', 
-            'resolution_no', 'winning_bidder', 'resolution_option', 'venue', 'aoq_no', 
-            'abstract_bidders', 'table_rating_service_provider', 'table_rating_address', 
-            'table_rating_factor_value', 'notice_award_service_provider', 
-            'notice_award_authorized_rep', 'notice_award_conforme', 'contract_received_by_coa', 
-            'contract_amount', 'notarized_place', 'notarized_date', 'ntp_service_provider', 
-            'ntp_authorized_rep', 'ntp_received_by', 'oss_service_provider', 
-            'oss_authorized_rep', 'secretary_service_provider', 'secretary_owner_rep', 
-            'pr_items',
-            'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at', 
-            'status', 'po_status', 'file_url', 'missing_count', 'procurement_record'
+            'id', 'prNo', 'user_pr_no', 'ppmp_no', 'year', 'quarter', 'title', 'date',
+            'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at',
+            'status', 'file_url', 'missing_count', 'pr_items',
         )
         extra_kwargs = {
             'file': {'required': False},
             'prNo': {'required': False, 'allow_blank': True},
-            'user_pr_no': {'required': False, 'allow_blank': True},
-            'total_amount': {'required': False, 'allow_null': True},
-            'source_of_fund': {'required': False, 'allow_blank': True},
-            'ppmp_no': {'required': False, 'allow_blank': True},
-            'year': {'required': False, 'allow_blank': True},
-            'quarter': {'required': False, 'allow_blank': True},
-            'app_no': {'required': False, 'allow_blank': True},
-            'app_type': {'required': False, 'allow_blank': True},
-            'certified_true_copy': {'required': False},
-            'certified_signed_by': {'required': False, 'allow_blank': True},
-            'market_budget': {'required': False, 'allow_null': True},
-            'market_period_from': {'required': False, 'allow_blank': True},
-            'market_period_to': {'required': False, 'allow_blank': True},
-            'market_expected_delivery': {'required': False, 'allow_blank': True},
-            'market_service_provider_1': {'required': False, 'allow_blank': True},
-            'market_service_provider_2': {'required': False, 'allow_blank': True},
-            'market_service_provider_3': {'required': False, 'allow_blank': True},
-            'office_division': {'required': False, 'allow_blank': True},
-            'received_by': {'required': False, 'allow_blank': True},
-            'date': {'required': False, 'allow_null': True},
-            'date_received': {'required': False, 'allow_null': True},
-            'attendance_members': {'required': False, 'allow_blank': True},
-            'resolution_no': {'required': False, 'allow_blank': True},
-            'winning_bidder': {'required': False, 'allow_blank': True},
-            'resolution_option': {'required': False, 'allow_blank': True},
-            'venue': {'required': False, 'allow_blank': True},
-            'aoq_no': {'required': False, 'allow_blank': True},
-            'abstract_bidders': {'required': False, 'allow_blank': True},
-            'table_rating_service_provider': {'required': False, 'allow_blank': True},
-            'table_rating_address': {'required': False, 'allow_blank': True},
-            'table_rating_factor_value': {'required': False, 'allow_blank': True},
-            'notice_award_service_provider': {'required': False, 'allow_blank': True},
-            'notice_award_authorized_rep': {'required': False, 'allow_blank': True},
-            'notice_award_conforme': {'required': False, 'allow_blank': True},
-            'contract_received_by_coa': {'required': False},
-            'contract_amount': {'required': False, 'allow_null': True},
-            'notarized_place': {'required': False, 'allow_blank': True},
-            'notarized_date': {'required': False, 'allow_null': True},
-            'ntp_service_provider': {'required': False, 'allow_blank': True},
-            'ntp_authorized_rep': {'required': False, 'allow_blank': True},
-            'ntp_received_by': {'required': False, 'allow_blank': True},
-            'oss_service_provider': {'required': False, 'allow_blank': True},
-            'oss_authorized_rep': {'required': False, 'allow_blank': True},
-            'secretary_service_provider': {'required': False, 'allow_blank': True},
-            'secretary_owner_rep': {'required': False, 'allow_blank': True},
             'category': {'required': False, 'allow_blank': True},
             'subDoc': {'required': False, 'allow_blank': True},
-            'pr_items': {'required': False, 'allow_blank': True},
-            'po_status': {'required': False, 'allow_blank': True},
+            'date': {'required': False, 'allow_null': True},
         }
 
     def validate_category(self, value):
@@ -182,77 +118,6 @@ class DocumentSerializer(serializers.ModelSerializer):
     def validate_subDoc(self, value):
         """Ensure subDoc has a default value if empty"""
         return value or 'N/A'
-
-
-    def validate_contract_received_by_coa(self, value):
-        """Accept form string 'true'/'false' for Yes/No"""
-        if value is None:
-            return False
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.strip().lower() in ('true', '1', 'yes', 'on')
-        return bool(value)
-
-    def validate_contract_amount(self, value):
-        """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
-        if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
-            return None
-        if isinstance(value, str):
-            value = value.replace(',', '').strip()
-            if value == '' or value == '.':
-                return None
-        try:
-            d = Decimal(value) if not isinstance(value, Decimal) else value
-            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        except (InvalidOperation, ValueError, TypeError):
-            return None
-
-    def validate_total_amount(self, value):
-        """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
-        if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
-            return None
-        if isinstance(value, str):
-            value = value.replace(',', '').strip()
-            if value == '' or value == '.':
-                return None
-        try:
-            d = Decimal(value) if not isinstance(value, Decimal) else value
-            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        except (InvalidOperation, ValueError, TypeError):
-            return None
-
-    def validate_pr_items(self, value):
-        """Robustly handle pr_items string input."""
-        if value is None:
-            return ""
-        if isinstance(value, (list, dict)):
-            return json.dumps(value)
-        return str(value)
-
-    def validate_market_budget(self, value):
-        """Allow empty string from form data to become None. Strip commas; round to 2 decimal places."""
-        if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
-            return None
-        if isinstance(value, str):
-            value = value.replace(',', '').strip()
-            if value == '' or value == '.':
-                return None
-        try:
-            d = Decimal(value) if not isinstance(value, Decimal) else value
-            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        except (InvalidOperation, ValueError, TypeError):
-            return None
-
-    def validate_certified_true_copy(self, value):
-        """Accept form string 'true'/'false' for checkbox/radio"""
-        if value is None:
-            return False
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.strip().lower() in ('true', '1', 'yes', 'on')
-        return bool(value)
 
     def validate_prNo(self, value):
         """BAC Folder No.: allow empty (auto-generated on create); allow format YYYY-MM-NNN if provided."""
@@ -275,130 +140,32 @@ class DocumentSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError(f'BAC Folder No. format "{val}" is invalid.')
 
     def create(self, validated_data):
-        try:
-            # Remove status if provided (it will be auto-calculated)
-            validated_data.pop('status', None)
-            
-            ppmp_no = validated_data.get('ppmp_no', '').strip()
-            pr_no = validated_data.get('prNo', '').strip()
+        # Remove status if provided (it will be auto-calculated)
+        validated_data.pop('status', None)
+
+        # Auto-assign prNo if not provided
+        if not validated_data.get('prNo', '').strip():
             doc_date = validated_data.get('date')
+            validated_data['prNo'] = get_next_transaction_number(date=doc_date)
 
-            # 1. Logic for grouping by PPMP No.
-            if ppmp_no:
-                # Try to find an existing folder for this PPMP No and PR No combination
-                # If pr_no is not provided, it will fallback to the first record for that PPMP No.
-                query = ProcurementRecord.objects.filter(ppmp_no=ppmp_no)
-                if pr_no:
-                    record = query.filter(pr_no=pr_no).first()
-                else:
-                    # If this is a Purchase Request, we want a NEW folder (assigned a new PR No)
-                    # For shared planning docs like APP/PPMP, we can still fallback to the first record.
-                    is_planning_doc = any(term in (validated_data.get('subDoc') or '').lower() 
-                                         for term in ['annual procurement plan', 'ppmp'])
-                    
-                    if is_planning_doc:
-                        record = query.first()
-                    else:
-                        record = None
-
-                if record:
-                    # Use existing folder's number and link
-                    validated_data['prNo'] = record.pr_no
-                    validated_data['procurement_record'] = record
-                    
-                    # If inheritance is needed
-                    if not validated_data.get('year') and record.year:
-                        validated_data['year'] = record.year
-                    if not validated_data.get('quarter') and record.quarter:
-                        validated_data['quarter'] = record.quarter
-                else:
-                    # Create a NEW folder for this PPMP No.
-                    if not pr_no:
-                        pr_no = get_next_transaction_number(date=doc_date)
-                    
-                    # Check for existing folder with same pr_no string (non-unique now)
-                    # but we want to create a NEW record for this NEW ppmp_no
-                    record = ProcurementRecord.objects.create(
-                        pr_no=pr_no,
-                        ppmp_no=ppmp_no,
-                        year=validated_data.get('year', ''),
-                        quarter=validated_data.get('quarter', ''),
-                        title=validated_data.get('title', f'Procurement for {ppmp_no}'),
-                        created_by=validated_data.get('uploadedBy', 'System')
-                    )
-                    validated_data['prNo'] = pr_no
-                    validated_data['procurement_record'] = record
-            
-            # 2. Fallback for documents without PPMP No.
-            if not validated_data.get('procurement_record'):
-                if not pr_no:
-                    pr_no = get_next_transaction_number(date=doc_date)
-                
-                # Find or create record by pr_no if no PPMP grouping
-                # ... (rest of legacy logic handled by model defaults or super().create)
-            
-            return super().create(validated_data)
-        except Exception as e:
-            import traceback
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error in DocumentSerializer.create: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise serializers.ValidationError({"error": str(e)})
-            # (Note: pr_no is no longer unique, so we'll look for or create)
-            record = ProcurementRecord.objects.filter(pr_no=pr_no, ppmp_no='').first()
-            if not record:
-                record = ProcurementRecord.objects.create(
-                    pr_no=pr_no,
-                    year=validated_data.get('year', ''),
-                    quarter=validated_data.get('quarter', ''),
-                    title=validated_data.get('title', 'General Procurement'),
-                    created_by=validated_data.get('uploadedBy', 'System')
-                )
-            
-            # Inheritance for non-PPMP grouping
-            if not validated_data.get('year') and record.year:
-                validated_data['year'] = record.year
-            if not validated_data.get('quarter') and record.quarter:
-                validated_data['quarter'] = record.quarter
-            validated_data['prNo'] = pr_no
-            validated_data['procurement_record'] = record
-
-        instance = super().create(validated_data)
-        # Status is automatically set in model's save() method and signal
-        instance.refresh_from_db()
-        return instance
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         # Never allow changing the original uploader through updates.
         validated_data.pop('uploadedBy', None)
         # BAC Folder No. (prNo) is set on create only; do not allow changing it.
         validated_data.pop('prNo', None)
-
-        if instance.user_pr_no and 'user_pr_no' in validated_data:
-            incoming_pr_no = str(validated_data.get('user_pr_no') or '').strip()
-            current_pr_no = str(instance.user_pr_no or '').strip()
-            if incoming_pr_no != current_pr_no:
-                raise serializers.ValidationError({
-                    'user_pr_no': 'PR No. is already assigned and cannot be updated.'
-                })
-
         # Don't clear file if not provided in update
         if 'file' not in validated_data or validated_data.get('file') is None:
             validated_data.pop('file', None)
         # Remove status if provided (it will be auto-calculated)
         validated_data.pop('status', None)
-        
-        # Update fields manually to ensure save() is called
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        
-        # Save will trigger status recalculation via model's save() method
+
         instance.save()
-        
-        # Refresh from database to get updated status (after signal processes it)
         instance.refresh_from_db()
-        
         return instance
 
     def get_file_url(self, obj):
@@ -452,7 +219,7 @@ class CalendarEventSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ('id', 'message', 'created_at', 'read', 'link', 'admin_only')
+        fields = ('id', 'message', 'created_at', 'read', 'link', 'recipient_role', 'recipient', 'admin_only')
 
 
 class AuditLogSerializer(serializers.ModelSerializer):

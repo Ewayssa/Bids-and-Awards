@@ -220,7 +220,7 @@ const DocViewModal = ({
                 prNo: getNormalizedPrNo(activePreviewDoc),
                 title: getNormalizedTitle(activePreviewDoc),
                 office: activePreviewDoc.end_user_office || '',
-                date: activePreviewDoc.date || activePreviewDoc.uploaded_at
+                date: activePreviewDoc.created_at || activePreviewDoc.date || activePreviewDoc.uploaded_at
             });
 
             if (cancelled) return;

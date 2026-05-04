@@ -38,30 +38,31 @@ class DashboardService:
     @staticmethod
     def get_folder_stats():
         """
-        Count dashboard progress by procurement folder/PPMP group, not by document row.
-        A folder is completed when every document currently in that folder has a file,
+        Count dashboard progress by procurement folder (ProcurementRecord).
+        A folder is completed when every document in that folder has a file,
         with Purchase Request counted as the system-generated file.
+        Documents are matched to folders by prNo.
         """
-        seen_document_ids = set()
         total = 0
         complete = 0
         ongoing = 0
 
-        for record in ProcurementRecord.objects.prefetch_related('documents').all():
-            docs = list(record.documents.all())
+        for record in ProcurementRecord.objects.all():
+            docs = list(Document.objects.filter(prNo=record.pr_no))
             if not docs:
                 continue
             total += 1
-            seen_document_ids.update(doc.id for doc in docs)
             if DashboardService._folder_is_completed(docs):
                 complete += 1
             else:
                 ongoing += 1
 
-        orphan_docs = Document.objects.filter(procurement_record__isnull=True).exclude(id__in=seen_document_ids)
+        # Also count orphan documents not linked to any ProcurementRecord
+        linked_pr_nos = set(ProcurementRecord.objects.values_list('pr_no', flat=True))
+        orphan_docs = Document.objects.exclude(prNo__in=linked_pr_nos)
         groups = {}
         for doc in orphan_docs:
-            key = (doc.ppmp_no or doc.prNo or str(doc.id)).strip()
+            key = (doc.prNo or str(doc.id)).strip()
             groups.setdefault(key, []).append(doc)
 
         for docs in groups.values():
@@ -94,12 +95,12 @@ class DashboardService:
         for record in records:
             p_type = record.procurement_type or 'small_value'
             required_docs = DashboardService.REQUIREMENTS_MAPPING.get(p_type, DashboardService.DEFAULT_REQUIREMENTS)
-            
-            # Use subDoc as the key for matching
-            uploaded_docs = set(Document.objects.filter(procurement_record=record).values_list('subDoc', flat=True))
-            
+
+            # Match documents by prNo
+            uploaded_docs = set(Document.objects.filter(prNo=record.pr_no).values_list('subDoc', flat=True))
+
             missing_docs = [doc for doc in required_docs if doc not in uploaded_docs]
-            
+
             if missing_docs:
                 breakdown.append({
                     'prNo': record.pr_no,
@@ -107,7 +108,7 @@ class DashboardService:
                     'missingCount': len(missing_docs),
                     'missingSubDocs': missing_docs
                 })
-        
+
         return breakdown
 
     @staticmethod

@@ -24,6 +24,7 @@ from ..permissions import (
     is_bac_secretariat,
     is_bac_chair,
     is_bac_member,
+    is_end_user,
 )
 from ..serializers import (
     UserSerializer,
@@ -47,8 +48,19 @@ from ..utils.document_helpers import get_next_transaction_number
 
 # --- Helper Functions ---
 
-def _create_notification(message, link='/procurement', admin_only=False):
-    Notification.objects.create(message=message, link=link, admin_only=admin_only)
+def _create_notification(message, link='/procurement', recipient_role=None, recipient=None, admin_only=False):
+    """
+    Create an in-system notification.
+    If recipient_role is set, all users with that role will see it.
+    If recipient is set, only that specific user will see it.
+    """
+    Notification.objects.create(
+        message=message, 
+        link=link, 
+        recipient_role=recipient_role, 
+        recipient=recipient,
+        admin_only=admin_only
+    )
 
 def _inline_file_response(file_field):
     """
@@ -262,6 +274,13 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         record = serializer.save()
         _log_audit('procurement_record_created', request.user.username, 'procurement_record', str(record.id), f'{record.pr_no} - {record.title}')
+        
+        # Notify BAC Secretariat/Admin about new Procurement Folder (PR)
+        _create_notification(
+            f"New Procurement Folder created: {record.pr_no} - {record.title}",
+            link='/procurement',
+            recipient_role='bac_secretariat'
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_update(self, serializer):
@@ -271,8 +290,8 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def documents(self, request, pk=None):
         record = self.get_object()
-        docs = record.documents.all()
-        
+        docs = Document.objects.filter(prNo=record.pr_no)
+
         stage = request.query_params.get('stage', '').strip()
         if stage:
             stage_config = {
@@ -291,7 +310,7 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
                 for cat in categories:
                     q |= Q(category__icontains=cat)
                 docs = docs.filter(q)
-        
+
         return Response(DocumentSerializer(docs, many=True).data)
 
     @action(detail=True, methods=['post'])
@@ -350,38 +369,21 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Document.objects.all().order_by('-uploaded_at')
-        
+
         category = self.request.query_params.get('category', '').strip()
         if category:
             queryset = queryset.filter(category__icontains=category)
-            
+
         sub_doc = self.request.query_params.get('subDoc', '').strip()
         if sub_doc:
             queryset = queryset.filter(subDoc__icontains=sub_doc)
-            
-        ppmp_no = self.request.query_params.get('ppmp_no', '').strip()
-        if ppmp_no:
-            queryset = queryset.filter(ppmp_no=ppmp_no)
-            
+
         pr_no = self.request.query_params.get('prNo', '').strip()
         if pr_no:
             queryset = queryset.filter(prNo=pr_no)
         return queryset
 
     def create(self, request, *args, **kwargs):
-        subDoc = request.data.get('subDoc', '').strip()
-        ppmp_no = request.data.get('ppmp_no', '').strip()
-        user_pr_no = request.data.get('user_pr_no', '').strip()
-
-        if 'Project Procurement Management Plan' in subDoc and ppmp_no:
-            if Document.objects.filter(subDoc=subDoc, ppmp_no=ppmp_no).exists():
-                return Response({'error': f'A PPMP with No. "{ppmp_no}" already exists.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if subDoc == 'Purchase Request' and user_pr_no:
-            if Document.objects.filter(subDoc=subDoc, user_pr_no=user_pr_no).exists() or \
-               ProcurementRecord.objects.filter(user_pr_no=user_pr_no).exists():
-                return Response({'error': f'PR No. "{user_pr_no}" is already used by another record.'}, status=status.HTTP_400_BAD_REQUEST)
-
         return super().create(request, *args, **kwargs)
 
     def get_permissions(self):
@@ -430,47 +432,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if not serializer.validated_data.get('uploadedBy'):
             serializer.validated_data['uploadedBy'] = self.request.user.fullName or self.request.user.username
-        
+
         doc = serializer.save()
-        ppmp_no = doc.ppmp_no
-        if ppmp_no:
-            from django.db import transaction
-            with transaction.atomic():
-                record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
-                if not record:
-                    pr_no = get_next_transaction_number()
-                    record = ProcurementRecord.objects.create(
-                        pr_no=pr_no,
-                        ppmp_no=ppmp_no,
-                        title=doc.title,
-                        year=doc.year,
-                        quarter=doc.quarter,
-                        total_amount=getattr(doc, 'total_amount', None),
-                        source_of_fund=getattr(doc, 'source_of_fund', ''),
-                        created_by=doc.uploadedBy
-                    )
-                    _log_audit('procurement_record_auto_created', doc.uploadedBy, 'procurement_record', str(record.id), f'Auto-created folder {record.pr_no} via {doc.subDoc} {ppmp_no}')
-                
-                doc.procurement_record = record
-                doc.prNo = record.pr_no
-                if doc.user_pr_no and not record.user_pr_no:
-                    record.user_pr_no = doc.user_pr_no
-                    record.save(update_fields=['user_pr_no'])
-                
-                doc.save(update_fields=['procurement_record', 'prNo'])
-                
-                Document.objects.filter(
-                    ppmp_no=ppmp_no, 
-                    procurement_record__isnull=True
-                ).update(procurement_record=record, prNo=record.pr_no)
-
-                sync_procurement_completion(record)
-
         title = (doc.title or doc.prNo or 'Document')[:80]
         _log_audit('document_created', doc.uploadedBy or 'Unknown', 'document', str(doc.id), title)
-        _create_notification(f'New BAC document submitted: {title}', admin_only=False)
-        if doc.procurement_record:
-            sync_procurement_completion(doc.procurement_record)
+
+        if 'Project Procurement Management Plan' in doc.subDoc:
+            _create_notification(f'New PPMP submitted: {title}', link='/encode', recipient_role='bac_secretariat')
+        elif 'Annual Procurement Plan' in doc.subDoc:
+            _create_notification(f'New APP submitted: {title}', link='/encode', recipient_role='bac_secretariat')
+        else:
+            _create_notification(f'New BAC document submitted: {title}', recipient_role='bac_secretariat')
+
+        # Sync procurement folder status if a folder exists for this prNo
+        if doc.prNo:
+            record = ProcurementRecord.objects.filter(pr_no=doc.prNo).first()
+            if record:
+                sync_procurement_completion(record)
 
     def perform_update(self, serializer):
         from ..utils.document_status import DocumentStatusCalculator
@@ -480,76 +458,55 @@ class DocumentViewSet(viewsets.ModelViewSet):
         title = (doc.title or doc.prNo or 'Document')[:80]
         actor = self.request.user.username
         _log_audit('document_updated', actor, 'document', str(doc.id), title)
-        _create_notification(f'BAC document updated: {title}', admin_only=True)
+        _create_notification(f'BAC document updated: {title}', recipient_role='bac_secretariat')
         if doc.status == 'complete' and old_status != 'complete':
             _log_audit('document_completed', actor, 'document', str(doc.id), title)
             _create_notification(f'BAC document completed: {title}', admin_only=True)
 
-        if doc.procurement_record:
-            sync_procurement_completion(doc.procurement_record)
+        # Sync procurement folder status if a folder exists for this prNo
+        if doc.prNo:
+            record = ProcurementRecord.objects.filter(pr_no=doc.prNo).first()
+            if record:
+                sync_procurement_completion(record)
 
     @action(detail=True, methods=['post'])
     def assign_pr_no(self, request, pk=None):
+        """Assign an official PR number to the procurement record linked by this document's prNo."""
         doc = self.get_object()
-        if not is_bac_member(request.user):
-             return Response({'error': 'Only BAC Members are authorized to assign PR numbers.'}, status=status.HTTP_403_FORBIDDEN)
+        if not (is_bac_member(request.user) or is_end_user(request.user) or getattr(request.user, 'role', '') in ['admin', 'bac_secretariat']):
+            return Response({'error': 'You are not authorized to assign PR numbers.'}, status=status.HTTP_403_FORBIDDEN)
+
         user_pr_no = request.data.get('user_pr_no', '').strip()
         if not user_pr_no:
             return Response({'error': 'PR Number is required'}, status=status.HTTP_400_BAD_REQUEST)
-        if doc.user_pr_no:
-            return Response({'error': 'PR No. is already assigned and cannot be updated.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        existing_record = doc.procurement_record
-        if not existing_record and doc.ppmp_no:
-            existing_record = ProcurementRecord.objects.filter(ppmp_no=doc.ppmp_no).first()
-
-        if existing_record and existing_record.user_pr_no:
-            return Response({'error': 'PR No. is already assigned to this procurement record and cannot be updated.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        if ProcurementRecord.objects.filter(user_pr_no=user_pr_no).exists() or \
-           Document.objects.filter(user_pr_no=user_pr_no).exclude(id=doc.id).exists():
+        if ProcurementRecord.objects.filter(user_pr_no=user_pr_no).exists():
             return Response({'error': f'PR No. "{user_pr_no}" already exists.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        from django.db import transaction
-        with transaction.atomic():
-            doc.user_pr_no = user_pr_no
-            doc.save(update_fields=['user_pr_no'])
-            ppmp_no = doc.ppmp_no
-            record = None
-            if ppmp_no:
-                record = ProcurementRecord.objects.filter(ppmp_no=ppmp_no).first()
-            if not record:
-                pr_no = get_next_transaction_number()
-                record = ProcurementRecord.objects.create(
-                    pr_no=pr_no,
-                    ppmp_no=ppmp_no,
-                    title=doc.title,
-                    user_pr_no=user_pr_no,
-                    year=doc.year,
-                    quarter=doc.quarter,
-                    total_amount=doc.total_amount,
-                    source_of_fund=doc.source_of_fund,
-                    created_by=request.user.fullName or request.user.username
-                )
-            else:
-                if not record.user_pr_no:
-                    record.user_pr_no = user_pr_no
-                    record.save(update_fields=['user_pr_no'])
 
-            if ppmp_no:
-                Document.objects.filter(
-                    ppmp_no=ppmp_no, 
-                    procurement_record__isnull=True
-                ).update(procurement_record=record, prNo=record.pr_no)
-            
-            if doc.procurement_record != record:
-                 doc.procurement_record = record
-                 doc.prNo = record.pr_no
-                 doc.save(update_fields=['procurement_record', 'prNo'])
-            if record:
-                from ..utils.workflow_logic import check_folder_readiness
-                check_folder_readiness(record)
-                sync_procurement_completion(record)
+        # Find the procurement record linked by prNo
+        record = ProcurementRecord.objects.filter(pr_no=doc.prNo).first() if doc.prNo else None
+        if record and record.user_pr_no:
+            return Response({'error': 'PR No. is already assigned to this procurement record and cannot be updated.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if record:
+            record.user_pr_no = user_pr_no
+            record.save(update_fields=['user_pr_no'])
+            from ..utils.workflow_logic import check_folder_readiness
+            check_folder_readiness(record)
+            sync_procurement_completion(record)
+
+        # Notify the end user (uploader) about the PR assignment
+        uploader_name = doc.uploadedBy
+        if uploader_name:
+            from ..models import User
+            uploader = User.objects.filter(username=uploader_name).first() or \
+                       User.objects.filter(fullName=uploader_name).first()
+            if uploader:
+                _create_notification(
+                    f"Official PR No. '{user_pr_no}' has been assigned to your request: {doc.title or doc.subDoc}",
+                    link='/my-documents',
+                    recipient=uploader
+                )
 
         return Response(DocumentSerializer(doc).data)
 
@@ -566,10 +523,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         doc_id, title = str(instance.id), (instance.title or instance.prNo or 'Document')[:80]
         actor = self.request.user.username
-        record = instance.procurement_record
+        pr_no = instance.prNo
         super().perform_destroy(instance)
-        if record:
-            sync_procurement_completion(record)
+        if pr_no:
+            record = ProcurementRecord.objects.filter(pr_no=pr_no).first()
+            if record:
+                sync_procurement_completion(record)
         _log_audit('document_deleted', actor, 'document', doc_id, title)
 
 class ReportViewSet(viewsets.ModelViewSet):
@@ -605,7 +564,12 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
         _create_notification(
             f'BAC activity scheduled: {title_short} — {date_str}',
             link='/',
-            admin_only=True,
+            recipient_role='bac_secretariat',
+        )
+        _create_notification(
+            f'BAC activity scheduled: {title_short} — {date_str}',
+            link='/',
+            recipient_role='bac_member',
         )
         try:
             EmailNotificationService.send_calendar_event_notification(event)
@@ -625,7 +589,12 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         for e in events:
             title_short = (e.title or 'Activity')[:200]
             msg = f'Incoming BAC activity: {title_short} — {reminder_date_str}'
-            if not Notification.objects.filter(message=msg, admin_only=False).exists():
+            if not Notification.objects.filter(message=msg, recipient_role='bac_secretariat').exists():
+                _create_notification(msg, link='/', recipient_role='bac_secretariat')
+            if not Notification.objects.filter(message=msg, recipient_role='bac_member').exists():
+                _create_notification(msg, link='/', recipient_role='bac_member')
+            # Standard notification for others (non-admin)
+            if not Notification.objects.filter(message=msg, recipient_role__isnull=True, recipient__isnull=True, admin_only=False).exists():
                 _create_notification(msg, link='/', admin_only=False)
             if not e.reminder_sent:
                 try:
@@ -637,16 +606,30 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
                     logging.getLogger(__name__).error(f'Opportunistic email reminder failed for "{e.title}": {err}')
 
     def get_queryset(self):
-        qs = Notification.objects.all().order_by('-created_at')
         user = self.request.user
         if not user.is_authenticated:
             return Notification.objects.none()
+
+        self._ensure_upcoming_calendar_notifications()
+        
+        from django.db.models import Q
+        # 1. Notifications targeted to the user's specific role
+        # 2. Notifications targeted specifically to this user
+        # 3. Global notifications (no role, no recipient)
+        # 4. (Legacy) admin_only notifications for privileged users
         
         is_privileged = is_bac_secretariat(user) or is_bac_member(user)
-        if not is_privileged:
-            self._ensure_upcoming_calendar_notifications()
-            qs = qs.filter(admin_only=False)
-        return qs
+        
+        query = Q(recipient=user) | Q(recipient_role=user.role)
+        
+        # Add global notifications
+        query |= Q(recipient__isnull=True, recipient_role__isnull=True, admin_only=False)
+        
+        # Add legacy admin_only for privileged users
+        if is_privileged:
+            query |= Q(admin_only=True)
+            
+        return Notification.objects.filter(query).distinct().order_by('-created_at')
 
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
@@ -705,9 +688,9 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         if 'pr_no' in self.request.data:
             user = self.request.user
-            if not is_bac_member(user):
+            if not (is_bac_member(user) or getattr(user, 'role', '') in ['admin', 'bac_secretariat']):
                 from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("Only BAC Members are authorized to assign PR numbers.")
+                raise PermissionDenied("You are not authorized to assign PR numbers.")
         pr = serializer.save()
         _log_audit('purchase_request_updated', self.request.user.username, 'purchase_request', str(pr.id), f'Updated PR {pr.pr_no}')
 
@@ -723,7 +706,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
             pr.status = 'po_generated'
             pr.save(update_fields=['status'])
         _log_audit('purchase_order_generated', self.request.user.username, 'purchase_order', str(po.id), f'PO {po.po_no}')
-        _create_notification(f'New Purchase Order generated: {po.po_no}', admin_only=True)
+        _create_notification(f'New Purchase Order generated: {po.po_no}', recipient_role='bac_secretariat')
 
     @action(detail=False, methods=['get'])
     def next_sequence(self, request):

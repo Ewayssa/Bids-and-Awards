@@ -141,16 +141,7 @@ const Encode = ({ user }) => {
         setActiveModal('view');
     };
 
-    // Group documents by PPMP No for the Folder view
-    const ppmpGroups = useMemo(() => {
-        const groups = {};
-        documents.forEach(doc => {
-            const ppmp = (doc.ppmp_no || 'Unassigned').trim();
-            if (!groups[ppmp]) groups[ppmp] = [];
-            groups[ppmp].push(doc);
-        });
-        return groups;
-    }, [documents]);
+
 
     const openWorkflow = (prNo) => {
         // Find the procurement record in our dedicated projects list
@@ -180,13 +171,7 @@ const Encode = ({ user }) => {
     };
 
     const handleOpenPPMPFolder = (ppmpNo) => {
-        setSelectedPPMP(ppmpNo);
-        setSelectedPPMPDocs(ppmpGroups[ppmpNo] || []);
-        // Find if there's a matching procurement record for this PPMP
-        // If multiple exist, we just take the first one or link to a general view
-        const matchingRecord = procurementRecords.find(r => r.ppmp_no === ppmpNo);
-        setSelectedProcurementRecord(matchingRecord);
-        setActiveModal('ppmpFolder');
+        // This is now handled inline in the onClick handler
     };
 
 
@@ -215,7 +200,7 @@ const Encode = ({ user }) => {
                             </div>
                         </div>
                         <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">
-                            <span className="text-xs font-black text-[var(--primary)]">{Object.keys(ppmpGroups).length}</span>
+                            <span className="text-xs font-black text-[var(--primary)]">{procurementRecords.length}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Folders</span>
                         </div>
                     </div>
@@ -234,27 +219,41 @@ const Encode = ({ user }) => {
                                 <p className="text-xs text-red-400 mt-2 uppercase tracking-widest font-black">{error}</p>
                                 <button onClick={load} className="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Retry</button>
                             </div>
-                        ) : Object.keys(ppmpGroups).length > 0 ? (
-                            Object.keys(ppmpGroups).sort((a, b) => {
-                                // Sort by latest document's upload time (LIFO)
-                                const latestA = Math.max(...ppmpGroups[a].map(d => new Date(d.uploaded_at).getTime()));
-                                const latestB = Math.max(...ppmpGroups[b].map(d => new Date(d.uploaded_at).getTime()));
-                                return latestB - latestA;
-                            }).map((ppmpNo) => {
-                                const docs = ppmpGroups[ppmpNo];
-                                const prNo = docs.find(d => d.prNo && d.prNo !== 'Unassigned')?.prNo || 'Pending';
-                                const displayPRNo = docs.find(d => d.user_pr_no)?.user_pr_no || prNo;
+                        ) : procurementRecords.length > 0 ? (
+                            procurementRecords.map((record) => {
+                                const ppmpNo = record.ppmp_no || 'Unassigned';
                                 
-                                // Find the matching procurement record to get the official title/purpose
-                                const record = procurementRecords.find(r => (r.ppmp_no || '').trim() === ppmpNo.trim());
-                                const prDoc = docs.find(d => d.subDoc === 'Purchase Request');
-                                const purpose = prDoc?.title || record?.title || docs.find(d => d.title && !d.title.toLowerCase().includes('ppmp'))?.title || 'General Procurement';
-                                const displayPR = record?.user_pr_no || record?.pr_no || docs.find(d => d.user_pr_no)?.user_pr_no || prNo;
+                                // Get documents specifically tied to this ProcurementRecord
+                                const recordDocs = record.documents || [];
+                                
+                                // Find globally inherited APP and PPMP documents for this PPMP No
+                                const inheritedDocs = documents.filter(d => 
+                                    (d.ppmp_no || '').trim() === ppmpNo.trim() && 
+                                    ['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].includes(d.subDoc)
+                                );
+                                
+                                // Combine, avoiding duplicates
+                                const docs = [...recordDocs];
+                                const existingIds = new Set(docs.map(d => d.id));
+                                for (const doc of inheritedDocs) {
+                                    if (!existingIds.has(doc.id)) {
+                                        docs.push(doc);
+                                        existingIds.add(doc.id);
+                                    }
+                                }
+
+                                const purpose = record.title || 'General Procurement';
+                                const displayPR = record.user_pr_no || record.pr_no || 'Pending';
 
                                 return (
                                     <div 
-                                        key={ppmpNo}
-                                        onClick={() => handleOpenPPMPFolder(ppmpNo)}
+                                        key={record.id}
+                                        onClick={() => {
+                                            setSelectedPPMP(ppmpNo);
+                                            setSelectedPPMPDocs(docs);
+                                            setSelectedProcurementRecord(record);
+                                            setActiveModal('ppmpFolder');
+                                        }}
                                         className="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl p-4 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-xl hover:shadow-[var(--primary)]/10 flex flex-col gap-2 relative overflow-hidden self-start"
                                     >
                                         <div className="absolute top-0 right-0 w-28 h-28 bg-[var(--primary)]/5 rounded-full -mr-14 -mt-14 group-hover:scale-150 transition-transform duration-700" />
