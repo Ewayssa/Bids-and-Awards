@@ -68,7 +68,7 @@ const APP = ({ user }) => {
                 title="Annual Procurement Plan"
                 subtitle="Manage and track APP records."
             >
-                {user?.role !== ROLES.VIEWER && (
+                {[ROLES.ADMIN, ROLES.SECRETARIAT].includes(user?.role) && (
                     <button 
                         type="button" 
                         onClick={() => setShowUploadModal(true)} 

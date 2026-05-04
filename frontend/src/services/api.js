@@ -36,6 +36,12 @@ export const getUploadedFilename = (record, fallback = 'File Preview') => {
 };
 
 export const openPreviewTab = (previewUrl, title = 'File Preview') => {
+    // If it's an internal React route, open it directly without iframe wrapper
+    if (previewUrl.startsWith('/') && !previewUrl.startsWith('//')) {
+        window.open(previewUrl, '_blank');
+        return;
+    }
+
     const previewWindow = window.open('', '_blank');
     if (!previewWindow) {
         window.open(previewUrl, '_blank', 'noopener');

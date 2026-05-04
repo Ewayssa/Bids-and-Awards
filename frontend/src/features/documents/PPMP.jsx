@@ -66,7 +66,7 @@ const PPMP = ({ user }) => {
                 title="Project Procurement Management Plan"
                 subtitle="Manage and track PPMP records."
             >
-                {user?.role !== ROLES.VIEWER && (
+                {[ROLES.ADMIN, ROLES.SECRETARIAT].includes(user?.role) && (
                     <button 
                         type="button" 
                         onClick={() => setShowUploadModal(true)} 

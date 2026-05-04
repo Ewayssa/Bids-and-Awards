@@ -64,7 +64,9 @@ class CanUploadDocuments(permissions.BasePermission):
         if not user or not user.is_authenticated:
             return False
         role = (getattr(user, 'role', None) or '').strip().lower()
-        return role in ['bac_secretariat', 'bac_chair', 'bac_member']
+        # BAC Members are explicitly restricted from uploading. 
+        # They can only view/download and assign PR numbers.
+        return role in ['bac_secretariat', 'bac_chair', 'end_user', 'admin']
 
 
 class CanEditProcurementRecords(permissions.BasePermission):

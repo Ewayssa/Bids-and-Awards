@@ -88,7 +88,11 @@ class DocumentSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     updated_at = serializers.DateTimeField(read_only=True)
     missing_count = serializers.SerializerMethodField()
+    procurement_record = serializers.SerializerMethodField()
     date = serializers.DateField(required=False, allow_null=True, input_formats=['%m-%d-%y', '%m-%d-%Y', '%m/%d/%y', '%m/%d/%Y', '%Y-%m-%d', 'iso-8601'])
+    ppmp_no = serializers.CharField(required=False, allow_blank=True)
+    year = serializers.CharField(required=False, allow_blank=True)
+    quarter = serializers.CharField(required=False, allow_blank=True)
 
     def get_status(self, obj):
         return obj.calculate_status()
@@ -96,12 +100,34 @@ class DocumentSerializer(serializers.ModelSerializer):
     def get_missing_count(self, obj):
         return get_document_missing_count(obj)
 
+    def get_procurement_record(self, obj):
+        from ..models import ProcurementRecord
+        record = ProcurementRecord.objects.filter(pr_no=obj.prNo).first()
+        return str(record.id) if record else None
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Prioritize document's own fields, fallback to folder metadata
+        ret['ppmp_no'] = instance.ppmp_no or ''
+        ret['year'] = instance.year or ''
+        ret['quarter'] = instance.quarter or ''
+        
+        if not ret['ppmp_no']:
+            from ..models import ProcurementRecord
+            record = ProcurementRecord.objects.filter(pr_no=instance.prNo).first()
+            if record:
+                ret['ppmp_no'] = record.ppmp_no
+                ret['year'] = record.year
+                ret['quarter'] = record.quarter
+        return ret
+
     class Meta:
         model = Document
         fields = (
-            'id', 'prNo', 'user_pr_no', 'ppmp_no', 'year', 'quarter', 'title', 'date',
+            'id', 'prNo', 'title', 'date',
             'uploadedBy', 'category', 'subDoc', 'file', 'uploaded_at', 'updated_at',
-            'status', 'file_url', 'missing_count', 'pr_items',
+            'status', 'file_url', 'missing_count', 'procurement_record',
+            'ppmp_no', 'year', 'quarter'
         )
         extra_kwargs = {
             'file': {'required': False},
@@ -143,10 +169,47 @@ class DocumentSerializer(serializers.ModelSerializer):
         # Remove status if provided (it will be auto-calculated)
         validated_data.pop('status', None)
 
+        # Get fields for ProcurementRecord, but keep them in validated_data for Document
+        ppmp_no = validated_data.get('ppmp_no', '')
+        year = validated_data.get('year', '')
+        quarter = validated_data.get('quarter', '')
+
         # Auto-assign prNo if not provided
         if not validated_data.get('prNo', '').strip():
             doc_date = validated_data.get('date')
             validated_data['prNo'] = get_next_transaction_number(date=doc_date)
+
+        # Ensure a ProcurementRecord (folder) exists for this prNo
+        pr_no = validated_data.get('prNo')
+        if pr_no:
+            from ..models import ProcurementRecord
+            record, created = ProcurementRecord.objects.get_or_create(
+                pr_no=pr_no,
+                defaults={
+                    'ppmp_no': ppmp_no,
+                    'title': validated_data.get('title', 'New Folder'),
+                    'year': year,
+                    'quarter': quarter,
+                    'created_by': validated_data.get('uploadedBy', 'System')
+                }
+            )
+            # If folder exists but has no ppmp_no/title/etc, update it
+            if not created:
+                updated = False
+                if not record.ppmp_no and ppmp_no:
+                    record.ppmp_no = ppmp_no
+                    updated = True
+                if not record.year and year:
+                    record.year = year
+                    updated = True
+                if not record.quarter and quarter:
+                    record.quarter = quarter
+                    updated = True
+                if record.title == 'New Folder' and validated_data.get('title'):
+                    record.title = validated_data.get('title')
+                    updated = True
+                if updated:
+                    record.save(update_fields=['ppmp_no', 'year', 'quarter', 'title'])
 
         return super().create(validated_data)
 

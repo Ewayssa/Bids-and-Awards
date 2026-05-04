@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from '../../components/PageHeader';
 import { MdReceipt, MdAdd, MdCheck, MdClose, MdVisibility, MdDownload } from 'react-icons/md';
-import { ROLES } from '../../utils/auth';
+import { ROLES, mapOldRoleToNew } from '../../utils/auth';
 import CreatePRModal from './modals/CreatePRModal';
 import DocViewModal from './modals/DocViewModal';
 import DocUploadModal from './modals/DocUploadModal';
@@ -28,11 +28,12 @@ const PR = ({ user }) => {
     const [assignValue, setAssignValue] = useState('');
     const [assigning, setAssigning] = useState(false);
 
-    const isAdmin = user?.role === ROLES.ADMIN;
-    const isMember = user?.role === ROLES.MEMBER;
-    const isSecretariat = user?.role === ROLES.SECRETARIAT;
-    const isEndUser = user?.role === ROLES.END_USER;
-    const canAssignPR = isMember || isAdmin || isSecretariat;
+    const normalizedRole = mapOldRoleToNew(user?.role, user?.position);
+    const isAdmin = normalizedRole === ROLES.ADMIN;
+    const isMember = normalizedRole === ROLES.MEMBER;
+    const isSecretariat = normalizedRole === ROLES.SECRETARIAT;
+    const isEndUser = normalizedRole === ROLES.END_USER;
+    const canAssignPR = isMember;
 
     const loadPRWithRelatedDocs = async (item) => {
         // Start with the exact documents linked to this specific ProcurementFolder
@@ -44,11 +45,7 @@ const PR = ({ user }) => {
             if (item.ppmp_no) {
                 const globalDocs = await documentService.getAll({ ppmp_no: item.ppmp_no });
                 inheritedDocs = globalDocs.filter(d => 
-                    d.subDoc === 'Annual Procurement Plan' || 
-                    d.subDoc === 'Project Procurement Management Plan' ||
-                    d.subDoc === 'Supplemental PPMP' ||
-                    d.subDoc === 'APP' ||
-                    d.subDoc === 'PPMP'
+                    ['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].some(type => (d.subDoc || '').includes(type))
                 );
             }
         } catch (err) {
@@ -97,8 +94,24 @@ const PR = ({ user }) => {
     const refreshSelectedDoc = async (fallbackDoc = selectedDoc) => {
         if (!fallbackDoc) return;
         const data = await purchaseRequestService.getAll();
-        setPrs(data);
-        const updated = data.find(p => p.id === fallbackDoc.id) || fallbackDoc;
+        
+        // Apply BAC Member filtering if applicable
+        let filtered = data;
+        if (isMember) {
+            filtered = data.filter(pr => {
+                const isReady = pr.is_ready === true || pr.is_ready === 'true';
+                const isCompleted = (pr.status || '').toLowerCase() === 'completed';
+                const hasPRNo = pr.pr_no && pr.pr_no.trim() !== '';
+                
+                // Also show if it has items but no PR No. yet (it's likely the one waiting)
+                const hasItems = pr.items && pr.items.length > 0;
+
+                return isReady || isCompleted || hasPRNo || hasItems;
+            });
+        }
+        
+        setPrs(filtered);
+        const updated = filtered.find(p => p.id === fallbackDoc.id) || fallbackDoc;
         setSelectedDoc(await loadPRWithRelatedDocs(updated));
     };
 
@@ -123,7 +136,19 @@ const PR = ({ user }) => {
         setLoading(true);
         try {
             const data = await purchaseRequestService.getAll();
-            setPrs(data);
+            
+            // If user is BAC Member, only show COMPLETED PRs (is_ready == true) or already assigned ones
+            if (isMember) {
+                setPrs(data.filter(pr => {
+                    const isReady = pr.is_ready === true || pr.is_ready === 'true';
+                    const isCompleted = (pr.status || '').toLowerCase() === 'completed';
+                    const hasPRNo = pr.pr_no && pr.pr_no.trim() !== '';
+                    const hasItems = pr.items && pr.items.length > 0;
+                    return isReady || isCompleted || hasPRNo || hasItems;
+                }));
+            } else {
+                setPrs(data);
+            }
         } catch (err) {
             console.error('Failed to fetch PRs:', err);
         } finally {
@@ -166,7 +191,7 @@ const PR = ({ user }) => {
                 title="Purchase Request"
                 subtitle="Manage and track Purchase Requests."
             >
-                {user?.role !== ROLES.VIEWER && (
+                {[ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.END_USER].includes(user?.role) && (
                     <button
                         type="button"
                         onClick={() => setShowCreateModal(true)}
@@ -312,6 +337,7 @@ const PR = ({ user }) => {
             {selectedDoc && (
                 <DocViewModal
                     doc={selectedDoc}
+                    user={user}
                     onClose={() => setSelectedDoc(null)}
                     onUploadMissing={(type, file) => {
                         setUploadingMissingType(type);

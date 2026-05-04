@@ -229,7 +229,7 @@ const Encode = ({ user }) => {
                                 // Find globally inherited APP and PPMP documents for this PPMP No
                                 const inheritedDocs = documents.filter(d => 
                                     (d.ppmp_no || '').trim() === ppmpNo.trim() && 
-                                    ['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].includes(d.subDoc)
+                                    ['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].some(type => (d.subDoc || '').includes(type))
                                 );
                                 
                                 // Combine, avoiding duplicates
@@ -305,6 +305,7 @@ const Encode = ({ user }) => {
             {activeModal === 'view' && (
                 <DocViewModal 
                     doc={selectedDoc} 
+                    user={user}
                     isOpen={activeModal === 'view'} 
                     onClose={() => {
                         setActiveModal(null);

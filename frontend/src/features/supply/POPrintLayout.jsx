@@ -6,7 +6,7 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
     const items = prItems || [];
     
     return (
-        <div ref={ref} className="bg-white p-10 text-black font-serif text-[11px] print:p-0" style={{ width: '210mm', minHeight: '297mm', fontFamily: "'Times New Roman', Times, serif" }}>
+        <div ref={ref} className="bg-white p-10 text-black font-serif text-[11px] print:p-8" style={{ width: '210mm', minHeight: '297mm', fontFamily: "'Times New Roman', Times, serif" }}>
             {/* Top Appendix Label */}
             <div className="text-right italic text-sm mb-1">Appendix 61</div>
 
@@ -99,17 +99,17 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
                                     <div className="font-bold">{item.description}</div>
                                     {item.pr_no && <div className="text-[9px] italic text-slate-500 mt-0.5">PR No. {item.pr_no}</div>}
                                 </td>
-                                <td className="border-r-[1.5px] border-black p-1 text-center">{Number(item.quantity).toLocaleString('en-PH', { maximumFractionDigits: 0 })}</td>
+                                <td className="border-r-[1.5px] border-black p-1 text-center">{Number(parseFloat(item.quantity) || 0).toLocaleString('en-PH', { maximumFractionDigits: 0 })}</td>
                                 <td className="border-r-[1.5px] border-black p-1 text-right pr-2">
-                                    {Number(item.unit_cost || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                    {Number(parseFloat(item.unit_cost) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-1 text-right pr-2 font-bold">
-                                    {Number(item.total || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                    {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                             </tr>
                         ))}
                         {/* Minimum 15 rows for layout consistency */}
-                        {[...Array(Math.max(0, 15 - (data.items?.length || 0)))].map((_, i) => (
+                        {[...Array(Math.max(0, 15 - items.length))].map((_, i) => (
                             <tr key={`empty-${i}`} className="border-b border-black">
                                 <td className="border-r-[1.5px] border-black p-1 text-center h-7"></td>
                                 <td className="border-r-[1.5px] border-black p-1 text-center"></td>
@@ -181,10 +181,7 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
                         </div>
                     </div>
                     <div className="p-2 space-y-4">
-                        <div className="flex gap-2 mt-2">
-                            <span className="font-bold whitespace-nowrap">Account Code :</span>
-                            <span className="border-b border-black flex-1 min-h-[16px]">{data.ors_burs_no}</span>
-                        </div>
+
                         <div className="flex gap-2">
                             <span className="font-bold whitespace-nowrap">Date of the ORS/BURS:</span>
                             <span className="border-b border-black flex-1 min-h-[16px]">{data.date_of_ors_burs}</span>

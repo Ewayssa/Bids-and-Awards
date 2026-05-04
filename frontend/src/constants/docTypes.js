@@ -199,7 +199,10 @@ export const CHECKLIST_CONFIG = {
                 documents: [
                     { name: 'Purchase Request', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
-                    { name: 'Annual Procurement Plan', required: true }
+                    { name: 'Annual Procurement Plan', required: true },
+                    { name: 'Activity Design', required: true },
+                    { name: 'Market Scoping', required: true },
+                    { name: 'Requisition and Issue Slip', required: true }
                 ]
             },
             {
@@ -260,7 +263,10 @@ export const CHECKLIST_CONFIG = {
                 documents: [
                     { name: 'Purchase Request', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
-                    { name: 'Annual Procurement Plan', required: true }
+                    { name: 'Annual Procurement Plan', required: true },
+                    { name: 'Activity Design', required: true },
+                    { name: 'Market Scoping', required: true },
+                    { name: 'Requisition and Issue Slip', required: true }
                 ]
             },
             {
@@ -314,6 +320,9 @@ export const CHECKLIST_CONFIG = {
                     { name: 'Purchase Request', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
                     { name: 'Annual Procurement Plan', required: true },
+                    { name: 'Activity Design', required: true },
+                    { name: 'Market Scoping', required: true },
+                    { name: 'Requisition and Issue Slip', required: true },
                     { name: 'Technical Specifications / TOR', required: true }
                 ]
             },
@@ -343,7 +352,10 @@ export const CHECKLIST_CONFIG = {
                 documents: [
                     { name: 'Purchase Request', required: true },
                     { name: 'Project Procurement Management Plan/Supplemental PPMP', required: true },
-                    { name: 'Annual Procurement Plan', required: true }
+                    { name: 'Annual Procurement Plan', required: true },
+                    { name: 'Activity Design', required: true },
+                    { name: 'Market Scoping', required: true },
+                    { name: 'Requisition and Issue Slip', required: true }
                 ]
             },
             // Fallback for public bidding if not explicitly defined by user yet

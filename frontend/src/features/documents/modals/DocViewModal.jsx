@@ -12,6 +12,7 @@ import { generatePR_PDFBlob } from '../../../utils/prGenerator';
 
 const DocViewModal = ({
     doc,
+    user,
     onClose,
     onUploadMissing
 }) => {
@@ -23,6 +24,8 @@ const DocViewModal = ({
     const isPR = useMemo(() => {
         return currentDoc.subDoc === 'Purchase Request' || currentDoc.grand_total !== undefined;
     }, [currentDoc]);
+
+    const isMember = user?.role === 'bac_member';
 
     const requiredSupportingDocs = useMemo(() => {
         if (isPR) {
@@ -395,7 +398,7 @@ const DocViewModal = ({
                                                             {item.label || supportDocLabels[item.subDoc] || item.subDoc || (item.grand_total !== undefined ? 'Purchase Request' : (item.title || 'Untitled Document'))}
                                                         </h5>
                                                     </div>
-                                                    {!hasFile && (
+                                                    {!hasFile && !isMember && (
                                                         <button
                                                             type="button"
                                                             onClick={(event) => {
@@ -480,7 +483,7 @@ const DocViewModal = ({
                                                 {activePreviewDoc ? 'Upload the file to make it available for preview.' : 'Use the upload menu to add supporting documents.'}
                                             </p>
                                         </div>
-                                        {activePreviewDoc && (
+                                        {activePreviewDoc && !isMember && (
                                             <button
                                                 onClick={() => onUploadMissing(activePreviewDoc.subDoc, null)}
                                                 className="px-6 py-3 bg-slate-900 dark:bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-sm"

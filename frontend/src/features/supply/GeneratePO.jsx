@@ -93,7 +93,8 @@ const GeneratePO = ({ user, onLogout }) => {
         try {
             const data = await purchaseRequestService.getAll({ status: 'completed' });
             const prList = Array.isArray(data) ? data : (data?.results || []);
-            setReadyPrs(prList);
+            // Only show PRs that have a PR number assigned by BAC Member
+            setReadyPrs(prList.filter(pr => pr.pr_no && pr.pr_no.trim() !== ''));
         } catch (error) {
             console.error('Error fetching PRs:', error);
         }
@@ -103,7 +104,14 @@ const GeneratePO = ({ user, onLogout }) => {
         try {
             const doc = await purchaseRequestService.getById(id);
             setPrDetails(doc);
-            setItems(doc.items || []);
+            // Normalize items: ensure quantity and unit_cost are always numbers
+            const normalizedItems = (doc.items || []).map(item => ({
+                ...item,
+                quantity: parseFloat(item.quantity) || 0,
+                unit_cost: parseFloat(item.unit_cost) || 0,
+                total: parseFloat(item.total) || 0,
+            }));
+            setItems(normalizedItems);
 
             if (doc.mode_of_procurement) {
                 setPoData(prev => ({ ...prev, mode_of_procurement: doc.mode_of_procurement }));
@@ -154,7 +162,12 @@ const GeneratePO = ({ user, onLogout }) => {
         openPreviewTab('/po/preview/new', `Preview: ${poData.po_no || 'New PO'}`);
     };
 
-    const totalAmount = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unit_cost || 0)), 0);
+    // Correctly parse quantity and unit_cost as floats (DRF returns DecimalField as strings)
+    const totalAmount = items.reduce((sum, item) => {
+        const qty = parseFloat(item.quantity) || 0;
+        const cost = parseFloat(item.unit_cost) || 0;
+        return sum + (qty * cost);
+    }, 0);
 
     // Auto-calculate amount in words
     useEffect(() => {
@@ -219,7 +232,8 @@ const GeneratePO = ({ user, onLogout }) => {
                 purchase_request: selectedPrId,
                 total_amount: totalAmount
             };
-            await purchaseOrderService.create(payload);
+            const response = await purchaseOrderService.create(payload);
+            const poId = response?.id;
 
             setSuccessMessage('Purchase Order generated successfully!');
             setTimeout(() => {
@@ -227,6 +241,12 @@ const GeneratePO = ({ user, onLogout }) => {
                 setShowForm(false);
                 fetchPOs(); // Refresh table
                 fetchReadyPrs(); // Refresh dropdown
+                
+                // Automatically open preview in new tab
+                if (poId) {
+                    viewPo({ id: poId, po_no: poData.po_no });
+                }
+
                 // Reset form
                 setSelectedPrId('');
                 setPoData({
@@ -474,7 +494,7 @@ const GeneratePO = ({ user, onLogout }) => {
                                                                     />
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-4 text-right font-black text-slate-900">₱{Number(item.quantity * item.unit_cost).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
+                                                            <td className="px-6 py-4 text-right font-black text-slate-900">₱{(parseFloat(item.quantity) * parseFloat(item.unit_cost)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -638,15 +658,7 @@ const GeneratePO = ({ user, onLogout }) => {
                                                     className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Code</label>
-                                                <input
-                                                    type="text"
-                                                    value={poData.ors_burs_no}
-                                                    onChange={(e) => setPoData({ ...poData, ors_burs_no: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
-                                                />
-                                            </div>
+
                                             <div className="space-y-2">
                                                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ORS/BURS Date</label>
                                                 <input

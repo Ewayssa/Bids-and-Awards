@@ -36,8 +36,10 @@ const ProcurementWorkflowView = ({
     const isSecretariat = user?.role === ROLES.SECRETARIAT;
     const isMember = user?.role === ROLES.MEMBER;
 
+    const isEndUser = user?.role === ROLES.END_USER;
+
     const canMarkAsCompleted = isAdmin || isSecretariat || isMember;
-    const canUpload = isAdmin || isSecretariat;
+    const canUpload = isAdmin || isSecretariat || isEndUser;
 
     const hasChecklistFile = (doc) => {
         if (!doc) return false;

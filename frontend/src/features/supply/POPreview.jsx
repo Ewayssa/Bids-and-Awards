@@ -67,7 +67,7 @@ const POPreview = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col items-center py-8 px-4 overflow-y-auto">
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center py-8 px-4 overflow-y-auto overflow-x-hidden">
             {/* Minimalist Floating Action Button */}
             <div className="fixed bottom-8 right-8 z-50 flex gap-3">
                 <button 
@@ -78,13 +78,15 @@ const POPreview = () => {
                 </button>
             </div>
 
-            {/* The Document */}
-            <div className="bg-white shadow-[0_0_50px_rgba(0,0,0,0.1)] rounded-sm overflow-hidden ring-1 ring-slate-200">
-                <POPrintLayout 
-                    ref={printRef} 
-                    data={data} 
-                    prItems={data.purchase_request_details?.items || []} 
-                />
+            {/* The Document Container - allows horizontal scroll on small screens */}
+            <div className="w-full flex justify-center overflow-x-auto py-4 custom-scrollbar">
+                <div className="bg-white shadow-[0_0_50px_rgba(0,0,0,0.1)] rounded-sm ring-1 ring-slate-200 shrink-0">
+                    <POPrintLayout 
+                        ref={printRef} 
+                        data={data} 
+                        prItems={data.purchase_request_details?.items || []} 
+                    />
+                </div>
             </div>
 
             <div className="h-12" /> {/* Spacer */}

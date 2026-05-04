@@ -47,6 +47,9 @@ REQUIRED_CHECKLIST_BY_TYPE = {
         {'name': 'Purchase Request'},
         {'name': 'Project Procurement Management Plan/Supplemental PPMP'},
         {'name': 'Annual Procurement Plan'},
+        {'name': 'Activity Design'},
+        {'name': 'Market Scoping'},
+        {'name': 'Requisition and Issue Slip'},
         {'name': 'Certification of Non Availability of DILG R1 facility'},
         {'name': 'Certification of Non Availability of Other Government Facility or RFQ Received and Certified by Government Facility'},
         {'name': 'Cost Benefit Analysis'},
@@ -61,6 +64,9 @@ REQUIRED_CHECKLIST_BY_TYPE = {
         {'name': 'Purchase Request'},
         {'name': 'Project Procurement Management Plan/Supplemental PPMP'},
         {'name': 'Annual Procurement Plan'},
+        {'name': 'Activity Design'},
+        {'name': 'Market Scoping'},
+        {'name': 'Requisition and Issue Slip'},
         {'name': 'Receiving Copy: Blank Request for Quotation'},
         {'name': 'Received RFQs with Documentary Requirements', 'min_files': 3},
         {'name': 'BAC Resolution'},
@@ -73,6 +79,9 @@ REQUIRED_CHECKLIST_BY_TYPE = {
         {'name': 'Purchase Request'},
         {'name': 'Project Procurement Management Plan/Supplemental PPMP'},
         {'name': 'Annual Procurement Plan'},
+        {'name': 'Activity Design'},
+        {'name': 'Market Scoping'},
+        {'name': 'Requisition and Issue Slip'},
         {'name': 'Technical Specifications / TOR'},
         {'name': 'Justification for Negotiated Procurement'},
         {'name': 'BAC Resolution'},
@@ -104,24 +113,66 @@ def document_matches_requirement(document, requirement_name):
         return False
     if sub_doc == required:
         return True
+    
+    # Smart matches for common documents
     if 'purchase request' in required and 'purchase request' in sub_doc:
         return True
+    if ('ppmp' in required or 'project procurement management plan' in required) and \
+       ('ppmp' in sub_doc or 'project procurement management plan' in sub_doc):
+        return True
+    if ('app' in required or 'annual procurement plan' in required) and \
+       ('app' in sub_doc or 'annual procurement plan' in sub_doc):
+        return True
+        
     return required in sub_doc or sub_doc in required
+
+
+def get_inherited_documents(record):
+    """
+    Find documents that are inherited from the parent PPMP or are global (APP).
+    """
+    if not record:
+        return Document.objects.none()
+        
+    # APP is global
+    app_query = Document.objects.filter(
+        subDoc__icontains='Annual Procurement Plan',
+        status='complete'
+    )
+    
+    # PPMP is inherited by ppmp_no
+    ppmp_query = Document.objects.none()
+    if record.ppmp_no and record.ppmp_no.strip():
+        # Find all records with this ppmp_no
+        from ..models import ProcurementRecord
+        sibling_pr_nos = list(ProcurementRecord.objects.filter(
+            ppmp_no=record.ppmp_no.strip()
+        ).values_list('pr_no', flat=True))
+        
+        ppmp_query = Document.objects.filter(
+            prNo__in=sibling_pr_nos,
+            subDoc__icontains='PPMP',
+            status='complete'
+        )
+        
+    return app_query | ppmp_query
 
 
 def get_missing_required_files(record):
     """
     Return required checklist entries that do not yet have uploaded/generated files.
-    This is intentionally file-based, not metadata-completeness-based.
+    This includes checking for inherited documents (PPMP/APP).
     """
     docs = list(_get_folder_docs(record))
+    inherited_docs = list(get_inherited_documents(record))
+    all_available_docs = docs + inherited_docs
 
     if not (record.procurement_type or '').strip():
-        if not docs:
+        if not all_available_docs:
             return ['At least one document']
         return [
             doc.subDoc or doc.title or 'Document'
-            for doc in docs
+            for doc in all_available_docs
             if not (bool(doc.file) or (doc.subDoc or '').strip() == 'Purchase Request')
         ]
 
@@ -132,7 +183,7 @@ def get_missing_required_files(record):
         name = requirement['name']
         min_files = requirement.get('min_files', 1)
         matches = [
-            doc for doc in docs
+            doc for doc in all_available_docs
             if document_matches_requirement(doc, name)
             and (bool(doc.file) or (doc.subDoc or '').strip() == 'Purchase Request')
         ]
@@ -199,8 +250,11 @@ def check_folder_readiness(record):
         ['Annual Procurement Plan', 'APP']
     ]
 
-    docs = _get_folder_docs(record)
-    complete_subdocs = [str(doc.subDoc or '').strip() for doc in docs if doc.status == 'complete']
+    docs = list(_get_folder_docs(record))
+    inherited_docs = list(get_inherited_documents(record))
+    all_available_docs = docs + inherited_docs
+    
+    complete_subdocs = [str(doc.subDoc or '').strip() for doc in all_available_docs if doc.status == 'complete']
 
     # Check for PR either as a Document or via the PurchaseRequest relation
     has_pr = 'Purchase Request' in complete_subdocs or record.purchase_requests.exists()
@@ -209,19 +263,11 @@ def check_folder_readiness(record):
     for group in required_groups:
         group_found = False
 
-        # Strategy A: Check within the folder's documents
+        # Check within the folder's documents + inherited ones
         for subdoc in complete_subdocs:
             if any(alias.lower() in subdoc.lower() for alias in group):
                 group_found = True
                 break
-
-        # Strategy B: Global check for APP (yearly/office-wide document)
-        if not group_found and ('Annual Procurement Plan' in group or 'APP' in group):
-            if Document.objects.filter(
-                subDoc__icontains='Annual Procurement Plan',
-                status='complete'
-            ).exists():
-                group_found = True
 
         if not group_found:
             all_groups_found = False
@@ -251,24 +297,35 @@ def check_folder_readiness(record):
 def sync_supply_readiness(record):
     """
     Synchronizes the Supply Officer's view with the PR readiness.
-    Conditions for a PR to proceed to Supply:
+    Conditions for a PR to proceed to Supply (status='completed'):
     1. Mandatory initial documents are uploaded (record.is_ready is True).
-    2. PR No. is assigned by BAC.
+    2. PR No. is assigned to the individual Purchase Request.
     """
     if not record:
         return
 
-    is_docs_complete = bool(record.is_ready)
+    is_docs_ready = bool(record.is_ready)
 
     from ..models import PurchaseRequest
     prs = record.purchase_requests.all()
 
     for pr in prs:
-        if is_docs_complete:
-            if pr.status == 'ongoing':
+        # Check if this specific PR has a PR number assigned
+        has_pr_no = bool(pr.pr_no and pr.pr_no.strip())
+        
+        if is_docs_ready and has_pr_no:
+            # Fully ready for Supply Officer
+            if pr.status != 'completed' and pr.status != 'po_generated':
                 pr.status = 'completed'
                 pr.save(update_fields=['status'])
+        elif is_docs_ready and not has_pr_no:
+            # Docs ready but waiting for BAC to assign PR No.
+            # We keep it as 'ongoing' (or you could add a 'pending_assignment' status)
+            if pr.status == 'completed':
+                pr.status = 'ongoing'
+                pr.save(update_fields=['status'])
         else:
+            # Docs not even ready
             if pr.status == 'completed':
                 pr.status = 'ongoing'
                 pr.save(update_fields=['status'])

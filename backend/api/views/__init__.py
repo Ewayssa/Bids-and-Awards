@@ -18,6 +18,7 @@ from ..permissions import (
     IsBACSecretariat, 
     IsBACSecretariatOrReadOnly, 
     CanManageUsers,
+    CanUploadDocuments,
     CanEditProcurementRecords,
     CanDeleteRecords,
     CanViewAuditLog,
@@ -392,7 +393,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         elif self.action in ['preview']:
             return [AllowAny()]
         elif self.action in ['create']:
-            return [IsAuthenticated()]
+            return [IsAuthenticated(), CanUploadDocuments()]
         elif self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsBACSecretariat()]
         return [IsAuthenticated()]
@@ -462,19 +463,20 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if doc.status == 'complete' and old_status != 'complete':
             _log_audit('document_completed', actor, 'document', str(doc.id), title)
             _create_notification(f'BAC document completed: {title}', admin_only=True)
-
+            
         # Sync procurement folder status if a folder exists for this prNo
         if doc.prNo:
             record = ProcurementRecord.objects.filter(pr_no=doc.prNo).first()
             if record:
                 sync_procurement_completion(record)
 
+
     @action(detail=True, methods=['post'])
     def assign_pr_no(self, request, pk=None):
         """Assign an official PR number to the procurement record linked by this document's prNo."""
         doc = self.get_object()
-        if not (is_bac_member(request.user) or is_end_user(request.user) or getattr(request.user, 'role', '') in ['admin', 'bac_secretariat']):
-            return Response({'error': 'You are not authorized to assign PR numbers.'}, status=status.HTTP_403_FORBIDDEN)
+        if not is_bac_member(request.user):
+            return Response({'error': 'Only BAC Members are authorized to assign PR numbers.'}, status=status.HTTP_403_FORBIDDEN)
 
         user_pr_no = request.data.get('user_pr_no', '').strip()
         if not user_pr_no:
@@ -670,11 +672,24 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
         qs = super().get_queryset()
 
-        status = self.request.query_params.get('status')
-        if status:
-            qs = qs.filter(status=status)
+        role = (getattr(user, 'role', None) or '').strip().lower()
+
+        if role in ('bac_member', 'bac_secretariat', 'bac_chair', 'admin'):
+            # BAC staff see all PRs
+            pass
+        elif role == 'supply':
+            # Supply Officer only sees completed PRs with an assigned PR No.
+            qs = qs.filter(status='completed').exclude(pr_no='').exclude(pr_no__isnull=True)
+        else:
+            # End Users only see their own PRs
+            qs = qs.filter(created_by=user.fullName or user.username)
+
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            qs = qs.filter(status=status_param)
 
         ppmp_id = self.request.query_params.get('ppmp_id')
         if ppmp_id:
@@ -684,15 +699,33 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         pr = serializer.save(created_by=self.request.user.fullName or self.request.user.username)
         _log_audit('purchase_request_created', self.request.user.username, 'purchase_request', str(pr.id), f'PR for {pr.purpose[:50]}')
+        
+        # Ensure status is synced if linked to a folder
+        if pr.ppmp:
+            from ..utils.workflow_logic import sync_procurement_completion
+            sync_procurement_completion(pr.ppmp)
 
     def perform_update(self, serializer):
         if 'pr_no' in self.request.data:
             user = self.request.user
-            if not (is_bac_member(user) or getattr(user, 'role', '') in ['admin', 'bac_secretariat']):
+            if not is_bac_member(user):
                 from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("You are not authorized to assign PR numbers.")
+                raise PermissionDenied("Only BAC Members are authorized to assign PR numbers.")
         pr = serializer.save()
         _log_audit('purchase_request_updated', self.request.user.username, 'purchase_request', str(pr.id), f'Updated PR {pr.pr_no}')
+        
+        # Re-sync status after update (this will flip status to 'completed' if pr_no + is_ready)
+        if pr.ppmp:
+            from ..utils.workflow_logic import sync_procurement_completion
+            sync_procurement_completion(pr.ppmp)
+
+        # Notify Supply Officer if a PR number was just assigned
+        if 'pr_no' in self.request.data and pr.pr_no:
+            _create_notification(
+                f"Purchase Request '{pr.purpose[:60]}' has been assigned PR No. {pr.pr_no} and is now ready for Purchase Order generation.",
+                link='/supply/generate-po',
+                recipient_role='supply',
+            )
 
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
     queryset = PurchaseOrder.objects.all().order_by('-created_at')

@@ -44,7 +44,6 @@ const CreatePRModal = ({
     });
     const fileInputRef = useRef(null);
     const [activeUploadType, setActiveUploadType] = useState(null);
-    const [inheritedDocs, setInheritedDocs] = useState([]);
 
     const handleFileSelect = (type) => {
         setActiveUploadType(type);
@@ -76,11 +75,20 @@ const CreatePRModal = ({
                 'Requisition and Issue Slip': null
             });
 
-            // Fetch PPMPs for dropdown
+            // Fetch unique PPMP documents for dropdown
             setLoadingPPMPs(true);
-            procurementRecordService.getAll()
+            documentService.getAll({ subDoc: 'Project Procurement Management Plan/Supplemental PPMP' })
                 .then(data => {
-                    setAvailablePPMPs(data);
+                    // Filter for unique ppmp_no
+                    const uniquePpmps = [];
+                    const seenNos = new Set();
+                    data.forEach(d => {
+                        if (d.ppmp_no && !seenNos.has(d.ppmp_no)) {
+                            uniquePpmps.push(d);
+                            seenNos.add(d.ppmp_no);
+                        }
+                    });
+                    setAvailablePPMPs(uniquePpmps);
                 })
                 .catch(err => console.error('Failed to fetch PPMPs:', err))
                 .finally(() => setLoadingPPMPs(false));
@@ -135,38 +143,13 @@ const CreatePRModal = ({
             const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
             const created_by = currentUser.fullName || currentUser.username || 'Unknown';
 
-            // 1. Create the structured Purchase Request
-            const prPayload = {
-                ppmp: form.ppmp_id,
-                pr_no: '', // Will be assigned later by BAC member
-                purpose: form.purpose,
-                grand_total: calculateTotal(),
-                status: 'ongoing',
-                items: items.map(item => ({
-                    unit: item.unit,
-                    description: item.description,
-                    quantity: parseFloat(item.quantity),
-                    unit_cost: parseFloat(item.unit_cost),
-                    total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)
-                }))
-            };
-
-            let newPR;
-            try {
-                newPR = await purchaseRequestService.create(prPayload);
-            } catch (prErr) {
-                console.error('Purchase Request (Relational) Error:', prErr);
-                const backendMsg = prErr.response?.data?.error || prErr.response?.data?.detail || prErr.message;
-                throw new Error(`Failed to create database record: ${typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : backendMsg}`);
-            }
-
-            // 2. Prepare legacy Document for PDF storage
+            // 1. Prepare legacy Document for PDF storage
             const formData = new FormData();
             formData.append('category', 'Initial Documents');
             formData.append('subDoc', 'Purchase Request');
             formData.append('title', form.purpose || form.title || `PR for ${form.ppmp_no}`);
             formData.append('ppmp_no', form.ppmp_no);
-            formData.append('prNo', ''); 
+            formData.append('prNo', ''); // Force generation of a new ProcurementRecord
             formData.append('user_pr_no', ''); 
             formData.append('total_amount', calculateTotal());
             formData.append('date', new Date().toISOString().slice(0, 10));
@@ -194,6 +177,7 @@ const CreatePRModal = ({
 
             let mainDoc;
             try {
+                // Upload PR Document FIRST to generate the unique folder (ProcurementRecord)
                 mainDoc = await documentService.create(formData);
             } catch (docErr) {
                 console.error('Document Upload (Legacy) Error:', docErr);
@@ -201,8 +185,33 @@ const CreatePRModal = ({
                 throw new Error(`Failed to upload PR document to storage: ${typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : backendMsg}`);
             }
 
-            // Capture the newly created folder ID so optional files go to the SAME folder
+            // Capture the newly created folder ID so optional files AND the relational PR record go to the SAME folder
             const newFolderId = mainDoc?.procurement_record;
+
+            // 2. Create the structured Purchase Request linked to the NEW folder
+            const prPayload = {
+                ppmp: newFolderId, 
+                pr_no: '', 
+                purpose: form.purpose,
+                grand_total: calculateTotal(),
+                status: 'ongoing',
+                items: items.map(item => ({
+                    unit: item.unit,
+                    description: item.description,
+                    quantity: parseFloat(item.quantity),
+                    unit_cost: parseFloat(item.unit_cost),
+                    total: (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)
+                }))
+            };
+
+            let newPR;
+            try {
+                newPR = await purchaseRequestService.create(prPayload);
+            } catch (prErr) {
+                console.error('Purchase Request (Relational) Error:', prErr);
+                const backendMsg = prErr.response?.data?.error || prErr.response?.data?.detail || prErr.message;
+                throw new Error(`Failed to create database record: ${typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : backendMsg}`);
+            }
 
             // Upload optional files
             for (const [subDocType, file] of Object.entries(optionalFiles)) {
@@ -404,30 +413,6 @@ const CreatePRModal = ({
                                 ))}
                             </select>
                             {errors.ppmp_id && <span className="text-[10px] text-red-500 font-bold ml-1">{errors.ppmp_id}</span>}
-
-                            {/* Inheritance Indicators */}
-                            {selectedPPMP && (
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                    {['Annual Procurement Plan', 'Project Procurement Management Plan'].map(type => {
-                                        const isAPP = type === 'Annual Procurement Plan';
-                                        const shortLabel = isAPP ? 'APP' : 'PPMP';
-                                        const exists = (selectedPPMP.documents || []).some(d => 
-                                            d.subDoc === type || (d.subDoc || '').includes(shortLabel)
-                                        );
-                                        
-                                        if (!exists) return null;
-
-                                        return (
-                                            <div key={type} className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-lg">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
-                                                    {shortLabel} Inherited
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
                         </div>
 
                         {/* Purpose Field */}
@@ -589,45 +574,45 @@ const CreatePRModal = ({
                                                     transition={{ duration: 0.2 }}
                                                     className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors group"
                                                 >
-                                                    <td className="table-td align-middle !py-3 !px-4 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
                                                         <input
                                                             type="text"
                                                             value={item.unit}
                                                             onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
-                                                            className="w-full p-2 text-xs text-center bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] outline-none transition-all font-bold"
-                                                            placeholder="pc"
+                                                            placeholder="Unit"
+                                                            className="w-full p-2.5 text-xs text-center bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold placeholder:text-slate-300"
                                                         />
                                                     </td>
-                                                    <td className="table-td align-middle !py-3 !px-4 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
                                                         <textarea
                                                             value={item.description}
                                                             onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
                                                             rows={1}
-                                                            className="w-full p-2 text-xs text-center bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] outline-none transition-all resize-none min-h-[38px] overflow-hidden font-bold"
-                                                            placeholder="Item details..."
+                                                            className="w-full p-2.5 text-xs text-left bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all resize-none min-h-[42px] overflow-hidden font-bold placeholder:text-slate-300"
+                                                            placeholder="Enter item description..."
                                                             onInput={(e) => {
                                                                 e.target.style.height = 'auto';
                                                                 e.target.style.height = (e.target.scrollHeight) + 'px';
                                                             }}
                                                         />
                                                     </td>
-                                                    <td className="table-td align-middle !py-3 !px-4 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
                                                         <input
                                                             type="number"
                                                             min="1"
                                                             value={item.quantity}
                                                             onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
-                                                            className="w-full p-2 text-xs text-center font-mono bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            className="w-full p-2.5 text-xs text-center font-mono bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                         />
                                                     </td>
-                                                    <td className="table-td align-middle !py-3 !px-4 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             step="0.01"
                                                             value={item.unit_cost}
                                                             onChange={(e) => handleItemChange(item.id, 'unit_cost', e.target.value)}
-                                                            className="w-full p-2 text-xs text-center font-mono bg-transparent border border-transparent rounded-lg hover:border-slate-200 focus:bg-white focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            className="w-full p-2.5 text-xs text-center font-mono bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                         />
                                                     </td>
                                                     <td className="table-td align-middle !py-3 !px-4 border-b border-slate-100 dark:border-slate-700/50">

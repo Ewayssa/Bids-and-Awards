@@ -19,12 +19,14 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
     related_documents = serializers.SerializerMethodField()
     folder_pr_no = serializers.CharField(source='ppmp.pr_no', read_only=True)
 
+    is_ready = serializers.BooleanField(source='ppmp.is_ready', read_only=True)
+
     class Meta:
         model = PurchaseRequest
         fields = [
             'id', 'ppmp', 'ppmp_no', 'folder_pr_no', 'ppmp_title', 'end_user_office', 'pr_no', 'purpose', 
             'grand_total', 'status', 'created_by', 'created_at', 'updated_at', 
-            'items', 'related_documents'
+            'items', 'related_documents', 'is_ready'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at']
 

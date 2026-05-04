@@ -76,6 +76,7 @@ class Document(models.Model):
         ('ongoing', 'Ongoing'),
         ('complete', 'Complete'),
     )
+    # Basic fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     prNo = models.CharField(max_length=100, blank=True, help_text='BAC Folder No.')
     title = models.CharField(max_length=255, blank=True)
@@ -83,62 +84,16 @@ class Document(models.Model):
     uploadedBy = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=255)
     subDoc = models.CharField(max_length=255)
-    user_pr_no = models.CharField(max_length=100, blank=True, help_text='Official PR No. assigned by BAC')
-    ppmp_no = models.CharField(max_length=100, blank=True, help_text='Associated PPMP No.')
-    year = models.CharField(max_length=4, blank=True)
-    quarter = models.CharField(max_length=10, blank=True)
-    pr_items = models.TextField(blank=True)
-    total_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
-    source_of_fund = models.CharField(max_length=255, blank=True)
-    app_no = models.CharField(max_length=100, blank=True)
-    app_type = models.CharField(max_length=20, blank=True)
-    
-    # Certification and Market fields
-    certified_signed_by = models.CharField(max_length=255, blank=True)
-    market_period_from = models.CharField(max_length=20, blank=True)
-    market_period_to = models.CharField(max_length=20, blank=True)
-    market_expected_delivery = models.CharField(max_length=20, blank=True)
-    market_service_provider_1 = models.CharField(max_length=255, blank=True)
-    market_service_provider_2 = models.CharField(max_length=255, blank=True)
-    market_service_provider_3 = models.CharField(max_length=255, blank=True)
-    
-    # Office and Process fields
-    office_division = models.CharField(max_length=255, blank=True)
-    received_by = models.CharField(max_length=255, blank=True)
-    attendance_members = models.TextField(blank=True)
-    resolution_no = models.CharField(max_length=100, blank=True)
-    resolution_option = models.CharField(max_length=20, blank=True)
-    venue = models.CharField(max_length=255, blank=True)
-    winning_bidder = models.CharField(max_length=255, blank=True)
-    abstract_bidders = models.TextField(blank=True)
-    aoq_no = models.CharField(max_length=100, blank=True)
-    
-    # Notice and Award fields
-    notice_award_authorized_rep = models.CharField(max_length=255, blank=True)
-    notice_award_conforme = models.CharField(max_length=255, blank=True)
-    notice_award_service_provider = models.CharField(max_length=255, blank=True)
-    table_rating_address = models.CharField(max_length=500, blank=True)
-    table_rating_factor_value = models.CharField(max_length=100, blank=True)
-    table_rating_service_provider = models.CharField(max_length=255, blank=True)
-    
-    # Final strict fields
-    notarized_place = models.CharField(max_length=255, blank=True)
-    ntp_service_provider = models.CharField(max_length=255, blank=True)
-    ntp_authorized_rep = models.CharField(max_length=255, blank=True)
-    ntp_received_by = models.CharField(max_length=255, blank=True)
-    oss_service_provider = models.CharField(max_length=255, blank=True)
-    oss_authorized_rep = models.CharField(max_length=255, blank=True)
-    secretary_service_provider = models.CharField(max_length=255, blank=True)
-    secretary_owner_rep = models.CharField(max_length=255, blank=True)
-    
-    po_status = models.CharField(max_length=20, blank=True)
-    certified_true_copy = models.BooleanField(default=False)
-    contract_received_by_coa = models.BooleanField(default=False)
     
     file = models.FileField(upload_to=document_file_upload_to, blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Association fields (planning)
+    ppmp_no = models.CharField(max_length=100, blank=True, help_text='Associated PPMP No.')
+    year = models.CharField(max_length=4, blank=True)
+    quarter = models.CharField(max_length=10, blank=True)
 
     def calculate_status(self):
         """
@@ -298,22 +253,17 @@ class ProcurementRecord(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def documents(self):
+        """Fetch all documents associated with this folder (manual link via pr_no)"""
+        return Document.objects.filter(prNo=self.pr_no)
+
     def __str__(self):
         return f"{self.pr_no} - {self.title}"
 
 
 
-# Single synchronization: When ProcurementRecord.user_pr_no is updated, 
-# propagate it to all linked PR documents.
-@receiver(post_save, sender=ProcurementRecord)
-def sync_pr_number_to_documents(sender, instance, created, **kwargs):
-    """
-    If a user_pr_no is assigned to the record, find all related PR documents 
-    and update their user_pr_no as well for consistency.
-    """
-    if instance.user_pr_no:
-        from . import Document
-        Document.objects.filter(prNo=instance.pr_no).update(user_pr_no=instance.user_pr_no)
+# Note: sync_pr_number_to_documents signal removed as Document model no longer has user_pr_no.
 
 class PurchaseRequest(models.Model):
     STATUS_CHOICES = (
