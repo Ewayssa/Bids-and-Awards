@@ -36,7 +36,7 @@ const DocItem = React.memo(({ doc, isNear, innerRef }) => {
     );
 }, (prev, next) => prev.isNear === next.isNear && prev.doc.id === next.doc.id);
 
-const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents }) => {
+const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record }) => {
     const [activeId, setActiveId] = useState(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const scrollContainerRef = useRef(null);
@@ -161,9 +161,9 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents }) => {
             onClose={onClose}
             title={(() => {
                 const prDoc = (documents || []).find(d => d.subDoc === 'Purchase Request');
-                const displayPR = (documents || []).find(d => d.user_pr_no)?.user_pr_no || (documents || []).find(d => d.prNo)?.prNo || ppmpNo || 'Unassigned';
-                const purpose = prDoc?.title || (documents || []).find(d => d.title && !d.title.toLowerCase().includes('ppmp'))?.title || 'General Procurement';
-                return `PR # ${displayPR} - ${purpose}`;
+                const userPrNo = record?.user_pr_no || (documents || []).find(d => d.user_pr_no)?.user_pr_no;
+                const purpose = record?.title || prDoc?.title || (documents || []).find(d => d.title && !d.title.toLowerCase().includes('ppmp'))?.title || 'General Procurement';
+                return userPrNo ? `PR No. ${userPrNo} - ${purpose}` : `No assigned PR no. - ${purpose}`;
             })()}
             size="2xl"
             showCloseButton={true}

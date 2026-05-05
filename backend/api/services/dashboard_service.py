@@ -48,11 +48,9 @@ class DashboardService:
         ongoing = 0
 
         for record in ProcurementRecord.objects.all():
-            docs = list(Document.objects.filter(prNo=record.pr_no))
-            if not docs:
-                continue
             total += 1
-            if DashboardService._folder_is_completed(docs):
+            prs = record.purchase_requests.all()
+            if prs.exists() and prs.first().status in ['completed', 'po_generated']:
                 complete += 1
             else:
                 ongoing += 1

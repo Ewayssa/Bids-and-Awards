@@ -159,7 +159,8 @@ const Encode = ({ user }) => {
 
     const getStatusColor = (status) => {
         switch (status?.toLowerCase()) {
-            case 'complete': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'complete': 
+            case 'completed': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
             case 'ongoing': return 'bg-amber-100 text-amber-700 border-amber-200';
             default: return 'bg-slate-100 text-slate-700 border-slate-200';
         }
@@ -243,7 +244,11 @@ const Encode = ({ user }) => {
                                 }
 
                                 const purpose = record.title || 'General Procurement';
-                                const displayPR = record.user_pr_no || record.pr_no || 'Pending';
+                                const hasAssignedPrNo = !!record.user_pr_no;
+                                const displayTitle = hasAssignedPrNo ? `PR No. ${record.user_pr_no} - ${purpose}` : `No assigned PR no. - ${purpose}`;
+                                const prStatus = record.purchase_requests?.length > 0 ? record.purchase_requests[0].status : null;
+                                const isPrCompleted = prStatus === 'completed' || prStatus === 'po_generated';
+                                const recordStatus = isPrCompleted ? 'COMPLETED' : 'ON GOING';
 
                                 return (
                                     <div 
@@ -254,7 +259,7 @@ const Encode = ({ user }) => {
                                             setSelectedProcurementRecord(record);
                                             setActiveModal('ppmpFolder');
                                         }}
-                                        className="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl p-4 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-xl hover:shadow-[var(--primary)]/10 flex flex-col gap-2 relative overflow-hidden self-start"
+                                        className="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl p-4 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-xl hover:shadow-[var(--primary)]/10 flex flex-col gap-3 relative overflow-hidden self-start"
                                     >
                                         <div className="absolute top-0 right-0 w-28 h-28 bg-[var(--primary)]/5 rounded-full -mr-14 -mt-14 group-hover:scale-150 transition-transform duration-700" />
                                         
@@ -264,17 +269,24 @@ const Encode = ({ user }) => {
                                                     📂
                                                 </div>
                                                 <div className="flex flex-col min-w-0">
-                                                    <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight truncate group-hover:text-[var(--primary)] transition-colors duration-300" title={`PR # ${displayPR} - ${purpose}`}>
-                                                        PR # {displayPR} - {purpose}
+                                                    <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight truncate group-hover:text-[var(--primary)] transition-colors duration-300" title={displayTitle}>
+                                                        {displayTitle}
                                                     </h4>
                                                 </div>
                                             </div>
-                                            <div className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 rounded-full text-[8px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-slate-700 shrink-0">
+                                            <div className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 rounded-full text-[8px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 dark:border-slate-700 shrink-0 ml-2">
                                                 {docs.length} Documents
                                             </div>
                                         </div>
 
-                                        <div className="pt-2 border-t border-slate-50 dark:border-slate-800 flex items-center justify-end relative z-10">
+                                        <div className="pt-2 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between relative z-10">
+                                            <div className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${
+                                                isPrCompleted
+                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                                    : 'bg-amber-50 text-amber-600 border-amber-100'
+                                            }`}>
+                                                {recordStatus}
+                                            </div>
                                             <div className="flex items-center gap-2 text-[var(--primary)] font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                                                 Open Folder
                                                 <div className="w-7 h-7 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white shadow-sm">
@@ -330,9 +342,11 @@ const Encode = ({ user }) => {
                     setActiveModal(null);
                     setSelectedPPMP(null);
                     setSelectedPPMPDocs([]);
+                    setSelectedProcurementRecord(null);
                 }}
                 ppmpNo={selectedPPMP}
                 documents={selectedPPMPDocs}
+                record={selectedProcurementRecord}
             />
 
             <ProcurementDocumentModal
