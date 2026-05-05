@@ -28,6 +28,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
         pr_no = self.request.query_params.get('prNo', '').strip()
         if pr_no:
             queryset = queryset.filter(prNo=pr_no)
+        
+        ppmp_no = self.request.query_params.get('ppmp_no', '').strip()
+        if ppmp_no:
+            queryset = queryset.filter(ppmp_no=ppmp_no)
         return queryset
 
     def get_permissions(self):

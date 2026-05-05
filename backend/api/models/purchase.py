@@ -20,7 +20,7 @@ class PurchaseRequest(models.Model):
         blank=True,
         help_text='Link to the associated PPMP (Procurement Record)'
     )
-    pr_no = models.CharField(max_length=100, blank=True)
+    pr_no = models.CharField(max_length=100, blank=True, null=True)
     purpose = models.TextField(help_text='Purpose of the purchase request')
     grand_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ongoing')

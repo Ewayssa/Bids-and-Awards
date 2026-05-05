@@ -42,24 +42,45 @@ const PR = ({ user }) => {
 
         try {
             // Fetch globally by PPMP No to find inherited APP and PPMP ONLY
-            if (item.ppmp_no) {
-                const globalDocs = await documentService.getAll({ ppmp_no: item.ppmp_no });
-                inheritedDocs = globalDocs.filter(d => 
-                    ['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].some(type => (d.subDoc || '').includes(type))
-                );
+            // Also check folder_pr_no (prNo) as fallback if ppmp_no is empty
+            const ppmpNo = item.ppmp_no || item.folder_pr_no;
+            if (ppmpNo) {
+                const globalDocs = await documentService.getAll({ ppmp_no: ppmpNo });
+                inheritedDocs = globalDocs.filter(d => {
+                    const subDoc = (d.subDoc || '').toLowerCase();
+                    return subDoc.includes('annual procurement plan') || 
+                           subDoc.includes('project procurement management plan') ||
+                           subDoc.includes('supplemental ppmp') ||
+                           subDoc.includes('app') ||
+                           subDoc.includes('ppmp');
+                });
             }
         } catch (err) {
             console.error('Failed to load inherited PR documents:', err);
         }
 
-        // Combine carefully, avoiding duplicates
+        // Combine carefully, avoiding duplicates - check by id AND by subDoc to prevent duplicates
         const allDocs = [...folderDocs];
         const existingIds = new Set(allDocs.map(d => d.id));
+        const existingSubDocs = new Map(); // Track subDoc types to avoid duplicates
         
+        // Index existing docs by subDoc type for deduplication
+        allDocs.forEach(doc => {
+            const key = (doc.subDoc || '').toLowerCase();
+            if (!existingSubDocs.has(key)) {
+                existingSubDocs.set(key, doc.id);
+            }
+        });
+        
+        // Add inherited docs, avoiding duplicates by subDoc type
         for (const doc of inheritedDocs) {
-            if (!existingIds.has(doc.id)) {
+            const docSubDoc = (doc.subDoc || '').toLowerCase();
+            const isDuplicateSubDoc = existingSubDocs.has(docSubDoc);
+            
+            if (!existingIds.has(doc.id) && !isDuplicateSubDoc) {
                 allDocs.push(doc);
                 existingIds.add(doc.id);
+                existingSubDocs.set(docSubDoc, doc.id);
             }
         }
 

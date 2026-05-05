@@ -30,10 +30,10 @@ class ProcurementRecord(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    pr_no = models.CharField(max_length=100, help_text='BAC Folder No.')
+    pr_no = models.CharField(max_length=100, unique=True, help_text='BAC Folder No.')
     ppmp_no = models.CharField(max_length=100, blank=True, help_text='Associated PPMP No. for grouping')
     is_ready = models.BooleanField(default=False, help_text='True if all mandatory docs (PR, Activity Design, RIS, Market Scoping) are uploaded')
-    user_pr_no = models.CharField(max_length=100, blank=True, help_text='Official PR No. assigned by BAC')
+    user_pr_no = models.CharField(max_length=100, blank=True, null=True, help_text='Official PR No. assigned by BAC')
     year = models.CharField(max_length=4, blank=True, help_text='Year (e.g. 2024)')
     quarter = models.CharField(max_length=10, blank=True, help_text='Quarter (e.g. Q1, Q2)')
     rfq_no = models.CharField(max_length=100, blank=True, help_text='RFQ No.')

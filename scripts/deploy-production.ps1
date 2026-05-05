@@ -1,4 +1,4 @@
-# BAC Document Tracking - Production Deployment Script
+# Procurement Management System - Production Deployment Script
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $backendPath = Join-Path $projectRoot "backend"

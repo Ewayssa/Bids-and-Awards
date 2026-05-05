@@ -157,7 +157,10 @@ def is_bac_chair(user):
 
 def is_bac_member(user):
     """Check if user is BAC Member."""
-    return get_user_role(user) == 'bac_member' or getattr(user, 'position', '') == 'BAC Member'
+    role = get_user_role(user)
+    position = getattr(user, 'position', '')
+    # Allow variations of the role name (bac_member, bac member, etc.)
+    return role in ['bac_member', 'bac member'] or position and 'bac member' in position.lower()
 
 def is_planning_unit(user):
     return get_user_role(user) == 'planning_unit'

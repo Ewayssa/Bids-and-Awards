@@ -200,10 +200,7 @@ const Encode = ({ user }) => {
                                 </h3>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">
-                            <span className="text-xs font-black text-[var(--primary)]">{procurementRecords.length}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Folders</span>
-                        </div>
+
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -220,20 +217,35 @@ const Encode = ({ user }) => {
                                 <p className="text-xs text-red-400 mt-2 uppercase tracking-widest font-black">{error}</p>
                                 <button onClick={load} className="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold uppercase text-[10px] tracking-widest">Retry</button>
                             </div>
-                        ) : procurementRecords.length > 0 ? (
-                            procurementRecords.map((record) => {
+                        ) : (() => {
+                            const filteredRecords = procurementRecords.filter(record => {
+                                const hasPR = record.purchase_requests?.length > 0;
+                                const hasNonGlobalDocs = (record.documents || []).some(d => 
+                                    !['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].some(type => (d.subDoc || '').includes(type))
+                                );
+                                return hasPR || hasNonGlobalDocs;
+                            });
+
+                            if (filteredRecords.length === 0) {
+                                return (
+                                    <div className="col-span-full py-20 bg-white/50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
+                                        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4 text-slate-300">
+                                            <MdDescription className="w-8 h-8" />
+                                        </div>
+                                        <h4 className="text-lg font-bold text-slate-400">No Active Projects</h4>
+                                        <p className="text-xs text-slate-400 mt-2 uppercase tracking-widest font-black">Group documents by PPMP No to see them here</p>
+                                    </div>
+                                );
+                            }
+
+                            return filteredRecords.map((record) => {
                                 const ppmpNo = record.ppmp_no || 'Unassigned';
-
-                                // Get documents specifically tied to this ProcurementRecord
                                 const recordDocs = record.documents || [];
-
-                                // Find globally inherited APP and PPMP documents for this PPMP No
                                 const inheritedDocs = documents.filter(d =>
                                     (d.ppmp_no || '').trim() === ppmpNo.trim() &&
                                     ['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].some(type => (d.subDoc || '').includes(type))
                                 );
 
-                                // Combine, avoiding duplicates
                                 const docs = [...recordDocs];
                                 const existingIds = new Set(docs.map(d => d.id));
                                 for (const doc of inheritedDocs) {
@@ -262,7 +274,6 @@ const Encode = ({ user }) => {
                                         className="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl p-4 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-xl hover:shadow-[var(--primary)]/10 flex flex-col gap-3 relative overflow-hidden self-start"
                                     >
                                         <div className="absolute top-0 right-0 w-28 h-28 bg-[var(--primary)]/5 rounded-full -mr-14 -mt-14 group-hover:scale-150 transition-transform duration-700" />
-
                                         <div className="flex items-start justify-between relative z-10">
                                             <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-base shadow-inner group-hover:scale-110 transition-transform duration-300 shrink-0">
@@ -295,16 +306,8 @@ const Encode = ({ user }) => {
                                         </div>
                                     </div>
                                 );
-                            })
-                        ) : (
-                            <div className="col-span-full py-20 bg-white/50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
-                                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4 text-slate-300">
-                                    <MdDescription className="w-8 h-8" />
-                                </div>
-                                <h4 className="text-lg font-bold text-slate-400">No Active Projects</h4>
-                                <p className="text-xs text-slate-400 mt-2 uppercase tracking-widest font-black">Group documents by PPMP No to see them here</p>
-                            </div>
-                        )}
+                            });
+                        })()}
                     </div>
                 </div>
 
