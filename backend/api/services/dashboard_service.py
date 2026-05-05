@@ -1,5 +1,5 @@
 from django.db.models import Count, Q
-from api.models import Document, ProcurementRecord
+from api.models import Document, ProcurementRecord, PurchaseRequest
 
 class DashboardService:
     # Simplified Requirement Lists (Short Labels)
@@ -38,37 +38,15 @@ class DashboardService:
     @staticmethod
     def get_folder_stats():
         """
-        Count dashboard progress by procurement folder (ProcurementRecord).
-        A folder is completed when every document in that folder has a file,
-        with Purchase Request counted as the system-generated file.
-        Documents are matched to folders by prNo.
+        Count dashboard progress by PurchaseRequest statuses.
+        This ensures the stat cards match the 'Purchase Request' page totals.
         """
-        total = 0
-        complete = 0
-        ongoing = 0
-
-        for record in ProcurementRecord.objects.all():
-            total += 1
-            prs = record.purchase_requests.all()
-            if prs.exists() and prs.first().status in ['completed', 'po_generated']:
-                complete += 1
-            else:
-                ongoing += 1
-
-        # Also count orphan documents not linked to any ProcurementRecord
-        linked_pr_nos = set(ProcurementRecord.objects.values_list('pr_no', flat=True))
-        orphan_docs = Document.objects.exclude(prNo__in=linked_pr_nos)
-        groups = {}
-        for doc in orphan_docs:
-            key = (doc.prNo or str(doc.id)).strip()
-            groups.setdefault(key, []).append(doc)
-
-        for docs in groups.values():
-            total += 1
-            if DashboardService._folder_is_completed(docs):
-                complete += 1
-            else:
-                ongoing += 1
+        # We exclude cancelled PRs from the main progress stats
+        active_prs = PurchaseRequest.objects.exclude(status='cancelled')
+        
+        total = active_prs.count()
+        complete = active_prs.filter(status__in=['completed', 'po_generated']).count()
+        ongoing = active_prs.filter(status='ongoing').count()
 
         return {
             'total': total,
