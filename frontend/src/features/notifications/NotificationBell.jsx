@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MdNotifications, MdNotificationsNone, MdHistory, MdFiberManualRecord, MdAccessTime } from 'react-icons/md';
 import { notificationService } from '../../services/api';
-import { formatDisplayDateTime } from '../../utils/helpers.jsx';
+import { formatDisplayDate, formatDisplayDateTime } from '../../utils/helpers';
 
 const NotificationBell = ({ user }) => {
     const navigate = useNavigate();

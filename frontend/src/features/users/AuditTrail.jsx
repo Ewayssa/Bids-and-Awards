@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PageHeader from '../../components/PageHeader';
 import { auditLogService } from '../../services/api';
 import { MdHistory, MdChevronLeft, MdChevronRight } from 'react-icons/md';
-
-const TABLE_PAGE_SIZE = 10;
+import { TABLE_PAGE_SIZE } from '../../constants';
 
 const ACTION_LABELS = {
     user_login: 'Login',

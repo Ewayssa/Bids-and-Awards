@@ -4,8 +4,8 @@ import { MdPersonAdd, MdCheckCircle, MdSearch, MdChevronLeft, MdChevronRight, Md
 import PageHeader from '../../components/PageHeader';
 import Modal from '../../components/Modal';
 import { ROLES, getRoleDisplayName, getAvailableRoles, hasPermission, PERMISSIONS } from '../../utils/auth';
+import { TABLE_PAGE_SIZE } from '../../constants';
 
-const TABLE_PAGE_SIZE = 10;
 const EMPTY_ADD_FORM = { username: '', fullName: '', office: '', role: '' };
 const EMPTY_EDIT_FORM = { fullName: '', office: '', role: '', is_active: true };
 

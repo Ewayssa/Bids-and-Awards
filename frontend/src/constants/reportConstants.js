@@ -61,7 +61,7 @@ export const HEADER_GROUPS = [
     { groupLabel: 'Remarks (Explaining changes from the APP)', colKeys: ['remarks'] },
 ];
 
-export const TABLE_PAGE_SIZE = 10;
+export const REPORT_TABLE_PAGE_SIZE = 10;
 export const DATE_MIN = '2000-01-01';
 export const DATE_MAX = '2060-12-31';
 export const STORAGE_KEY_ENCODED_REPORT = 'bac_reports_encoded_rows';

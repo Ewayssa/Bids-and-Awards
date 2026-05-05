@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { MdAdd, MdClose, MdEdit, MdEvent, MdDelete, MdInfo, MdCheckCircle, MdUpdate } from 'react-icons/md';
 import { calendarEventService } from '../../services/api';
-import { formatDisplayDate, formatDisplayTime, DatePicker } from '../../utils/helpers.jsx';
+import { formatDisplayDate, formatDisplayTime } from '../../utils/helpers';
+import DatePicker from '../../components/DatePicker';
 import Modal from '../../components/Modal';
 
 export const EventModals = ({ 

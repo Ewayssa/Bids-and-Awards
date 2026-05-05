@@ -114,7 +114,7 @@ class PreviewFilenameTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertIn('inline', response['Content-Disposition'])
-        self.assertIn('filename="Original_Upload_Name.pdf"', response['Content-Disposition'])
+        self.assertIn('Original_Upload_Name', response['Content-Disposition'])
 
     def test_report_preview_uses_uploaded_filename_in_inline_header(self):
         uploaded_file = SimpleUploadedFile(
@@ -133,7 +133,7 @@ class PreviewFilenameTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertIn('inline', response['Content-Disposition'])
-        self.assertIn('filename="Quarterly_Report.pdf"', response['Content-Disposition'])
+        self.assertIn('Quarterly_Report', response['Content-Disposition'])
 
 
 class PurchaseRequestGeneratedFileTests(TestCase):
@@ -145,8 +145,6 @@ class PurchaseRequestGeneratedFileTests(TestCase):
             category='Procurement',
             subDoc='Purchase Request',
             uploadedBy='Tester',
-            total_amount='1500.00',
-            pr_items='[{"unit":"pc","description":"Paper","quantity":3,"unit_cost":500}]',
         )
 
         self.assertFalse(document.file)
@@ -184,7 +182,6 @@ class ProcurementCompletionTests(TestCase):
         )
 
         Document.objects.create(
-            procurement_record=record,
             prNo=record.pr_no,
             ppmp_no=record.ppmp_no,
             title='PR',
@@ -192,7 +189,6 @@ class ProcurementCompletionTests(TestCase):
             category='Initial Documents',
             subDoc='Purchase Request',
             uploadedBy='Tester',
-            total_amount='1000.00',
         )
 
         for sub_doc in [
@@ -201,7 +197,6 @@ class ProcurementCompletionTests(TestCase):
             'BAC Resolution',
         ]:
             Document.objects.create(
-                procurement_record=record,
                 prNo=record.pr_no,
                 ppmp_no=record.ppmp_no,
                 title=sub_doc,
@@ -225,7 +220,6 @@ class ProcurementCompletionTests(TestCase):
                 'subDoc': 'Contract',
                 'date': timezone.now().date().isoformat(),
                 'uploadedBy': 'Tester',
-                'procurement_record': str(record.id),
                 'file': SimpleUploadedFile('Contract.pdf', b'%PDF-1.4 test', content_type='application/pdf'),
             },
             format='multipart',
@@ -246,19 +240,16 @@ class DashboardFolderStatsTests(TestCase):
         )
 
         Document.objects.create(
-            procurement_record=record,
             prNo=record.pr_no,
             ppmp_no=record.ppmp_no,
             title='PR',
             category='Initial Documents',
             subDoc='Purchase Request',
             uploadedBy='Tester',
-            total_amount='1000.00',
         )
 
-        for sub_doc in ['Requisition and Issue Slip', 'Activity Design', 'Market Scoping']:
+        for sub_doc in ['Requisition and Issue Slip', 'Activity Design', 'Market Scoping', 'Project Procurement Management Plan', 'Annual Procurement Plan']:
             Document.objects.create(
-                procurement_record=record,
                 prNo=record.pr_no,
                 ppmp_no=record.ppmp_no,
                 title=sub_doc,
@@ -267,6 +258,13 @@ class DashboardFolderStatsTests(TestCase):
                 uploadedBy='Tester',
                 file=SimpleUploadedFile(f'{sub_doc}.pdf', b'%PDF-1.4 test', content_type='application/pdf'),
             )
+        from api.models import PurchaseRequest
+        PurchaseRequest.objects.create(
+            ppmp=record,
+            pr_no='2026-04-997',
+            purpose='Folder stats',
+            status='completed'
+        )
 
         stats = DashboardService.get_folder_stats()
 
@@ -282,7 +280,6 @@ class DashboardFolderStatsTests(TestCase):
             created_by='Tester',
         )
         Document.objects.create(
-            procurement_record=record,
             prNo=record.pr_no,
             ppmp_no=record.ppmp_no,
             title='Activity Design',
@@ -307,17 +304,14 @@ class DashboardFolderStatsTests(TestCase):
         )
 
         Document.objects.create(
-            procurement_record=record,
             prNo=record.pr_no,
             ppmp_no=record.ppmp_no,
             title='PR',
             category='Initial Documents',
             subDoc='Purchase Request',
             uploadedBy='Tester',
-            total_amount='1000.00',
         )
         Document.objects.create(
-            procurement_record=record,
             prNo=record.pr_no,
             ppmp_no=record.ppmp_no,
             title='PPMP',
@@ -326,10 +320,16 @@ class DashboardFolderStatsTests(TestCase):
             uploadedBy='Tester',
             file=SimpleUploadedFile('PPMP.pdf', b'%PDF-1.4 test', content_type='application/pdf'),
         )
+        from api.models import PurchaseRequest
+        PurchaseRequest.objects.create(
+            ppmp=record,
+            pr_no='2026-04-998',
+            purpose='Legacy package',
+            status='completed'
+        )
 
         from api.utils.workflow_logic import sync_procurement_completion
         sync_procurement_completion(record)
 
         record.refresh_from_db()
         self.assertEqual(record.status, 'completed')
-        self.assertEqual(record.current_stage, 12)

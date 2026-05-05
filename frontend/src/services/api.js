@@ -92,19 +92,63 @@ api.interceptors.request.use(
     }
 );
 
-// Add a response interceptor to handle token expiration
+// Add a response interceptor to handle token expiration with silent refresh
+let _isRefreshing = false;
+let _refreshQueue = [];
+
+const _processQueue = (error, token = null) => {
+    _refreshQueue.forEach(({ resolve, reject }) => error ? reject(error) : resolve(token));
+    _refreshQueue = [];
+};
+
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response?.status === 401) {
-            // Token expired or invalid, clear local storage and redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
+        const originalRequest = error.config;
+
+        // Only attempt refresh on 401, and not on the refresh endpoint itself (avoids infinite loop)
+        if (error.response?.status === 401 && !originalRequest._retried && !originalRequest.url?.includes('token/refresh')) {
+            originalRequest._retried = true;
+
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (!refreshToken) {
+                // No refresh token — force logout
+                localStorage.clear();
+                if (window.location.pathname !== '/login') window.location.href = '/login';
+                return Promise.reject(error);
+            }
+
+            if (_isRefreshing) {
+                // Queue requests while a refresh is already in flight
+                return new Promise((resolve, reject) => {
+                    _refreshQueue.push({ resolve, reject });
+                }).then(token => {
+                    originalRequest.headers['Authorization'] = `Bearer ${token}`;
+                    return api(originalRequest);
+                });
+            }
+
+            _isRefreshing = true;
+            try {
+                const res = await api.post('/token/refresh/', { refresh: refreshToken });
+                const newAccessToken = res.data.access;
+                localStorage.setItem('token', newAccessToken);
+                api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+                originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+                _processQueue(null, newAccessToken);
+                return api(originalRequest);
+            } catch (refreshError) {
+                _processQueue(refreshError, null);
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('user');
+                if (window.location.pathname !== '/login') window.location.href = '/login';
+                return Promise.reject(refreshError);
+            } finally {
+                _isRefreshing = false;
             }
         }
+
         return Promise.reject(error);
     }
 );

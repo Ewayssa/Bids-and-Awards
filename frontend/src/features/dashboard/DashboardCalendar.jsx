@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MdChevronLeft, MdChevronRight, MdTimeline } from 'react-icons/md';
-import { formatDisplayDate, formatDisplayTime } from '../../utils/helpers.jsx';
+import { formatDisplayDate, formatDisplayTime } from '../../utils/helpers';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -163,3 +163,5 @@ const EventList = ({ title, events, isAdmin, onEdit, iconColor = 'var(--primary)
         )}
     </div>
 );
+
+export default DashboardCalendar;

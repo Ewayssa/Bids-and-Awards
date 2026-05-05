@@ -2,6 +2,15 @@
  * Consolidated helper functions for formatting, document management, and general utilities.
  */
 
+// --- Constants ---
+
+export const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+export const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 // --- String & Text Helpers ---
 
 /**
@@ -33,6 +42,50 @@ export function sanitizeFilename(filename) {
 // --- Date & Time Helpers ---
 
 /**
+ * Get days for a calendar month (including padding from prev/next months)
+ */
+export function getCalendarDays(month, year) {
+    const firstDay = new Date(year, month, 1).getDay(); // 0 (Sun) to 6 (Sat)
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    
+    const days = [];
+    
+    // Padding from prev month
+    for (let i = firstDay - 1; i >= 0; i--) {
+        days.push({
+            day: prevMonthDays - i,
+            month: month === 0 ? 11 : month - 1,
+            year: month === 0 ? year - 1 : year,
+            currentMonth: false
+        });
+    }
+    
+    // Current month
+    for (let i = 1; i <= daysInMonth; i++) {
+        days.push({
+            day: i,
+            month,
+            year,
+            currentMonth: true
+        });
+    }
+    
+    // Padding for next month (to fill 6 rows/42 cells for consistency)
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i++) {
+        days.push({
+            day: i,
+            month: month === 11 ? 0 : month + 1,
+            year: month === 11 ? year + 1 : year,
+            currentMonth: false
+        });
+    }
+    
+    return days;
+}
+
+/**
  * Format date for display (MM/DD/YYYY)
  */
 export function formatDisplayDate(date) {
@@ -41,8 +94,20 @@ export function formatDisplayDate(date) {
     if (Number.isNaN(d.getTime())) return '';
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    return `${month}-${day}-${year}`;
+    const year = String(d.getFullYear());
+    return `${month}/${day}/${year}`;
+}
+
+/**
+ * Format date and time for display (MM/DD/YYYY HH:MM AM/PM)
+ */
+export function formatDisplayDateTime(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return '';
+    const datePart = formatDisplayDate(d);
+    const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `${datePart} ${timePart}`;
 }
 
 /**
@@ -52,7 +117,10 @@ export function formatInputDate(date) {
     if (!date) return '';
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return '';
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**
@@ -150,7 +218,7 @@ export function formatNumber(value, decimals = 0) {
  * Get missing required fields for a document
  */
 export function getMissingFields(doc) {
-    const required = ['title', 'category', 'subDoc', 'date', 'file'];
+    const required = ['category', 'subDoc', 'date', 'file'];
     const missing = [];
     required.forEach(field => {
         const value = doc[field];

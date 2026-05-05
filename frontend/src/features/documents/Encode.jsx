@@ -17,7 +17,7 @@ import {
     MdLabel
 } from 'react-icons/md';
 import PageHeader from '../../components/PageHeader';
-import { TABLE_PAGE_SIZE } from '../../utils/constants';
+import { TABLE_PAGE_SIZE } from '../../constants';
 import { DOC_TYPES, RFQ_PROCUREMENT_METHODS } from '../../constants/docTypes';
 import { formatCurrencyValue } from '../../utils/validation';
 
@@ -57,14 +57,14 @@ const Encode = ({ user }) => {
                 documentService.getAll(),
                 procurementRecordService.getAll(),
             ]);
-            
+
             const list = Array.isArray(docsResponse) ? docsResponse : (docsResponse?.results ?? []);
             const sortedDocs = [...list].sort((a, b) => {
                 const aTime = a.uploaded_at ? new Date(a.uploaded_at).getTime() : 0;
                 const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
                 return bTime - aTime;
             });
-            
+
             setDocuments(sortedDocs);
             setProcurementRecords(recordsResponse);
 
@@ -122,7 +122,7 @@ const Encode = ({ user }) => {
                     title: doc.title,
                     office: doc.end_user_office || ''
                 };
-                
+
                 // Open PR as a PDF in a new standardized preview tab
                 const blob = await generatePR_PDFBlob(prData);
                 const url = URL.createObjectURL(blob);
@@ -159,13 +159,13 @@ const Encode = ({ user }) => {
 
     const getStatusColor = (status) => {
         switch (status?.toLowerCase()) {
-            case 'complete': 
+            case 'complete':
             case 'completed': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
             case 'ongoing': return 'bg-amber-100 text-amber-700 border-amber-200';
             default: return 'bg-slate-100 text-slate-700 border-slate-200';
         }
     };
-    
+
     const handleOpenWorkflow = (record) => {
         setSelectedProcurementRecord(record);
         setActiveModal('detailedWorkflow');
@@ -223,16 +223,16 @@ const Encode = ({ user }) => {
                         ) : procurementRecords.length > 0 ? (
                             procurementRecords.map((record) => {
                                 const ppmpNo = record.ppmp_no || 'Unassigned';
-                                
+
                                 // Get documents specifically tied to this ProcurementRecord
                                 const recordDocs = record.documents || [];
-                                
+
                                 // Find globally inherited APP and PPMP documents for this PPMP No
-                                const inheritedDocs = documents.filter(d => 
-                                    (d.ppmp_no || '').trim() === ppmpNo.trim() && 
+                                const inheritedDocs = documents.filter(d =>
+                                    (d.ppmp_no || '').trim() === ppmpNo.trim() &&
                                     ['Annual Procurement Plan', 'Project Procurement Management Plan', 'Supplemental PPMP', 'APP', 'PPMP'].some(type => (d.subDoc || '').includes(type))
                                 );
-                                
+
                                 // Combine, avoiding duplicates
                                 const docs = [...recordDocs];
                                 const existingIds = new Set(docs.map(d => d.id));
@@ -251,7 +251,7 @@ const Encode = ({ user }) => {
                                 const recordStatus = isPrCompleted ? 'COMPLETED' : 'ON GOING';
 
                                 return (
-                                    <div 
+                                    <div
                                         key={record.id}
                                         onClick={() => {
                                             setSelectedPPMP(ppmpNo);
@@ -262,7 +262,7 @@ const Encode = ({ user }) => {
                                         className="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl p-4 border-2 border-slate-200 dark:border-slate-800 hover:border-[var(--primary)]/50 transition-all duration-500 hover:shadow-xl hover:shadow-[var(--primary)]/10 flex flex-col gap-3 relative overflow-hidden self-start"
                                     >
                                         <div className="absolute top-0 right-0 w-28 h-28 bg-[var(--primary)]/5 rounded-full -mr-14 -mt-14 group-hover:scale-150 transition-transform duration-700" />
-                                        
+
                                         <div className="flex items-start justify-between relative z-10">
                                             <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-base shadow-inner group-hover:scale-110 transition-transform duration-300 shrink-0">
@@ -280,11 +280,10 @@ const Encode = ({ user }) => {
                                         </div>
 
                                         <div className="pt-2 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between relative z-10">
-                                            <div className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${
-                                                isPrCompleted
-                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                                                    : 'bg-amber-50 text-amber-600 border-amber-100'
-                                            }`}>
+                                            <div className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${isPrCompleted
+                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                }`}>
                                                 {recordStatus}
                                             </div>
                                             <div className="flex items-center gap-2 text-[var(--primary)] font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
@@ -315,14 +314,14 @@ const Encode = ({ user }) => {
 
             {/* View Details Modal */}
             {activeModal === 'view' && (
-                <DocViewModal 
-                    doc={selectedDoc} 
+                <DocViewModal
+                    doc={selectedDoc}
                     user={user}
-                    isOpen={activeModal === 'view'} 
+                    isOpen={activeModal === 'view'}
                     onClose={() => {
                         setActiveModal(null);
                         setSelectedDoc(null);
-                    }} 
+                    }}
                 />
             )}
 

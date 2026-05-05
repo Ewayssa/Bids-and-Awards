@@ -51,15 +51,6 @@ export const SORT_DIRECTIONS = {
     DESC: 'desc'
 };
 
-// Common months for calendar
-export const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-];
-
-// Common days for calendar
-export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 // API error messages
 export const API_ERRORS = {
     NETWORK_ERROR: 'Network error. Please check your connection.',

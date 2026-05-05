@@ -8,13 +8,16 @@
         body {
             margin: 0;
             padding: 0;
-            background: #eef3ef;
-            color: #1f2933;
-            font-family: Arial, Helvetica, sans-serif;
-            line-height: 1.55;
+            background-color: #f1f5f9;
+            color: #334155;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
         table {
             border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
         }
         img {
             border: 0;
@@ -22,288 +25,255 @@
             outline: none;
             text-decoration: none;
         }
-        .email-shell {
+        .wrapper {
             width: 100%;
-            background: #eef3ef;
-            padding: 28px 12px;
+            background-color: #f1f5f9;
+            padding: 40px 10px;
         }
         .container {
             width: 100%;
-            max-width: 680px;
-            background: #ffffff;
-            border: 1px solid #d9e2dc;
-            border-radius: 8px;
+            max-width: 600px;
+            background-color: #ffffff;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 14px 30px rgba(16, 54, 32, 0.12);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
         .masthead {
-            background: #0b5f31;
+            background-color: #0b5f31;
+            padding: 32px 40px;
             color: #ffffff;
         }
-        .masthead-inner {
-            padding: 24px 30px;
+        .masthead-logo-table {
+            width: 100%;
         }
-        .seal-cell {
-            width: 78px;
+        .logo-cell {
+            width: 60px;
             vertical-align: middle;
         }
-        .seal {
-            width: 62px;
-            height: 62px;
-            object-fit: contain;
-            background: #ffffff;
+        .logo-img {
+            width: 60px;
+            height: auto;
+            background-color: #ffffff;
             border-radius: 50%;
-            padding: 6px;
+            padding: 4px;
         }
-        .agency {
+        .header-text-cell {
+            padding-left: 20px;
+            vertical-align: middle;
+        }
+        .agency-name {
             margin: 0;
-            color: #dff5e7;
             font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1.4px;
-            text-transform: uppercase;
-        }
-        .office {
-            margin: 4px 0 0;
-            color: #ffffff;
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: 0;
-        }
-        .system-name {
-            margin: 3px 0 0;
-            color: #ccebd6;
-            font-size: 13px;
             font-weight: 600;
-        }
-        .accent-bar td {
-            height: 5px;
-            font-size: 0;
-            line-height: 0;
-        }
-        .accent-red {
-            background: #b91c1c;
-        }
-        .accent-gold {
-            background: #f2c94c;
-        }
-        .accent-blue {
-            background: #1d4ed8;
-        }
-        .content {
-            padding: 34px 38px 36px;
-        }
-        .notice-pill {
-            display: inline-block;
-            margin: 0 0 22px;
-            padding: 7px 12px;
-            background: #e8f5ed;
-            border: 1px solid #b7dbc4;
-            border-radius: 999px;
-            color: #0b5f31;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.8);
         }
-        .greeting {
-            margin: 0 0 12px;
-            color: #102a1b;
+        .office-name {
+            margin: 4px 0 0;
             font-size: 18px;
             font-weight: 700;
+            line-height: 1.2;
+            color: #ffffff;
+        }
+        .accent-bar {
+            height: 4px;
+            width: 100%;
+        }
+        .accent-red { background-color: #ef4444; }
+        .accent-gold { background-color: #f59e0b; }
+        .accent-blue { background-color: #3b82f6; }
+
+        .content {
+            padding: 40px;
+        }
+        .notice-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 9999px;
+            color: #166534;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 24px;
+        }
+        .greeting {
+            margin: 0 0 16px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
         }
         .intro {
-            margin: 0 0 26px;
-            color: #425044;
+            margin: 0 0 32px;
             font-size: 15px;
+            color: #475569;
         }
         .event-card {
             width: 100%;
-            margin: 0 0 28px;
-            background: #fbfdfb;
-            border: 1px solid #d5e5da;
-            border-left: 6px solid #0b5f31;
-            border-radius: 6px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #0b5f31;
+            border-radius: 8px;
+            margin-bottom: 32px;
         }
-        .event-card td {
-            padding: 0;
+        .event-detail-row {
+            border-bottom: 1px solid #e2e8f0;
         }
-        .event-row {
-            border-bottom: 1px solid #e5eee8;
+        .event-detail-row:last-child {
+            border-bottom: none;
         }
-        .event-label {
-            width: 165px;
-            padding: 16px 18px;
-            color: #627066;
+        .label-cell {
+            width: 120px;
+            padding: 16px 20px;
             font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-            vertical-align: top;
-        }
-        .event-value {
-            padding: 16px 18px 16px 0;
-            color: #102a1b;
-            font-size: 16px;
             font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
             vertical-align: top;
         }
-        .action-wrap {
-            margin: 32px 0 30px;
-            text-align: center;
+        .value-cell {
+            padding: 16px 20px 16px 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+            vertical-align: top;
         }
-        .action-button {
-            display: inline-block;
-            min-width: 180px;
-            padding: 14px 24px;
-            background: #0b5f31;
-            border-radius: 4px;
-            color: #ffffff !important;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0.7px;
-            text-decoration: none;
-            text-transform: uppercase;
+        .activity-title {
+            font-size: 18px;
+            color: #0b5f31;
         }
         .closing {
-            margin: 0;
+            margin-top: 32px;
             padding-top: 24px;
-            border-top: 1px solid #e5eee8;
-            color: #425044;
+            border-top: 1px solid #e2e8f0;
             font-size: 14px;
+            color: #64748b;
         }
         .signature {
-            margin: 20px 0 0;
+            margin-top: 20px;
+            font-weight: 700;
             color: #0b5f31;
-            font-size: 14px;
-            font-weight: 800;
         }
         .footer {
-            padding: 22px 30px;
-            background: #f7faf8;
-            border-top: 1px solid #d9e2dc;
-            color: #65746a;
-            font-size: 12px;
+            padding: 24px 40px;
+            background-color: #f8fafc;
+            border-top: 1px solid #e2e8f0;
             text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
         }
-        .footer strong {
-            color: #0b5f31;
+        .footer b {
+            color: #475569;
         }
+
         @media only screen and (max-width: 600px) {
-            .email-shell {
+            .wrapper {
                 padding: 0;
             }
             .container {
                 border-radius: 0;
             }
-            .masthead-inner,
-            .content,
-            .footer {
-                padding-left: 20px;
-                padding-right: 20px;
+            .masthead, .content, .footer {
+                padding: 24px 20px;
             }
-            .seal-cell {
-                width: 64px;
+            .office-name {
+                font-size: 16px;
             }
-            .seal {
-                width: 50px;
-                height: 50px;
-            }
-            .office {
-                font-size: 17px;
-            }
-            .event-label,
-            .event-value {
+            .label-cell, .value-cell {
                 display: block;
                 width: auto;
-                padding: 14px 16px 0;
+                padding: 12px 16px 4px;
             }
-            .event-value {
-                padding-top: 5px;
-                padding-bottom: 14px;
+            .value-cell {
+                padding-top: 0;
+                padding-bottom: 12px;
             }
         }
     </style>
 </head>
 <body>
-    <table role="presentation" class="email-shell" width="100%">
+    <table role="presentation" class="wrapper" width="100%">
         <tr>
             <td align="center">
-                <table role="presentation" class="container" width="680">
+                <table role="presentation" class="container" width="600">
+                    <!-- Masthead -->
                     <tr>
                         <td class="masthead">
-                            <table role="presentation" width="100%" class="masthead-inner">
+                            <table role="presentation" class="masthead-logo-table">
                                 <tr>
-                                    <td class="seal-cell">
-                                        <img src="{{ frontend_base_url }}/dilg-logo.png" alt="DILG" class="seal" width="62" height="62">
+                                    <td class="logo-cell">
+                                        <img src="{{ frontend_base_url }}/dilg-logo.png" alt="DILG" class="logo-img" width="60">
                                     </td>
-                                    <td>
-                                        <p class="agency">Republic of the Philippines</p>
-                                        <h1 class="office">Department of the Interior and Local Government</h1>
-                                        <p class="system-name">Bids and Awards Committee Management System</p>
+                                    <td class="header-text-cell">
+                                        <p class="agency-name">Republic of the Philippines</p>
+                                        <h1 class="office-name">Department of the Interior and Local Government</h1>
                                     </td>
-                                    <td class="seal-cell" align="right">
-                                        <img src="{{ frontend_base_url }}/bagong-pilipinas-logo.png" alt="Bagong Pilipinas" class="seal" width="62" height="62">
+                                    <td class="logo-cell" align="right">
+                                        <img src="{{ frontend_base_url }}/bagong-pilipinas-logo.png" alt="Bagong Pilipinas" class="logo-img" width="60">
                                     </td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
+                    <!-- Accent Bar -->
                     <tr>
                         <td>
                             <table role="presentation" width="100%" class="accent-bar">
                                 <tr>
-                                    <td class="accent-red" width="34%">&nbsp;</td>
-                                    <td class="accent-gold" width="32%">&nbsp;</td>
-                                    <td class="accent-blue" width="34%">&nbsp;</td>
+                                    <td class="accent-red" width="33.33%"></td>
+                                    <td class="accent-gold" width="33.34%"></td>
+                                    <td class="accent-blue" width="33.33%"></td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
+                    <!-- Main Content -->
                     <tr>
                         <td class="content">
-                            <div class="notice-pill">{{ notification_type|upper }}</div>
-                            <p class="greeting">{{ greeting|default:"To all concerned personnel," }}</p>
+                            <div class="notice-badge">{{ notification_type|upper }}</div>
+                            <h2 class="greeting">{{ greeting|default:"To all concerned personnel," }}</h2>
                             <p class="intro">{{ intro_text }}</p>
 
-                            <table role="presentation" class="event-card" width="100%">
-                                <tr class="event-row">
-                                    <td class="event-label">Activity</td>
-                                    <td class="event-value">{{ event.title }}</td>
+                            <table role="presentation" class="event-card">
+                                <tr class="event-detail-row">
+                                    <td class="label-cell">Activity</td>
+                                    <td class="value-cell activity-title">{{ event.title }}</td>
                                 </tr>
-                                <tr class="event-row">
-                                    <td class="event-label">Date</td>
-                                    <td class="event-value">{{ event.date|date:"F d, Y" }}</td>
+                                <tr class="event-detail-row">
+                                    <td class="label-cell">Date</td>
+                                    <td class="value-cell">{{ event.date|date:"F d, Y" }}</td>
                                 </tr>
                                 {% if time_display %}
-                                <tr class="event-row">
-                                    <td class="event-label">Time</td>
-                                    <td class="event-value">{{ time_display }}</td>
+                                <tr class="event-detail-row">
+                                    <td class="label-cell">Time</td>
+                                    <td class="value-cell">{{ time_display }}</td>
                                 </tr>
                                 {% endif %}
                                 <tr>
-                                    <td class="event-label">Access</td>
-                                    <td class="event-value">View complete details through the official BAC portal.</td>
+                                    <td class="label-cell">Status</td>
+                                    <td class="value-cell">Officially Scheduled</td>
                                 </tr>
                             </table>
 
-                            <div class="action-wrap">
-                                <a href="{{ login_url }}" class="action-button">Open BAC Portal</a>
-                            </div>
-
                             <div class="closing">
-                                <p>This is a system-generated official notice from the DILG BAC Management System. Kindly take note of the scheduled activity and make the necessary preparations.</p>
+                                <p>This is a system-generated official notice from the DILG Bids and Awards Committee (BAC) Management System. Please ensure all necessary preparations are made for the scheduled activity.</p>
                                 <p class="signature">
                                     BAC Secretariat<br>
-                                    Department of the Interior and Local Government
+                                    DILG Central Office
                                 </p>
                             </div>
                         </td>
                     </tr>
+                    <!-- Footer -->
                     <tr>
                         <td class="footer">
-                            <strong>DILG BAC Management System</strong><br>
-                            This email was sent automatically. Please do not reply directly to this message.
+                            <b>DILG BAC Management System</b><br>
+                            This is an automated notification. Please do not reply to this email.<br>
+                            &copy; {{ now|date:"Y" }} DILG Central Office. All rights reserved.
                         </td>
                     </tr>
                 </table>

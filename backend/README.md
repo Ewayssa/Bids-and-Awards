@@ -1,22 +1,36 @@
-# BAC Backend (Django)
+# Bids-and-Awards Backend (Django)
 
-One-time setup (from project root, e.g. `BIDS_and_Award`):
+This is the backend service for the Bids-and-Awards System, built with Django and Django REST Framework.
 
-1. **Create and activate a virtual environment** (if you don't have one):
+## Project Structure
+The `api` app has been reorganized into modular components for better maintainability:
+- `api/models/`: Modular database models.
+- `api/views/`: Modular API views and logic.
+- `api/serializers/`: Modular data transformation layers.
+- `api/services/`: Business logic services (Dashboards, Notifications).
+- `api/utils/`: Shared helper functions.
+
+## Setup Instructions
+
+1. **Virtual Environment**:
    ```powershell
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
    ```
-2. **Install dependencies**:
+
+2. **Install Dependencies**:
    ```powershell
-   pip install -r bids-and-awards\backend\requirements.txt
+   pip install -r requirements.txt
    ```
-3. **Run the app** (from `bids-and-awards` folder):
-   - Use `.\start-project.ps1` to start backend + frontend, or
-   - Use `.\run-backend.ps1` to start only the backend.
 
-The first time you run the backend, the script will:
-- Apply Django migrations
-- Create a superuser: **username** `admin`, **password** `admin123`
+3. **Environment Variables**:
+   Copy `.env.example` to `.env` and configure your database (MySQL) and secret key.
 
-API base: `http://127.0.0.1:8000/api/`. The Vite dev server proxies `/api` to this port.
+4. **Run Server**:
+   ```powershell
+   python manage.py runserver
+   ```
+
+## Management Commands
+- `python manage.py send_event_reminders`: Sends email reminders for upcoming calendar events.
+- `python manage.py recalculate_document_status`: Bulk recalculates status for all documents.

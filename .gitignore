@@ -1,5 +1,7 @@
-.DS_Store
-Thumbs.db
+# Environment / Secrets
+.env
+.env.local
+.env.*.local
 
 # Python
 __pycache__/
@@ -15,6 +17,8 @@ env/
 
 # Django / local runtime
 backend/media/
+db.sqlite3
+db.sqlite3-journal
 
 # Node
 node_modules/
@@ -23,4 +27,12 @@ build/
 
 # Logs
 *.log
+
+# OS / IDE junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.bak
 

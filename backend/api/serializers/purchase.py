@@ -1,8 +1,9 @@
 import logging
 import traceback
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.db import transaction
 from rest_framework import serializers
-from ..models import PurchaseRequest, PurchaseRequestItem
+from ..models import PurchaseRequest, PurchaseRequestItem, PurchaseOrder
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,6 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
     end_user_office = serializers.CharField(source='ppmp.end_user_office', read_only=True)
     related_documents = serializers.SerializerMethodField()
     folder_pr_no = serializers.CharField(source='ppmp.pr_no', read_only=True)
-
     is_ready = serializers.BooleanField(source='ppmp.is_ready', read_only=True)
 
     class Meta:
@@ -32,12 +32,10 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
 
     def get_related_documents(self, obj):
         if obj.ppmp:
-            from . import DocumentSerializer
-            # 1. Get all linked Document model files by matching prNo with parent folder's pr_no
+            from .document import DocumentSerializer
             from ..models import Document
             related_files = list(DocumentSerializer(Document.objects.filter(prNo=obj.ppmp.pr_no), many=True).data)
             
-            # 2. Get other Purchase Requests in the same folder
             other_prs = obj.ppmp.purchase_requests.exclude(id=obj.id)
             for pr in other_prs:
                 related_files.append({
@@ -62,9 +60,7 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         try:
             items_data = validated_data.pop('items', [])
-            
             with transaction.atomic():
-                # Assign current user if not provided (viewset should handle this usually)
                 pr = PurchaseRequest.objects.create(**validated_data)
                 for item_data in items_data:
                     PurchaseRequestItem.objects.create(purchase_request=pr, **item_data)
@@ -72,23 +68,44 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
         except Exception as e:
             logger.error(f"Error creating PurchaseRequest: {str(e)}")
             logger.error(traceback.format_exc())
-            # Re-raise as ValidationError so DRF returns 400 instead of 500
             raise serializers.ValidationError({"error": str(e)})
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop('items', None)
-        instance.pr_no = validated_data.get('pr_no', instance.pr_no)
-        instance.purpose = validated_data.get('purpose', instance.purpose)
-        instance.grand_total = validated_data.get('grand_total', instance.grand_total)
-        instance.status = validated_data.get('status', instance.status)
-        instance.ppmp = validated_data.get('ppmp', instance.ppmp)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
         instance.save()
 
         if items_data is not None:
-            # Simple approach: delete old items and create new ones
-            # For a production app, you might want to sync instead
             instance.items.all().delete()
             for item_data in items_data:
                 PurchaseRequestItem.objects.create(purchase_request=instance, **item_data)
-        
         return instance
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    purchase_request_details = PurchaseRequestSerializer(source='purchase_request', read_only=True)
+    po_date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
+    date_of_ors_burs = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
+
+    def validate_date_of_ors_burs(self, value):
+        if value == '' or value == 'null':
+            return None
+        return value
+
+    def validate_total_amount(self, value):
+        if value is None or value == '' or (isinstance(value, str) and not str(value).strip()):
+            return 0
+        if isinstance(value, str):
+            value = value.replace(',', '').strip()
+            if value == '' or value == '.':
+                return 0
+        try:
+            d = Decimal(value) if not isinstance(value, Decimal) else value
+            return d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, ValueError, TypeError):
+            return 0
+
+    class Meta:
+        model = PurchaseOrder
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at', 'created_by')

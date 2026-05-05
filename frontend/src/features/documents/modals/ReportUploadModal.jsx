@@ -2,7 +2,7 @@ import React from 'react';
 import { MdUpload, MdDescription, MdCheckCircle, MdInfo } from 'react-icons/md';
 import Modal from '../../../components/Modal';
 
-const UploadModal = ({ 
+const ReportUploadModal = ({ 
     onClose, 
     onSubmit, 
     form, 
@@ -99,4 +99,4 @@ const UploadModal = ({
     );
 };
 
-export default UploadModal;
+export default ReportUploadModal;
