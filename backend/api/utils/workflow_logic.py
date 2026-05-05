@@ -313,19 +313,13 @@ def sync_supply_readiness(record):
         # Check if this specific PR has a PR number assigned
         has_pr_no = bool(pr.pr_no and pr.pr_no.strip())
         
-        if is_docs_ready and has_pr_no:
-            # Fully ready for Supply Officer
+        if is_docs_ready:
+            # All initial files are uploaded (no missing files) -> Ready for BAC Member
             if pr.status != 'completed' and pr.status != 'po_generated':
                 pr.status = 'completed'
                 pr.save(update_fields=['status'])
-        elif is_docs_ready and not has_pr_no:
-            # Docs ready but waiting for BAC to assign PR No.
-            # We keep it as 'ongoing' (or you could add a 'pending_assignment' status)
-            if pr.status == 'completed':
-                pr.status = 'ongoing'
-                pr.save(update_fields=['status'])
         else:
-            # Docs not even ready
-            if pr.status == 'completed':
+            # Has missing files/documents needed to be uploaded
+            if pr.status != 'ongoing':
                 pr.status = 'ongoing'
                 pr.save(update_fields=['status'])

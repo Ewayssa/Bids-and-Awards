@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
     MdSave,
@@ -25,6 +25,7 @@ import { numberToWords } from '../../utils/numberToWords';
 
 const GeneratePO = ({ user, onLogout }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [pos, setPos] = useState([]);
     const [readyPrs, setReadyPrs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -66,6 +67,18 @@ const GeneratePO = ({ user, onLogout }) => {
         fetchPOs();
         fetchReadyPrs();
     }, []);
+
+    // Handle pr_id from query parameter (for "Generate PO" button from Dashboard)
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const prId = params.get('pr_id');
+        if (prId) {
+            setSelectedPrId(prId);
+            setShowForm(true);
+            // Clean up URL without refreshing
+            window.history.replaceState({}, '', location.pathname);
+        }
+    }, [location.search]);
 
     useEffect(() => {
         if (selectedPrId) {
@@ -211,27 +224,49 @@ const GeneratePO = ({ user, onLogout }) => {
     }, [poData.po_date, showForm]);
 
     const isFormValid = () => {
-        return selectedPrId &&
-            poData.po_no &&
-            poData.supplier_name &&
-            poData.supplier_address &&
-            poData.po_date &&
-            poData.mode_of_procurement;
+        const required = [
+            selectedPrId,
+            poData.po_no,
+            poData.supplier_name,
+            poData.supplier_address,
+            poData.po_date,
+            poData.mode_of_procurement
+        ];
+        return required.every(val => val && val.toString().trim() !== '');
     };
 
     const handleSave = async () => {
         if (!isFormValid()) {
-            alert('Please fill in all required fields.');
+            const missing = [];
+            if (!selectedPrId) missing.push("Purchase Request");
+            if (!poData.po_no) missing.push("PO Number");
+            if (!poData.supplier_name) missing.push("Supplier Name");
+            if (!poData.supplier_address) missing.push("Supplier Address");
+            if (!poData.po_date) missing.push("PO Date");
+            if (!poData.mode_of_procurement) missing.push("Mode of Procurement");
+            
+            alert(`Please fill in the following required fields: \n- ${missing.join('\n- ')}`);
             return;
         }
 
         try {
             setSaving(true);
+            
+            // Sanitize payload: remove empty strings for optional date fields
+            const sanitizedPoData = { ...poData };
+            if (sanitizedPoData.date_of_ors_burs === '') {
+                sanitizedPoData.date_of_ors_burs = null;
+            }
+            if (sanitizedPoData.date_of_delivery === '') {
+                sanitizedPoData.date_of_delivery = null;
+            }
+
             const payload = {
-                ...poData,
+                ...sanitizedPoData,
                 purchase_request: selectedPrId,
-                total_amount: totalAmount
+                total_amount: isNaN(totalAmount) ? 0 : totalAmount
             };
+
             const response = await purchaseOrderService.create(payload);
             const poId = response?.id;
 
@@ -242,7 +277,6 @@ const GeneratePO = ({ user, onLogout }) => {
                 fetchPOs(); // Refresh table
                 fetchReadyPrs(); // Refresh dropdown
                 
-                // Automatically open preview in new tab
                 if (poId) {
                     viewPo({ id: poId, po_no: poData.po_no });
                 }
@@ -268,10 +302,13 @@ const GeneratePO = ({ user, onLogout }) => {
                 });
             }, 2000);
         } catch (error) {
-            const errorData = error.response?.data;
+            console.error('Error details:', error.response?.data);
             let errorMessage = 'Failed to generate Purchase Order.';
             
-            if (errorData) {
+            if (error.response?.status === 500) {
+                errorMessage += ' Server Error (500). Please contact administrator.';
+            } else if (error.response?.data) {
+                const errorData = error.response.data;
                 if (typeof errorData === 'object') {
                     errorMessage += ' ' + Object.entries(errorData)
                         .map(([field, msg]) => `${field}: ${msg}`)
@@ -279,10 +316,11 @@ const GeneratePO = ({ user, onLogout }) => {
                 } else {
                     errorMessage += ' ' + errorData;
                 }
+            } else {
+                errorMessage += ' ' + (error.message || 'Unknown error.');
             }
             
             alert(errorMessage);
-            console.error('Error details:', errorData);
         } finally {
             setSaving(false);
         }
@@ -303,12 +341,7 @@ const GeneratePO = ({ user, onLogout }) => {
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Generate and track Purchase Orders for approved requests.</p>
                 </div>
                 <div className="flex flex-col md:flex-row items-center gap-4">
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="flex items-center gap-3 px-8 py-3.5 bg-[#16a34a] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-[#15803d] hover:-translate-y-0.5 transition-all active:scale-95 whitespace-nowrap"
-                    >
-                        <MdAdd size={22} /> Generate PO
-                    </button>
+                    {/* Action removed - handled from Supply Dashboard queue */}
                 </div>
             </div>
 
@@ -421,11 +454,11 @@ const GeneratePO = ({ user, onLogout }) => {
             >
                 <div className="max-h-[85vh] overflow-y-auto custom-scrollbar">
                     {successMessage ? (
-                        <div className="flex flex-col items-center justify-center p-20 space-y-6 text-center">
-                            <MdCheckCircle className="text-emerald-500 text-8xl animate-bounce" />
+                        <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center">
+                            <MdCheckCircle className="text-emerald-500 text-6xl animate-bounce" />
                             <div>
-                                <h2 className="text-2xl font-black text-slate-900 tracking-tight">{successMessage}</h2>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Refreshing records...</p>
+                                <h2 className="text-lg font-black text-slate-900 tracking-tight">{successMessage}</h2>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Refreshing records...</p>
                             </div>
                         </div>
                     ) : (
@@ -509,57 +542,65 @@ const GeneratePO = ({ user, onLogout }) => {
                                     </div>
 
                                     {/* PO INPUT FIELDS */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-3 ml-1">
-                                            <MdAssignment className="text-emerald-600" size={20} />
-                                            <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Step 2: PO Specifications</h3>
+                                    <div className="space-y-8 bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                                                <MdAssignment size={18} />
+                                            </div>
+                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.1em]">PO Specifications</h3>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                            {/* PO NO & DATE */}
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">PO Number</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">PO Number <span className="text-rose-500">*</span></label>
                                                 <input
                                                     type="text"
                                                     value={poData.po_no}
                                                     onChange={(e) => setPoData({ ...poData, po_no: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
+                                                    placeholder="Enter PO No."
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">PO Date</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">PO Date <span className="text-rose-500">*</span></label>
                                                 <input
                                                     type="date"
                                                     value={poData.po_date}
                                                     onChange={(e) => setPoData({ ...poData, po_date: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                 />
                                             </div>
+
+                                            {/* SUPPLIER NAME */}
                                             <div className="space-y-2 col-span-full">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier Name</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier Name <span className="text-rose-500">*</span></label>
                                                 <input
                                                     type="text"
                                                     value={poData.supplier_name}
                                                     onChange={(e) => setPoData({ ...poData, supplier_name: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner text-lg"
-                                                    placeholder="Enter Official Supplier Name"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-black text-slate-900 text-lg transition-all"
+                                                    placeholder="Full Business Name"
                                                 />
                                             </div>
+
+                                            {/* TIN & MODE */}
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier TIN</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier TIN</label>
                                                 <input
                                                     type="text"
                                                     value={poData.tin}
                                                     onChange={(e) => setPoData({ ...poData, tin: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                     placeholder="000-000-000-000"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Mode of Procurement</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Mode of Procurement <span className="text-rose-500">*</span></label>
                                                 <select
                                                     value={poData.mode_of_procurement}
                                                     onChange={(e) => setPoData({ ...poData, mode_of_procurement: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all appearance-none"
                                                 >
                                                     <option value="">Select Mode</option>
                                                     <option value="Public Bidding">Public Bidding</option>
@@ -568,47 +609,51 @@ const GeneratePO = ({ user, onLogout }) => {
                                                     <option value="Negotiated Procurement">Negotiated Procurement</option>
                                                 </select>
                                             </div>
+
+                                            {/* ADDRESS */}
                                             <div className="space-y-2 col-span-full">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Supplier Address</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier Address <span className="text-rose-500">*</span></label>
                                                 <textarea
                                                     value={poData.supplier_address}
                                                     onChange={(e) => setPoData({ ...poData, supplier_address: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-medium text-slate-600 h-20 transition-all shadow-inner resize-none"
-                                                    placeholder="Enter Full Business Address"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-medium text-slate-600 h-24 transition-all resize-none"
+                                                    placeholder="Enter Business Address"
                                                 />
                                             </div>
 
-                                            {/* DELIVERY & PAYMENT SECTION */}
-                                            <div className="col-span-full pt-4 flex items-center gap-3">
-                                                <div className="h-px flex-1 bg-slate-100"></div>
-                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Delivery & Payment</span>
-                                                <div className="h-px flex-1 bg-slate-100"></div>
+                                            {/* DELIVERY & PAYMENT DIVIDER */}
+                                            <div className="col-span-full py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-px flex-1 bg-slate-100"></div>
+                                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">Delivery & Payment</span>
+                                                    <div className="h-px flex-1 bg-slate-100"></div>
+                                                </div>
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Place of Delivery</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Place of Delivery <span className="text-rose-500">*</span></label>
                                                 <input
                                                     type="text"
                                                     value={poData.place_of_delivery}
                                                     onChange={(e) => setPoData({ ...poData, place_of_delivery: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Delivery</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Date of Delivery</label>
                                                 <input
                                                     type="date"
                                                     value={poData.date_of_delivery}
                                                     onChange={(e) => setPoData({ ...poData, date_of_delivery: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Payment Term</label>
+                                            <div className="space-y-2 col-span-full">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Payment Term</label>
                                                 <select
                                                     value={poData.payment_term}
                                                     onChange={(e) => setPoData({ ...poData, payment_term: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                 >
                                                     <option value="">Select Payment Term</option>
                                                     <option value="Full Payment after delivery">Full Payment after delivery</option>
@@ -617,30 +662,21 @@ const GeneratePO = ({ user, onLogout }) => {
                                                 </select>
                                             </div>
 
-                                            {/* AMOUNT IN WORDS */}
-                                            <div className="space-y-2 col-span-full">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Amount in Words</label>
-                                                <textarea
-                                                    value={poData.amount_in_words}
-                                                    readOnly
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-100/50 border-2 border-transparent font-medium text-slate-500 h-20 transition-all cursor-not-allowed resize-none italic"
-                                                    placeholder="Automatic calculation..."
-                                                />
-                                            </div>
-
-                                            {/* ACCOUNTING SECTION */}
-                                            <div className="col-span-full pt-4 flex items-center gap-3">
-                                                <div className="h-px flex-1 bg-slate-100"></div>
-                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Accounting Details</span>
-                                                <div className="h-px flex-1 bg-slate-100"></div>
+                                            {/* ACCOUNTING DIVIDER */}
+                                            <div className="col-span-full py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-px flex-1 bg-slate-100"></div>
+                                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">Accounting Details</span>
+                                                    <div className="h-px flex-1 bg-slate-100"></div>
+                                                </div>
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Fund Cluster</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fund Cluster</label>
                                                 <select
                                                     value={poData.fund_cluster}
                                                     onChange={(e) => setPoData({ ...poData, fund_cluster: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                 >
                                                     <option value="">Select Cluster</option>
                                                     <option value="01">01</option>
@@ -650,31 +686,31 @@ const GeneratePO = ({ user, onLogout }) => {
                                                 </select>
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Funds Available</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Funds Available</label>
                                                 <input
                                                     type="text"
                                                     value={poData.funds_available}
                                                     onChange={(e) => setPoData({ ...poData, funds_available: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ORS/BURS Date</label>
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">ORS/BURS Date</label>
                                                 <input
                                                     type="date"
                                                     value={poData.date_of_ors_burs}
                                                     onChange={(e) => setPoData({ ...poData, date_of_ors_burs: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner"
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                 />
                                             </div>
-                                            <div className="space-y-2 col-span-full">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">ORS/BURS No.</label>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">ORS/BURS No.</label>
                                                 <input
                                                     type="text"
-                                                    value={poData.ors_burs_amount}
-                                                    onChange={(e) => setPoData({ ...poData, ors_burs_amount: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all shadow-inner font-bold"
+                                                    value={poData.ors_burs_no}
+                                                    onChange={(e) => setPoData({ ...poData, ors_burs_no: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                     placeholder="Enter ORS/BURS number"
                                                 />
                                             </div>

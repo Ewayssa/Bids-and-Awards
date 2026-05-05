@@ -150,16 +150,9 @@ class DashboardService:
             for event in events
         ]
 
-        # 4. Procurement Method Counts (For charts)
-        method_counts_raw = ProcurementRecord.objects.values('procurement_type').annotate(count=Count('id'))
-        
-        # Map DB values to display names expected by UI
-        type_mapping = {
-            'lease_of_venue': 'Lease of Venue',
-            'small_value': 'Small Value Procurement',
-            'public_bidding': 'Public Bidding',
-            'negotiated': 'Negotiated Procurement'
-        }
+        # 4. Procurement Method Counts (For charts) - sourced from Purchase Order's mode_of_procurement
+        from api.models import PurchaseOrder
+        method_counts_raw = PurchaseOrder.objects.values('mode_of_procurement').annotate(count=Count('id'))
         
         procurementMethodCounts = {
             'Lease of Venue': 0,
@@ -169,10 +162,20 @@ class DashboardService:
         }
         
         for item in method_counts_raw:
-            p_type = item.get('procurement_type')
-            display_name = type_mapping.get(p_type)
-            if display_name:
-                procurementMethodCounts[display_name] = item.get('count', 0)
+            p_type = (item.get('mode_of_procurement') or '').strip().lower()
+            count = item.get('count', 0)
+            
+            # Fuzzy matching since it's a text field in Generate PO
+            if 'lease' in p_type or 'lov' in p_type:
+                procurementMethodCounts['Lease of Venue'] += count
+            elif 'small' in p_type or 'svp' in p_type:
+                procurementMethodCounts['Small Value Procurement'] += count
+            elif 'bidding' in p_type or 'pb' in p_type:
+                procurementMethodCounts['Public Bidding'] += count
+            elif 'negotiated' in p_type or 'neg' in p_type:
+                procurementMethodCounts['Negotiated Procurement'] += count
+            elif p_type: # Fallback for other valid strings
+                procurementMethodCounts['Small Value Procurement'] += count
 
         # 5. Pending Breakdown
         pendingBreakdown = DashboardService.get_pending_breakdown()

@@ -251,7 +251,20 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
         queryset = super().get_queryset()
+
+        role = (getattr(user, 'role', None) or '').strip().lower()
+
+        # Filtering based on role
+        if role in ('bac_secretariat', 'bac_chair', 'admin', 'bac_member'):
+            # Admin and BAC staff see all records
+            pass
+        elif role == 'end_user':
+            # End Users only see records they created
+            queryset = queryset.filter(created_by=user.fullName or user.username)
+        # Add other roles if needed (e.g., supply officer, bac member)
+        
         status_param = self.request.query_params.get('status', '').strip()
         if status_param:
             queryset = queryset.filter(status=status_param)
@@ -684,8 +697,8 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
             # BAC members only see completed PRs
             qs = qs.filter(status='completed')
         elif role == 'supply':
-            # Supply Officer only sees completed PRs with an assigned PR No.
-            qs = qs.filter(status='completed').exclude(pr_no='').exclude(pr_no__isnull=True)
+            # Supply Officer only sees completed PRs with an assigned PR No. that DON'T have a PO yet
+            qs = qs.filter(status='completed').exclude(pr_no='').exclude(pr_no__isnull=True).exclude(purchase_orders__isnull=False)
         else:
             # End Users only see their own PRs
             qs = qs.filter(created_by=user.fullName or user.username)
@@ -693,6 +706,8 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         status_param = self.request.query_params.get('status')
         if status_param:
             qs = qs.filter(status=status_param)
+            if status_param == 'completed':
+                qs = qs.exclude(purchase_orders__isnull=False)
 
         ppmp_id = self.request.query_params.get('ppmp_id')
         if ppmp_id:
@@ -770,12 +785,15 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_supply_dashboard_data(request):
-    # Only PRs that are 'completed' AND have an official PR number assigned by BAC
-    ready_prs_qs = PurchaseRequest.objects.filter(status='completed').exclude(ppmp__user_pr_no='').exclude(ppmp__user_pr_no__isnull=True)
+    # Only PRs that are 'completed' AND have an official PR number assigned by BAC AND don't have a PO yet
+    ready_prs_qs = PurchaseRequest.objects.filter(status='completed')\
+                                 .exclude(pr_no='')\
+                                 .exclude(pr_no__isnull=True)\
+                                 .exclude(purchase_orders__isnull=False)
     
     ready_for_po_count = ready_prs_qs.count()
     pending_po_count = PurchaseRequest.objects.filter(status='ongoing').count()
-    po_generated_count = PurchaseOrder.objects.count()
+    po_generated_count = PurchaseOrder.objects.exclude(status='cancelled').count()
     
     recent_ready_prs = ready_prs_qs.order_by('-created_at')[:5]
     pr_serializer = PurchaseRequestSerializer(recent_ready_prs, many=True)

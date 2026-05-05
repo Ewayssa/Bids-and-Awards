@@ -463,3 +463,5 @@ export const purchaseOrderService = {
         return response.data.next_sequence;
     }
 };
+
+export default api;
