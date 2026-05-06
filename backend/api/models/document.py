@@ -13,8 +13,12 @@ def document_file_upload_to(instance, filename):
     """
     category = (instance.category or 'General').strip()
     category = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', category)[:100] or 'General'
-    pr_no = (instance.prNo or 'unknown').strip()
+    
+    # Handle prNo as a ForeignKey instance
+    raw_pr_no = instance.prNo.pr_no if instance.prNo else 'unknown'
+    pr_no = str(raw_pr_no).strip()
     pr_no = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', pr_no)[:50] or 'unknown'
+    
     name = os.path.basename(filename)
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', name)[:200] or 'document'
     return os.path.join('documents', category, pr_no, name)
@@ -27,7 +31,16 @@ class Document(models.Model):
     )
     # Basic fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    prNo = models.CharField(max_length=100, blank=True, help_text='BAC Folder No.')
+    prNo = models.ForeignKey(
+        'ProcurementRecord',
+        to_field='pr_no',
+        on_delete=models.CASCADE,
+        db_column='prNo',
+        null=True,
+        blank=True,
+        related_name='documents_rel',
+        help_text='BAC Folder No.'
+    )
     title = models.CharField(max_length=255, blank=True)
     date = models.DateField(null=True, blank=True)
     uploadedBy = models.CharField(max_length=255, blank=True)

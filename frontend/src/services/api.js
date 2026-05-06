@@ -229,6 +229,13 @@ export const documentService = {
         return response.data;
     },
 
+    async updatePRFile(id, formData) {
+        const response = await api.post(`/upload/${id}/update_pr_file/`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
     async addComment(id, comment) {
         const response = await api.post(`/upload/${id}/comments/`, { comment });
         return response.data;

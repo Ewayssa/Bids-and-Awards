@@ -21,12 +21,9 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
 
         role = (getattr(user, 'role', None) or '').strip().lower()
 
-        if role in ('bac_secretariat', 'bac_chair', 'admin'):
-            # BAC staff see all PRs
+        if role in ('bac_secretariat', 'bac_chair', 'admin', 'bac_member'):
+            # BAC staff and members see all PRs
             pass
-        elif role == 'bac_member':
-            # BAC members only see completed PRs
-            qs = qs.filter(status='completed')
         elif role == 'supply':
             # Supply Officer only sees PRs with an assigned PR No. that DON'T have a PO yet
             qs = qs.exclude(pr_no='').exclude(pr_no__isnull=True).exclude(purchase_orders__isnull=False)

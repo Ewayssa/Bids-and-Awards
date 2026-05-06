@@ -47,17 +47,25 @@ const UploadAPPModal = ({
                 subDoc: 'Project Procurement Management Plan/Supplemental PPMP' 
             })
             .then(data => {
-                // Ensure we only show unique PPMP numbers
+                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                const role = currentUser.role || '';
+                const isEndUser = role.toLowerCase().includes('end_user') || role === 'USER';
+                const userName = currentUser.fullName || currentUser.username;
+
+                // Ensure we only show unique PPMP numbers AND owner (if end user)
                 const uniquePPMPs = [];
                 const seen = new Set();
                 data.forEach(item => {
+                    const isOwner = item.uploadedBy === userName;
                     if (item.ppmp_no && !seen.has(item.ppmp_no)) {
-                        seen.add(item.ppmp_no);
-                        uniquePPMPs.push({ 
-                            ppmp_no: item.ppmp_no, 
-                            prNo: item.prNo,
-                            title: item.title 
-                        });
+                        if (!isEndUser || isOwner) {
+                            seen.add(item.ppmp_no);
+                            uniquePPMPs.push({ 
+                                ppmp_no: item.ppmp_no, 
+                                prNo: item.prNo,
+                                title: item.title 
+                            });
+                        }
                     }
                 });
                 setAvailablePPMPs(uniquePPMPs);

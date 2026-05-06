@@ -56,13 +56,7 @@ export const DashboardCalendar = ({ events, isAdmin, onOpenAddEvent, onOpenEditE
 
     return (
         <section className="overflow-visible min-w-0 dashboard-section border-b lg:border-b-0 lg:border-r border-[var(--border-light)]" style={{ animationDelay: '0.15s' }}>
-            <div className="px-6 py-5 border-b border-[var(--border-light)] bg-[var(--background-subtle)]/40">
-                <h2 className="text-sm font-semibold text-[var(--text)] uppercase tracking-wide flex items-center gap-2 m-0">
-                    <MdTimeline className="w-4 h-4 text-[var(--primary)]" aria-hidden />
-                    Calendar of Activities
-                </h2>
-                <p className="text-xs text-[var(--text-muted)] mt-1 font-medium m-0">Bids and Awards Committee schedule</p>
-            </div>
+
             <div className="p-6 flex flex-col xl:flex-row gap-8 min-w-0 overflow-visible bg-[var(--surface)]">
                 <div className="flex-1 min-w-0 flex flex-col gap-5">
                     <div className="flex items-center justify-between gap-4 px-2">

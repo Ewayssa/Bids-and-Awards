@@ -244,31 +244,7 @@ const GeneratePO = ({ user, onLogout }) => {
         fetchNextPoNumber();
     }, [poData.po_date, showForm]);
 
-    // Auto-generate ORS/BURS Number
-    useEffect(() => {
-        const fetchNextOrsBurs = async () => {
-            if (!poData.date_of_ors_burs || !poData.fund_cluster || !showForm) return;
-            
-            try {
-                const date = new Date(poData.date_of_ors_burs);
-                const year = date.getFullYear();
-                const shortYear = year.toString().slice(-2);
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                
-                const nextSeq = await purchaseOrderService.getNextOrsBursSequence(year, poData.fund_cluster);
-                const sequence = nextSeq.toString().padStart(4, '0');
-                
-                setPoData(prev => ({
-                    ...prev,
-                    ors_burs_no: `${year}-${month}-${sequence}`
-                }));
-            } catch (error) {
-                console.error('Error fetching next ORS/BURS sequence:', error);
-            }
-        };
-
-        fetchNextOrsBurs();
-    }, [poData.date_of_ors_burs, poData.fund_cluster, showForm]);
+    // ORS/BURS Number is manually encoded
 
     const isFormValid = () => {
         const required = [
@@ -310,7 +286,7 @@ const GeneratePO = ({ user, onLogout }) => {
 
             const payload = {
                 ...sanitizedPoData,
-                purchase_request: selectedPrId,
+                purchase_request: readyPrs.find(p => String(p.id) === String(selectedPrId))?.pr_no || selectedPrId,
                 total_amount: isNaN(totalAmount) ? 0 : totalAmount
             };
 
@@ -741,16 +717,47 @@ const GeneratePO = ({ user, onLogout }) => {
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Funds Available</label>
-                                                <input
-                                                    type="text"
-                                                    value={poData.funds_available}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/[^0-9.]/g, '');
-                                                        setPoData({ ...poData, funds_available: val });
-                                                    }}
-                                                    className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
-                                                    placeholder="0.00"
-                                                />
+                                                <div className="relative group">
+                                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
+                                                    <input
+                                                        type="text"
+                                                        value={poData.funds_available}
+                                                        onChange={(e) => {
+                                                            let val = e.target.value.replace(/[^0-9.]/g, '');
+                                                            
+                                                            const parts = val.split('.');
+                                                            if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                                                            
+                                                            // Format integer part with commas
+                                                            if (val.includes('.')) {
+                                                                const [intPart, decimalPart] = val.split('.');
+                                                                const formattedInt = intPart ? parseInt(intPart).toLocaleString('en-PH') : '';
+                                                                setPoData({ ...poData, funds_available: `${formattedInt}.${decimalPart.substring(0, 2)}` });
+                                                            } else {
+                                                                const formattedInt = val ? parseInt(val).toLocaleString('en-PH') : '';
+                                                                setPoData({ ...poData, funds_available: formattedInt });
+                                                            }
+                                                        }}
+                                                        onBlur={() => {
+                                                            if (poData.funds_available) {
+                                                                const num = parseFloat(poData.funds_available.replace(/,/g, ''));
+                                                                if (!isNaN(num)) {
+                                                                    const formatted = num.toLocaleString('en-PH', { 
+                                                                        minimumFractionDigits: 2, 
+                                                                        maximumFractionDigits: 2 
+                                                                    });
+                                                                    setPoData({ ...poData, funds_available: formatted });
+                                                                }
+                                                            }
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            // Optional: keep commas but maybe not? 
+                                                            // User wants "auto format when typing", so focus shouldn't necessarily strip them.
+                                                        }}
+                                                        className="w-full pl-10 pr-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
                                             </div>
 
                                             <div className="space-y-2">
@@ -768,11 +775,21 @@ const GeneratePO = ({ user, onLogout }) => {
                                                     type="text"
                                                     value={poData.ors_burs_no}
                                                     onChange={(e) => {
-                                                        const val = e.target.value.replace(/[^0-9-]/g, '');
-                                                        setPoData({ ...poData, ors_burs_no: val });
+                                                        const raw = e.target.value.replace(/\D/g, '');
+                                                        let formatted = '';
+                                                        if (raw.length > 0) {
+                                                            formatted += raw.substring(0, 4);
+                                                            if (raw.length > 4) {
+                                                                formatted += '-' + raw.substring(4, 6);
+                                                                if (raw.length > 6) {
+                                                                    formatted += '-' + raw.substring(6, 10);
+                                                                }
+                                                            }
+                                                        }
+                                                        setPoData({ ...poData, ors_burs_no: formatted });
                                                     }}
                                                     className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
-                                                    placeholder="00-00-0000"
+                                                    placeholder="0000-00-0000"
                                                 />
                                             </div>
                                         </div>

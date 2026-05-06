@@ -1,4 +1,4 @@
-# BAC Document Tracking - Start Django Backend (opens in new window)
+# Procurement Management System - Start Django Backend (opens in new window)
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $backendPath = Join-Path $root "backend"

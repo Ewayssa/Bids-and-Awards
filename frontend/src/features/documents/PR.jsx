@@ -121,12 +121,10 @@ const PR = ({ user }) => {
         if (isMember) {
             filtered = data.filter(pr => {
                 const isReady = pr.is_ready === true || pr.is_ready === 'true';
-                const isCompleted = (pr.status || '').toLowerCase() === 'completed';
+                const status = (pr.status || '').toLowerCase();
+                const isCompleted = status === 'completed' || status === 'po_generated';
                 const hasPRNo = pr.pr_no && pr.pr_no.trim() !== '';
-                
-                // Also show if it has items but no PR No. yet (it's likely the one waiting)
                 const hasItems = pr.items && pr.items.length > 0;
-
                 return isReady || isCompleted || hasPRNo || hasItems;
             });
         }
@@ -162,7 +160,8 @@ const PR = ({ user }) => {
             if (isMember) {
                 setPrs(data.filter(pr => {
                     const isReady = pr.is_ready === true || pr.is_ready === 'true';
-                    const isCompleted = (pr.status || '').toLowerCase() === 'completed';
+                    const status = (pr.status || '').toLowerCase();
+                    const isCompleted = status === 'completed' || status === 'po_generated';
                     const hasPRNo = pr.pr_no && pr.pr_no.trim() !== '';
                     const hasItems = pr.items && pr.items.length > 0;
                     return isReady || isCompleted || hasPRNo || hasItems;
@@ -181,7 +180,48 @@ const PR = ({ user }) => {
         if (item.pr_no || !assignValue.trim() || assigning) return;
         setAssigning(true);
         try {
-            await purchaseRequestService.update(item.id, { pr_no: assignValue.trim() });
+            const assignedPrNo = assignValue.trim();
+            await purchaseRequestService.update(item.id, { pr_no: assignedPrNo });
+
+            // Regenerate the PR PDF with the newly assigned PR number and re-upload it
+            try {
+                const prData = {
+                    items: item.items || [],
+                    total: item.grand_total,
+                    ppmp_no: item.ppmp_no,
+                    prNo: assignedPrNo,
+                    purpose: item.purpose,
+                    office: item.end_user_office || item.ppmp_title || '',
+                    date: item.created_at
+                };
+
+                // Generate updated PDF blob
+                const pdfBlob = await generatePR_PDFBlob(prData);
+                const pdfFile = new File(
+                    [pdfBlob],
+                    `PR_${assignedPrNo.replace(/[/\\?%*:|"<>]/g, '_')}.pdf`,
+                    { type: 'application/pdf' }
+                );
+
+                // Find the Purchase Request Document record linked to this folder
+                const folderPrNo = item.folder_pr_no;
+                if (folderPrNo) {
+                    const allDocs = await documentService.getAll({ prNo: folderPrNo });
+                    const prDoc = allDocs.find(d =>
+                        (d.subDoc || '').toLowerCase().includes('purchase request') && d.file
+                    );
+                    if (prDoc) {
+                        const formData = new FormData();
+                        formData.append('file', pdfFile);
+                        formData.append('title', item.purpose || `PR ${assignedPrNo}`);
+                        await documentService.updatePRFile(prDoc.id, formData);
+                    }
+                }
+            } catch (pdfErr) {
+                // PDF re-upload is best-effort — don't block the PR assignment if it fails
+                console.warn('Could not regenerate PR PDF after assignment:', pdfErr);
+            }
+
             await fetchPRs();
             setEditingPrId(null);
             setAssignValue('');
@@ -210,7 +250,6 @@ const PR = ({ user }) => {
         <div className="min-h-full pb-12">
             <PageHeader
                 title="Purchase Request"
-                subtitle="Manage and track Purchase Requests."
             >
                 {[ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.END_USER].includes(user?.role) && (
                     <button
@@ -240,10 +279,10 @@ const PR = ({ user }) => {
                                     <th className="table-th text-center">Total Cost</th>
                                     <th className="table-th text-center">Status</th>
                                     <th className="table-th text-center">Date Uploaded</th>
-                                    {!isEndUser && <th className="table-th !text-center !px-4">Actions</th>}
+                                    <th className="table-th !text-center !px-4">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                 {prs.map((item, idx) => {
                                     return (
                                         <tr key={idx} className="table-tr group">
@@ -283,62 +322,58 @@ const PR = ({ user }) => {
                                                     {item.created_at ? new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                                                 </span>
                                             </td>
-                                            {!isEndUser && (
-                                                <td className="table-td !text-center !px-3 !py-3 border-b border-slate-50 dark:border-slate-800/50 min-w-[280px]">
-                                                    <div className="flex flex-wrap justify-center items-center gap-2">
-                                                        {editingPrId === item.id && !item.pr_no ? (
-                                                            <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
-                                                                <input
-                                                                    autoFocus
-                                                                    type="text"
-                                                                    value={assignValue}
-                                                                    onChange={(e) => setAssignValue(e.target.value)}
-                                                                    className="h-8 w-24 px-2 bg-white border-2 border-emerald-500 rounded text-[10px] font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
-                                                                    placeholder="PR No."
-                                                                />
-                                                                <button
-                                                                    disabled={assigning || !assignValue.trim()}
-                                                                    onClick={() => handleAssignPR(item)}
-                                                                    className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all active:scale-90 shadow-sm"
-                                                                >
-                                                                    {assigning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full" /> : <MdCheck className="w-5 h-5" />}
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setEditingPrId(null)}
-                                                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
-                                                                >
-                                                                    <MdClose className="w-5 h-5" />
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            canAssignPR && !item.pr_no && (
-                                                                <button
-                                                                    onClick={() => startAssigning(item)}
-                                                                    className="btn-action-secondary justify-center !text-emerald-700 !border-emerald-200 hover:!bg-emerald-50 !text-[10px] !font-black !uppercase !tracking-wide"
-                                                                >
-                                                                    Assign PR No.
-                                                                </button>
-                                                            )
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleView(item)}
-                                                            disabled={isEndUser && item.created_by !== (user?.fullName || user?.username)}
-                                                            className={`btn-action justify-center bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-700 !text-[10px] !font-black !uppercase !tracking-wide shadow-sm disabled:opacity-30 disabled:cursor-not-allowed`}
-                                                            title={isEndUser && item.created_by !== (user?.fullName || user?.username) ? "Access restricted to owner" : "View Details"}
-                                                        >
-                                                            View
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleQuickView(item)}
-                                                            disabled={isEndUser && item.created_by !== (user?.fullName || user?.username)}
-                                                            className="btn-action-secondary justify-center !text-slate-800 dark:!text-white !text-[10px] !font-black !uppercase !tracking-wide disabled:opacity-30 disabled:cursor-not-allowed"
-                                                            title={isEndUser && item.created_by !== (user?.fullName || user?.username) ? "Access restricted to owner" : "Download PDF"}
-                                                        >
-                                                            Download
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            )}
+                                            <td className="table-td !text-center !px-3 !py-3 border-b border-slate-50 dark:border-slate-800/50 min-w-[280px]">
+                                                <div className="flex flex-wrap justify-center items-center gap-2">
+                                                    {editingPrId === item.id && !item.pr_no ? (
+                                                        <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                value={assignValue}
+                                                                onChange={(e) => setAssignValue(e.target.value)}
+                                                                className="h-8 w-24 px-2 bg-white border-2 border-emerald-500 rounded text-[10px] font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                                                                placeholder="PR No."
+                                                            />
+                                                            <button
+                                                                disabled={assigning || !assignValue.trim()}
+                                                                onClick={() => handleAssignPR(item)}
+                                                                className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all active:scale-90 shadow-sm"
+                                                            >
+                                                                {assigning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full" /> : <MdCheck className="w-5 h-5" />}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingPrId(null)}
+                                                                className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
+                                                            >
+                                                                <MdClose className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        canAssignPR && !item.pr_no && (
+                                                            <button
+                                                                onClick={() => startAssigning(item)}
+                                                                className="btn-action-secondary justify-center !text-emerald-700 !border-emerald-200 hover:!bg-emerald-50 !text-[10px] !font-black !uppercase !tracking-wide"
+                                                            >
+                                                                Assign PR No.
+                                                            </button>
+                                                        )
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleView(item)}
+                                                        className={`btn-action justify-center bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-700 !text-[10px] !font-black !uppercase !tracking-wide shadow-sm`}
+                                                        title="View Details"
+                                                    >
+                                                        View
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleQuickView(item)}
+                                                        className="btn-action-secondary justify-center !text-slate-800 dark:!text-white !text-[10px] !font-black !uppercase !tracking-wide"
+                                                        title="Download PDF"
+                                                    >
+                                                        Download
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -358,6 +393,7 @@ const PR = ({ user }) => {
 
             <CreatePRModal
                 isOpen={showCreateModal}
+                user={user}
                 onClose={() => setShowCreateModal(false)}
                 onSuccess={(data) => {
                     fetchPRs();

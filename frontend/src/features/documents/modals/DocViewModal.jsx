@@ -51,10 +51,11 @@ const DocViewModal = ({
 
     const isGeneratedPRFile = (target) => {
         if (!target) return false;
+        // Any Purchase Request document should always be rendered dynamically
+        // so the assigned PR number is always reflected in the preview.
         const targetIsPR = target.subDoc === 'Purchase Request' || target.grand_total !== undefined;
         if (!targetIsPR) return false;
-        // Check for either legacy or new structured fields
-        return !!(target.pr_items || target.items || target.total_amount || target.grand_total || target.title || target.purpose || target.ppmp_no);
+        return true;
     };
     const hasUploadedFile = (target) => !!(target?.file_url || target?.file || isGeneratedPRFile(target));
     
@@ -178,11 +179,18 @@ const DocViewModal = ({
 
     const getPreviewUrl = (target) => {
         if (!target) return null;
+
+        // For Purchase Request documents: ALWAYS generate dynamically so that the
+        // assigned PR number is reflected in the preview even when a stored file exists
+        // (the stored file was uploaded before PR number assignment).
         if (isGeneratedPRFile(target)) {
             return generatedPrPreviewUrl;
         }
+
+        // For all other document types, serve the stored file from the backend
         if (target.id && hasUploadedFile(target)) {
-            return `${getDocumentPreviewUrl(target.id)}?v=${Date.now()}`;
+            const version = target.updated_at || target.uploaded_at || '1';
+            return `${getDocumentPreviewUrl(target.id)}?v=${version}`;
         }
 
         let url = target.file_url || target.file;
@@ -201,7 +209,8 @@ const DocViewModal = ({
             } catch (e) {}
         }
 
-        return `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`;
+        const version = target.updated_at || target.uploaded_at || '1';
+        return `${url}${url.includes('?') ? '&' : '?'}v=${version}`;
     };
 
     const activePreviewDoc = documentsForPreview.find(item => item.id === activePreviewId) || documentsForPreview[0] || null;
@@ -216,13 +225,32 @@ const DocViewModal = ({
                 return;
             }
 
+            // Determine the correct PR number to embed:
+            // Priority: pr_no from the parent PurchaseRequest > prNo on the document itself.
+            // This ensures the assigned PR number is always reflected in the preview PDF.
+            const effectivePrNo =
+                currentDoc.pr_no ||
+                currentDoc.user_pr_no ||
+                activePreviewDoc.pr_no ||
+                activePreviewDoc.user_pr_no ||
+                activePreviewDoc.prNo ||
+                '';
+
+            // Use items from the parent PurchaseRequest (currentDoc) if the stored
+            // Document record doesn't have them (it usually won't).
+            const effectiveItems = getNormalizedItems(activePreviewDoc).length > 0
+                ? getNormalizedItems(activePreviewDoc)
+                : getNormalizedItems(currentDoc);
+
+            const effectiveTotal = getNormalizedTotal(activePreviewDoc) || getNormalizedTotal(currentDoc);
+
             const blob = await generatePR_PDFBlob({
-                items: getNormalizedItems(activePreviewDoc),
-                total: getNormalizedTotal(activePreviewDoc),
-                ppmp_no: activePreviewDoc.ppmp_no,
-                prNo: getNormalizedPrNo(activePreviewDoc),
+                items: effectiveItems,
+                total: effectiveTotal,
+                ppmp_no: activePreviewDoc.ppmp_no || currentDoc.ppmp_no,
+                prNo: effectivePrNo,
                 title: getNormalizedTitle(activePreviewDoc),
-                office: activePreviewDoc.end_user_office || '',
+                office: activePreviewDoc.end_user_office || currentDoc.end_user_office || '',
                 date: activePreviewDoc.created_at || activePreviewDoc.date || activePreviewDoc.uploaded_at
             });
 
@@ -237,10 +265,22 @@ const DocViewModal = ({
             cancelled = true;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [activePreviewDoc?.id, activePreviewDoc?.file_url, activePreviewDoc?.file, activePreviewDoc?.pr_items, activePreviewDoc?.items, activePreviewDoc?.total_amount, activePreviewDoc?.grand_total]);
+    }, [
+        activePreviewDoc?.id,
+        activePreviewDoc?.file_url,
+        activePreviewDoc?.file,
+        activePreviewDoc?.pr_items,
+        activePreviewDoc?.items,
+        activePreviewDoc?.total_amount,
+        activePreviewDoc?.grand_total,
+        currentDoc.pr_no,
+        currentDoc.user_pr_no,
+        currentDoc.items,
+        currentDoc.grand_total,
+    ]);
 
-    const previewUrl = getPreviewUrl(activePreviewDoc);
-    const previewFrameUrl = previewUrl ? `${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH` : null;
+    const previewUrl = useMemo(() => getPreviewUrl(activePreviewDoc), [activePreviewDoc, generatedPrPreviewUrl]);
+    const previewFrameUrl = previewUrl ? `${previewUrl}${previewUrl.includes('#') ? '' : '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'}` : null;
     const formatMoney = (value) => `PHP ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     if (!doc) return null;

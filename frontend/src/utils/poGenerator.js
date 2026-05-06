@@ -2,10 +2,15 @@
 import { jsPDF } from 'jspdf';
 import { numberToWords } from './numberToWords';
 
-const formatAmount = (value) => Number(value || 0).toLocaleString('en-PH', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-});
+const formatAmount = (value) => {
+    // If it's a string, strip commas first
+    const cleanValue = typeof value === 'string' ? value.replace(/,/g, '') : value;
+    const num = Number(cleanValue || 0);
+    return isNaN(num) ? '0.00' : num.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+};
 
 const safePOFilenamePart = (value) => String(value || 'Document').replace(/[/\\?%*:|"<>]/g, '_');
 
@@ -79,15 +84,15 @@ export const generatePO_PDFBlob = async (data) => {
     setFont('normal', 10);
     doc.text('P.O. No.:', midX + 5, currentY + 14);
     setFont('bold', 10);
-    doc.text(String(data.po_no || ''), midX + 110, currentY + 14);
+    doc.text(String(data.po_no || ''), midX + 95, currentY + 14);
 
     setFont('normal', 10);
     doc.text('Date:', midX + 5, currentY + 28);
-    doc.text(String(data.po_date || data.date || ''), midX + 110, currentY + 28);
+    doc.text(String(data.po_date || data.date || ''), midX + 95, currentY + 28);
 
     doc.text('Mode of Procurement:', midX + 5, currentY + 42);
-    setFont('bold', 9);
-    doc.text(String(data.mode_of_procurement || '').toUpperCase(), midX + 110, currentY + 42);
+    setFont('bold', 8); // Slightly smaller to fit long strings like NEGOTIATED PROCUREMENT
+    doc.text(String(data.mode_of_procurement || '').toUpperCase(), midX + 95, currentY + 42, { maxWidth: contentWidth - (midX - boxStartX) - 100 });
 
     currentY += row1Height;
 

@@ -14,13 +14,14 @@ class PurchaseRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ppmp = models.ForeignKey(
         ProcurementRecord, 
+        to_field='pr_no',
         on_delete=models.CASCADE, 
         related_name='purchase_requests',
         null=True,
         blank=True,
         help_text='Link to the associated PPMP (Procurement Record)'
     )
-    pr_no = models.CharField(max_length=100, blank=True, null=True)
+    pr_no = models.CharField(max_length=100, blank=True, null=True, unique=True)
     purpose = models.TextField(help_text='Purpose of the purchase request')
     grand_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ongoing')
@@ -93,6 +94,7 @@ class PurchaseOrder(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     purchase_request = models.ForeignKey(
         PurchaseRequest, 
+        to_field='pr_no',
         on_delete=models.CASCADE, 
         related_name='purchase_orders',
         null=True,

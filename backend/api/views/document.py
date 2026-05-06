@@ -1,3 +1,4 @@
+import os
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -117,6 +118,40 @@ class DocumentViewSet(viewsets.ModelViewSet):
             if record:
                 sync_procurement_completion(record)
 
+    @action(detail=True, methods=['post'], url_path='update_pr_file')
+    def update_pr_file(self, request, pk=None):
+        """
+        Allow BAC Members to replace the file on a Purchase Request Document
+        after assigning an official PR number. Only the 'file' field is updated.
+        """
+        doc = self.get_object()
+        if not is_bac_member(request.user):
+            return Response({'error': 'Only BAC Members are authorized to update PR files.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if doc.subDoc and 'Purchase Request' not in doc.subDoc:
+            return Response({'error': 'This action is only permitted on Purchase Request documents.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        new_file = request.FILES.get('file')
+        if not new_file:
+            return Response({'error': 'A file is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Delete the old file from storage if it exists
+        if doc.file:
+            try:
+                import os
+                if os.path.isfile(doc.file.path):
+                    os.remove(doc.file.path)
+            except Exception:
+                pass  # Best-effort cleanup
+
+        doc.file = new_file
+        if request.data.get('title'):
+            doc.title = request.data.get('title')
+        doc.save()
+        doc.refresh_from_db()
+
+        return Response(DocumentSerializer(doc).data)
+
     @action(detail=True, methods=['post'])
     def assign_pr_no(self, request, pk=None):
         """Assign an official PR number to the procurement record linked by this document's prNo."""
@@ -132,7 +167,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             return Response({'error': f'PR No. "{user_pr_no}" already exists.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Find the procurement record linked by prNo
-        record = ProcurementRecord.objects.filter(pr_no=doc.prNo).first() if doc.prNo else None
+        record = doc.prNo if doc.prNo else None
         if record and record.user_pr_no:
             return Response({'error': 'PR No. is already assigned to this procurement record and cannot be updated.'}, status=status.HTTP_400_BAD_REQUEST)
 

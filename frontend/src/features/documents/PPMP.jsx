@@ -11,6 +11,8 @@ const PPMP = ({ user }) => {
     const [successMessage, setSuccessMessage] = useState('');
     const [ppmps, setPpmps] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [previewDoc, setPreviewDoc] = useState(null);
+    const isEndUser = (user?.role || '').toLowerCase().includes('end_user') || user?.role === 'USER';
 
     const fetchPPMPs = async () => {
         setLoading(true);
@@ -18,6 +20,7 @@ const PPMP = ({ user }) => {
             const data = await documentService.getAll({ 
                 subDoc: 'Project Procurement Management Plan/Supplemental PPMP'
             });
+            
             setPpmps(data);
         } catch (err) {
             console.error('Failed to fetch PPMPs:', err);
@@ -64,9 +67,8 @@ const PPMP = ({ user }) => {
         <div className="min-h-full pb-12">
             <PageHeader
                 title="Project Procurement Management Plan"
-                subtitle="Manage and track PPMP records."
             >
-                {[ROLES.ADMIN, ROLES.SECRETARIAT].includes(user?.role) && (
+                {[ROLES.ADMIN, ROLES.SECRETARIAT, ROLES.END_USER].includes(user?.role) && (
                     <button 
                         type="button" 
                         onClick={() => setShowUploadModal(true)} 
@@ -90,7 +92,7 @@ const PPMP = ({ user }) => {
                                     <th className="table-th text-center">Quarter</th>
                                     <th className="table-th text-center">Year</th>
                                     <th className="table-th text-center">Date Uploaded</th>
-                                    {user?.role !== ROLES.END_USER && <th className="table-th text-center">Actions</th>}
+                                    <th className="table-th text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
@@ -116,20 +118,17 @@ const PPMP = ({ user }) => {
                                                 {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                                             </span>
                                         </td>
-                                        {user?.role !== ROLES.END_USER && (
-                                            <td className="table-td text-center">
-                                                <div className="table-actions justify-center">
-                                                    <button 
-                                                        onClick={() => handleView(item)}
-                                                        disabled={user?.role === ROLES.END_USER && item.uploadedBy !== (user?.fullName || user?.username)}
-                                                        className="px-6 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-full font-black uppercase tracking-widest text-[9px] hover:scale-110 active:scale-95 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
-                                                        title={user?.role === ROLES.END_USER && item.uploadedBy !== (user?.fullName || user?.username) ? "Access restricted to owner" : "View Document"}
-                                                    >
-                                                        View
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        )}
+                                        <td className="table-td text-center">
+                                            <div className="table-actions justify-center">
+                                                <button 
+                                                    onClick={() => handleView(item)}
+                                                    className="px-6 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-full font-black uppercase tracking-widest text-[9px] hover:scale-110 active:scale-95 transition-all shadow-xl shadow-slate-900/20"
+                                                    title="View Document"
+                                                >
+                                                    View
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -200,11 +200,15 @@ def has_required_files_completed(record):
 def sync_procurement_status(record):
     """
     Keep procurement status aligned with required checklist file uploads.
+    - ongoing: missing documents (files not yet uploaded)
+    - completed: all documents uploaded, ready for PR No. assignment (with or without assignment)
     """
     if not record or record.status == 'closed':
         return False
 
     is_complete = has_required_files_completed(record)
+    
+    # All required documents uploaded = completed status (ready for PR No. assignment)
     if is_complete and record.status != 'completed':
         record.status = 'completed'
         record.save(update_fields=['status', 'updated_at'])
@@ -280,15 +284,16 @@ def check_folder_readiness(record):
         record.is_ready = now_ready
         record.save(update_fields=['is_ready'])
 
-    # Notify when ready and PR No. not yet assigned
-    if now_ready and not record.user_pr_no:
-        msg = f"Procurement Folder '{record.title}' is now complete and ready for PR No. assignment."
+    # Notify when ready and PR No. not yet assigned (Only notify on transition to ready)
+    if now_ready and not was_ready and not record.user_pr_no:
+        msg = f"PR '{record.pr_no}' is ready for PR No. assignment. All required documents have been uploaded."
         from ..models import Notification
-        Notification.objects.create(
-            message=msg,
-            link='/pr',
-            recipient_role='bac_member'
-        )
+        if not Notification.objects.filter(message=msg, recipient_role='bac_member').exists():
+            Notification.objects.create(
+                message=msg,
+                link='/pr',
+                recipient_role='bac_member'
+            )
 
     sync_supply_readiness(record)
     return now_ready

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { 
     MdDownload, 
@@ -7,9 +7,18 @@ import {
 } from 'react-icons/md';
 import Modal from '../../../components/Modal';
 import { getDocumentPreviewUrl } from '../../../services/api';
+import { generatePR_PDFBlob } from '../../../utils/prGenerator';
 
-// Memoized Document Item to prevent unnecessary re-renders
-const DocItem = React.memo(({ doc, isNear, innerRef }) => {
+// Memoized Document Item — supports both a server URL and a generated blob URL
+const DocItem = React.memo(({ doc, isNear, innerRef, generatedBlobUrl }) => {
+    // We use a stable URL to prevent constant iframe reloads during scrolling
+    const previewSrc = useMemo(() => {
+        if (generatedBlobUrl) {
+            return `${generatedBlobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+        }
+        return `${getDocumentPreviewUrl(doc.id)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+    }, [doc.id, generatedBlobUrl]);
+
     return (
         <div 
             ref={innerRef}
@@ -20,7 +29,7 @@ const DocItem = React.memo(({ doc, isNear, innerRef }) => {
                 <div className="w-full h-full relative overflow-hidden">
                     {/* The Clipping Trick: Make iframe slightly larger than container to hide its native scrollbars */}
                     <iframe 
-                        src={`${getDocumentPreviewUrl(doc.id)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} 
+                        src={previewSrc}
                         className="absolute inset-0 w-[108%] h-[108%] -top-[4%] -left-[4%] border-none"
                         title={doc.title}
                         loading="lazy"
@@ -34,26 +43,87 @@ const DocItem = React.memo(({ doc, isNear, innerRef }) => {
             )}
         </div>
     );
-}, (prev, next) => prev.isNear === next.isNear && prev.doc.id === next.doc.id);
+}, (prev, next) =>
+    prev.isNear === next.isNear &&
+    prev.doc.id === next.doc.id &&
+    prev.generatedBlobUrl === next.generatedBlobUrl
+);
 
 const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record, user }) => {
     const [activeId, setActiveId] = useState(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [generatedPrBlobs, setGeneratedPrBlobs] = useState({});
     const scrollContainerRef = useRef(null);
     const itemRefs = useRef({});
 
-    const isEndUser = (user?.role || '').toLowerCase().includes('end_user') || user?.role === 'USER';
-    const isOwner = record?.created_by === (user?.fullName || user?.username);
-    const canDownload = !isEndUser || isOwner;
+    const canDownload = true; // Enabled for all users who can view the folder
 
     // Hooks order must be preserved - hooks before early return
-    const folderDocs = (documents || [])
+    const folderDocs = useMemo(() => (documents || [])
         .filter(d => d.file_url)
         .sort((a, b) => {
             const aTime = a.uploaded_at ? new Date(a.uploaded_at).getTime() : 0;
             const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
             return aTime - bTime;
-        });
+        }), [documents]);
+
+    // Handle dynamic PR PDF generation
+    useEffect(() => {
+        if (!isOpen) return;
+        if (folderDocs.length === 0) {
+            setGeneratedPrBlobs({});
+            return;
+        }
+
+        let isMounted = true;
+        const generateBlobs = async () => {
+            const prDocs = folderDocs.filter(d => (d.subDoc || '').toLowerCase().includes('purchase request'));
+            if (prDocs.length === 0) return;
+
+            const newBlobs = {};
+            for (const doc of prDocs) {
+                // Find matching purchase request data from the record
+                const prDataFromRecord = (record?.purchase_requests || []).find(pr => 
+                    pr.pr_no === record?.user_pr_no || pr.folder_pr_no === record?.pr_no
+                ) || record?.purchase_requests?.[0];
+
+                if (prDataFromRecord) {
+                    try {
+                        const prData = {
+                            items: prDataFromRecord.items || [],
+                            total: prDataFromRecord.grand_total,
+                            ppmp_no: record?.ppmp_no || doc.ppmp_no,
+                            prNo: record?.user_pr_no || doc.user_pr_no || '',
+                            purpose: record?.title || doc.title || prDataFromRecord.purpose,
+                            office: record?.end_user_office || prDataFromRecord.end_user_office || '',
+                            date: prDataFromRecord.created_at || doc.uploaded_at || doc.created_at
+                        };
+
+                        const blob = await generatePR_PDFBlob(prData);
+                        if (isMounted) {
+                            newBlobs[doc.id] = URL.createObjectURL(blob);
+                        }
+                    } catch (err) {
+                        console.error("Failed to generate PR PDF blob in folder view:", err);
+                    }
+                }
+            }
+            
+            if (isMounted) {
+                setGeneratedPrBlobs(prev => {
+                    // Revoke old blobs
+                    Object.values(prev).forEach(url => URL.revokeObjectURL(url));
+                    return newBlobs;
+                });
+            }
+        };
+
+        generateBlobs();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [isOpen, folderDocs, record]);
 
     // Intersection Observer to update sidebar on scroll
     useEffect(() => {
@@ -116,17 +186,25 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record, user }) =
             const mergedPdf = await PDFDocument.create();
 
             for (const [index, doc] of folderDocs.entries()) {
-                const response = await fetch(getDocumentPreviewUrl(doc.id), { credentials: 'include' });
-                if (!response.ok) {
-                    throw new Error(`Failed to download ${doc.subDoc || doc.title || `document ${index + 1}`}`);
+                let bytes;
+                const generatedUrl = generatedPrBlobs[doc.id];
+
+                if (generatedUrl) {
+                    const response = await fetch(generatedUrl);
+                    bytes = await response.arrayBuffer();
+                } else {
+                    const response = await fetch(getDocumentPreviewUrl(doc.id), { credentials: 'include' });
+                    if (!response.ok) {
+                        throw new Error(`Failed to download ${doc.subDoc || doc.title || `document ${index + 1}`}`);
+                    }
+
+                    const contentType = response.headers.get('content-type') || '';
+                    if (!contentType.toLowerCase().includes('pdf')) {
+                        throw new Error(`${doc.subDoc || doc.title || `Document ${index + 1}`} is not a PDF file.`);
+                    }
+                    bytes = await response.arrayBuffer();
                 }
 
-                const contentType = response.headers.get('content-type') || '';
-                if (!contentType.toLowerCase().includes('pdf')) {
-                    throw new Error(`${doc.subDoc || doc.title || `Document ${index + 1}`} is not a PDF file.`);
-                }
-
-                const bytes = await response.arrayBuffer();
                 const sourcePdf = await PDFDocument.load(bytes);
                 const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
                 copiedPages.forEach((page) => mergedPdf.addPage(page));
@@ -179,9 +257,9 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record, user }) =
                     <div className="p-6 border-b border-slate-200 bg-white/50 backdrop-blur-md">
                         <button
                             onClick={handleDownload}
-                            disabled={folderDocs.length === 0 || isDownloading || !canDownload}
+                            disabled={folderDocs.length === 0 || isDownloading}
                             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--primary)] text-white rounded-xl shadow-lg shadow-[var(--primary)]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                            title={!canDownload ? "Download restricted to owner" : "Download All as PDF"}
+                            title="Download All as PDF"
                         >
                             <MdDownload className="w-4 h-4" />
                             {isDownloading ? 'Preparing...' : 'Download All'}
@@ -242,6 +320,7 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record, user }) =
                                 doc={doc}
                                 isNear={activeIdx === -1 || Math.abs(idx - activeIdx) <= 1}
                                 innerRef={el => itemRefs.current[doc.id] = el}
+                                generatedBlobUrl={generatedPrBlobs[doc.id]}
                             />
                         ));
                     })() : (

@@ -12,7 +12,8 @@ const CreatePRModal = ({
     show,
     isOpen,
     onClose,
-    onSuccess
+    onSuccess,
+    user
 }) => {
     const isModalOpen = show || isOpen;
     const [submitting, setSubmitting] = useState(false);
@@ -79,13 +80,21 @@ const CreatePRModal = ({
             setLoadingPPMPs(true);
             documentService.getAll({ subDoc: 'Project Procurement Management Plan/Supplemental PPMP' })
                 .then(data => {
-                    // Filter for unique ppmp_no
+                    const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+                    const role = currentUser.role || '';
+                    const isEndUser = role.toLowerCase().includes('end_user') || role === 'USER';
+                    const userName = currentUser.fullName || currentUser.username;
+
+                    // Filter for unique ppmp_no AND owner (if end user)
                     const uniquePpmps = [];
                     const seenNos = new Set();
                     data.forEach(d => {
+                        const isOwner = d.uploadedBy === userName;
                         if (d.ppmp_no && !seenNos.has(d.ppmp_no)) {
-                            uniquePpmps.push(d);
-                            seenNos.add(d.ppmp_no);
+                            if (!isEndUser || isOwner) {
+                                uniquePpmps.push(d);
+                                seenNos.add(d.ppmp_no);
+                            }
                         }
                     });
                     setAvailablePPMPs(uniquePpmps);
@@ -188,10 +197,10 @@ const CreatePRModal = ({
             // Capture the newly created folder ID so optional files AND the relational PR record go to the SAME folder
             const newFolderId = mainDoc?.procurement_record;
 
-            // 2. Create the structured Purchase Request linked to the NEW folder
+            // 2. Create the structured Purchase Request linked to its OWN folder (the one just created)
             const prPayload = {
-                ppmp: newFolderId, 
-                pr_no: '', 
+                ppmp: mainDoc?.prNo, // Link to the PR's own folder
+                pr_no: null, 
                 purpose: form.purpose,
                 grand_total: calculateTotal(),
                 status: 'ongoing',
@@ -219,11 +228,10 @@ const CreatePRModal = ({
                     const optFormData = new FormData();
                     optFormData.append('category', 'Initial Documents');
                     optFormData.append('subDoc', subDocType);
-                    // Use purpose in title to distinguish between multiple PRs in the same folder
                     optFormData.append('title', `${subDocType} for ${form.purpose || form.ppmp_no}`);
                     optFormData.append('ppmp_no', form.ppmp_no);
-                    optFormData.append('prNo', mainDoc?.prNo || ''); // Use the new PR No
-                    optFormData.append('user_pr_no', ''); 
+                    optFormData.append('prNo', mainDoc?.prNo || ''); // Link to the PR's own folder
+                    optFormData.append('user_pr_no', '');
                     optFormData.append('file', file);
                     optFormData.append('date', new Date().toISOString().slice(0, 10));
                     optFormData.append('uploadedBy', created_by);

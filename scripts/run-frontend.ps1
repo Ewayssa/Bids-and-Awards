@@ -1,4 +1,4 @@
-# BAC Document Tracking - Start Vite Frontend
+# Procurement Management System - Start Vite Frontend
 $root = Split-Path $PSScriptRoot -Parent
 $frontendPath = Join-Path $root "frontend"
 

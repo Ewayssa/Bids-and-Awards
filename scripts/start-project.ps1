@@ -1,4 +1,4 @@
-# BAC Document Tracking - Start Backend + Frontend (run this once)
+# Procurement Management System - Start Backend + Frontend (run this once)
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $backendPath = Join-Path $projectRoot "backend"

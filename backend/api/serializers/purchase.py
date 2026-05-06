@@ -3,7 +3,7 @@ import traceback
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.db import transaction
 from rest_framework import serializers
-from ..models import PurchaseRequest, PurchaseRequestItem, PurchaseOrder
+from ..models import PurchaseRequest, PurchaseRequestItem, PurchaseOrder, ProcurementRecord
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +14,7 @@ class PurchaseRequestItemSerializer(serializers.ModelSerializer):
 
 class PurchaseRequestSerializer(serializers.ModelSerializer):
     items = PurchaseRequestItemSerializer(many=True)
+    ppmp = serializers.SlugRelatedField(slug_field='pr_no', queryset=ProcurementRecord.objects.all(), required=False, allow_null=True)
     ppmp_no = serializers.CharField(source='ppmp.ppmp_no', read_only=True)
     ppmp_title = serializers.CharField(source='ppmp.title', read_only=True)
     end_user_office = serializers.CharField(source='ppmp.end_user_office', read_only=True)
@@ -83,6 +84,7 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
         return instance
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
+    purchase_request = serializers.SlugRelatedField(slug_field='pr_no', queryset=PurchaseRequest.objects.all(), required=False, allow_null=True)
     pr_no = serializers.CharField(source='purchase_request.pr_no', read_only=True)
     purchase_request_details = PurchaseRequestSerializer(source='purchase_request', read_only=True)
     po_date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
