@@ -352,7 +352,9 @@ const ProcurementWorkflowView = ({
                                                                 e.stopPropagation(); // Prevent row click
                                                                 handleViewDoc(statusObj.docs[statusObj.docs.length - 1]);
                                                             }}
-                                                            className="btn-action-ghost !text-[10px] !py-1"
+                                                            disabled={isEndUser && record?.created_by !== (user?.fullName || user?.username)}
+                                                            className="btn-action-ghost !text-[10px] !py-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            title={isEndUser && record?.created_by !== (user?.fullName || user?.username) ? "View restricted to owner" : statusObj.count > 1 ? `View (${statusObj.count})` : 'View'}
                                                         >
                                                             {statusObj.count > 1 ? `View (${statusObj.count})` : 'View'}
                                                         </button>

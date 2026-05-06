@@ -27,19 +27,16 @@ def get_dashboard_data(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_supply_dashboard_data(request):
-    # Only PRs that are 'completed' AND have an official PR number assigned by BAC AND don't have a PO yet
-    ready_prs_qs = PurchaseRequest.objects.filter(status='completed')\
-                                 .exclude(pr_no='')\
-                                 .exclude(pr_no__isnull=True)\
-                                 .exclude(purchase_orders__isnull=False)
+    # Relaxed query: Any PR with a number that doesn't have a PO yet should be visible to Supply
+    ready_prs_qs = PurchaseRequest.objects.exclude(pr_no='').exclude(pr_no__isnull=True).exclude(purchase_orders__isnull=False)
     
     ready_for_po_count = ready_prs_qs.count()
     pending_po_count = PurchaseRequest.objects.filter(status='ongoing').count()
     po_generated_count = PurchaseOrder.objects.exclude(status='cancelled').count()
     
-    recent_ready_prs = ready_prs_qs.order_by('-created_at')[:5]
+    recent_ready_prs = ready_prs_qs.order_by('-created_at')[:50]
     pr_serializer = PurchaseRequestSerializer(recent_ready_prs, many=True)
-    recent_pos = PurchaseOrder.objects.all().order_by('-created_at')[:5]
+    recent_pos = PurchaseOrder.objects.all().order_by('-created_at')[:50]
     po_serializer = PurchaseOrderSerializer(recent_pos, many=True)
     
     return Response({

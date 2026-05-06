@@ -21,3 +21,23 @@ DATABASE
 
 
 NOTE: Try to limit 2 terminals only. (Remove terminals that dont have running commands. :)  
+
+
+
+Account Credentials:
+
+BAC Secretariat (admin)
+Email: admin
+Password: Admin123@
+
+BAC Member 
+Email: 
+Password: 
+
+End User
+Email: 
+Password: 
+
+Supply Officer
+Email: 
+Password: 

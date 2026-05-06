@@ -28,11 +28,11 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
             # BAC members only see completed PRs
             qs = qs.filter(status='completed')
         elif role == 'supply':
-            # Supply Officer only sees completed PRs with an assigned PR No. that DON'T have a PO yet
-            qs = qs.filter(status='completed').exclude(pr_no='').exclude(pr_no__isnull=True).exclude(purchase_orders__isnull=False)
+            # Supply Officer only sees PRs with an assigned PR No. that DON'T have a PO yet
+            qs = qs.exclude(pr_no='').exclude(pr_no__isnull=True).exclude(purchase_orders__isnull=False)
         else:
-            # End Users only see their own PRs
-            qs = qs.filter(created_by=user.fullName or user.username)
+            # End Users see all PRs (Frontend will handle restricted view/edit)
+            pass
 
         status_param = self.request.query_params.get('status')
         if status_param:
@@ -62,15 +62,21 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         pr = serializer.save()
         _log_audit('purchase_request_updated', self.request.user.username, 'purchase_request', str(pr.id), f'Updated PR {pr.pr_no}')
         
-        # Re-sync status after update (this will flip status to 'completed' if pr_no + is_ready)
+        # Re-sync status after update
+        if pr.pr_no and pr.status == 'ongoing':
+            # Assigning a number always completes the PR for the Supply Officer
+            pr.status = 'completed'
+            pr.save(update_fields=['status'])
+            
         if pr.ppmp:
+            # Sync folder-based readiness/checklist
             sync_procurement_completion(pr.ppmp)
 
         # Notify Supply Officer if a PR number was just assigned
         if 'pr_no' in self.request.data and pr.pr_no:
             _create_notification(
                 f"Purchase Request '{pr.purpose[:60]}' has been assigned PR No. {pr.pr_no} and is now ready for Purchase Order generation.",
-                link='/supply/generate-po',
+                link=f'/supply/generate-po?pr_id={pr.id}',
                 recipient_role='supply',
             )
 
@@ -103,6 +109,32 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 # Expecting format YYYY-MM-SEQ (e.g. 2026-04-001)
                 parts = po_no.split('-')
                 if len(parts) >= 3:
+                    seq = int(parts[-1])
+                    if seq > max_seq:
+                        max_seq = seq
+            except (ValueError, IndexError):
+                continue
+        
+        return Response({'next_sequence': max_seq + 1})
+
+    @action(detail=False, methods=['get'])
+    def next_ors_burs_sequence(self, request):
+        year = request.query_params.get('year')
+        cluster = request.query_params.get('cluster', '01')
+        if not year:
+            year = timezone.now().year
+        
+        # Format: Cluster-YY-MM-XXXX. We filter by year and cluster.
+        short_year = str(year)[-2:]
+        prefix = f"{cluster}-{short_year}-"
+        
+        pos = PurchaseOrder.objects.filter(ors_burs_no__startswith=prefix).values_list('ors_burs_no', flat=True)
+        
+        max_seq = 0
+        for no in pos:
+            try:
+                parts = no.split('-')
+                if len(parts) >= 4:
                     seq = int(parts[-1])
                     if seq > max_seq:
                         max_seq = seq

@@ -24,8 +24,8 @@ class ProcurementRecordViewSet(viewsets.ModelViewSet):
             # Admin and BAC staff see all records
             pass
         elif role == 'end_user':
-            # End Users only see records they created
-            queryset = queryset.filter(created_by=user.fullName or user.username)
+            # End Users see all records (Frontend will handle restricted view/edit)
+            pass
         # Add other roles if needed (e.g., supply officer, bac member)
         
         status_param = self.request.query_params.get('status', '').strip()

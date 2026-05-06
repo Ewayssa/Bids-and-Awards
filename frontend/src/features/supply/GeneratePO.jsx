@@ -121,7 +121,7 @@ const GeneratePO = ({ user, onLogout }) => {
             const normalizedItems = (doc.items || []).map(item => ({
                 ...item,
                 quantity: parseFloat(item.quantity) || 0,
-                unit_cost: parseFloat(item.unit_cost) || 0,
+                unit_cost: item.unit_cost || '',
                 total: parseFloat(item.total) || 0,
             }));
             setItems(normalizedItems);
@@ -136,7 +136,8 @@ const GeneratePO = ({ user, onLogout }) => {
 
     const handleCostChange = (index, value) => {
         const newItems = [...items];
-        newItems[index].unit_cost = parseFloat(value) || 0;
+        // Allow empty string or numbers
+        newItems[index].unit_cost = value;
         setItems(newItems);
     };
 
@@ -207,7 +208,6 @@ const GeneratePO = ({ user, onLogout }) => {
                 const year = date.getFullYear();
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                 
-                // Fetch next sequence for the year from backend
                 const nextSeq = await purchaseOrderService.getNextSequence(year);
                 const sequence = nextSeq.toString().padStart(3, '0');
                 
@@ -222,6 +222,32 @@ const GeneratePO = ({ user, onLogout }) => {
 
         fetchNextPoNumber();
     }, [poData.po_date, showForm]);
+
+    // Auto-generate ORS/BURS Number
+    useEffect(() => {
+        const fetchNextOrsBurs = async () => {
+            if (!poData.date_of_ors_burs || !poData.fund_cluster || !showForm) return;
+            
+            try {
+                const date = new Date(poData.date_of_ors_burs);
+                const year = date.getFullYear();
+                const shortYear = year.toString().slice(-2);
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                
+                const nextSeq = await purchaseOrderService.getNextOrsBursSequence(year, poData.fund_cluster);
+                const sequence = nextSeq.toString().padStart(4, '0');
+                
+                setPoData(prev => ({
+                    ...prev,
+                    ors_burs_no: `${year}-${month}-${sequence}`
+                }));
+            } catch (error) {
+                console.error('Error fetching next ORS/BURS sequence:', error);
+            }
+        };
+
+        fetchNextOrsBurs();
+    }, [poData.date_of_ors_burs, poData.fund_cluster, showForm]);
 
     const isFormValid = () => {
         const required = [
@@ -362,18 +388,18 @@ const GeneratePO = ({ user, onLogout }) => {
             </div>
 
             {/* PO RECORDS TABLE */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/30 overflow-hidden">
+            <div className="table-container">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                    <table className="app-table table-zebra">
                         <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">PO No.</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">PR No.</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Supplier</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Date</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                            <tr className="table-header-row">
+                                <th className="table-th">PO No.</th>
+                                <th className="table-th">PR No.</th>
+                                <th className="table-th">Supplier</th>
+                                <th className="table-th text-right">Amount</th>
+                                <th className="table-th">Date</th>
+                                <th className="table-th text-center">Status</th>
+                                <th className="table-th text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -387,31 +413,31 @@ const GeneratePO = ({ user, onLogout }) => {
                                     </td>
                                 </tr>
                             ) : filteredPOs.length > 0 ? filteredPOs.map((po) => (
-                                <tr key={po.id} className="hover:bg-slate-50 transition-all group">
-                                    <td className="px-8 py-6">
+                                <tr key={po.id} className="table-tr group">
+                                    <td className="table-td">
                                         <p className="text-sm font-black text-slate-900 group-hover:text-emerald-600 transition-colors">{po.po_no}</p>
                                     </td>
-                                    <td className="px-8 py-6">
+                                    <td className="table-td">
                                         <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider bg-emerald-50 px-2.5 py-1 rounded-lg inline-block border border-emerald-100">
                                             {po.purchase_request_details?.pr_no}
                                         </p>
                                     </td>
-                                    <td className="px-8 py-6">
+                                    <td className="table-td">
                                         <p className="text-sm font-bold text-slate-700 truncate max-w-[200px]">{po.supplier_name}</p>
                                     </td>
-                                    <td className="px-8 py-6 text-sm text-slate-500 font-medium whitespace-nowrap">
-                                        {new Date(po.po_date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </td>
-                                    <td className="px-8 py-6 text-right whitespace-nowrap">
+                                    <td className="table-td text-right whitespace-nowrap">
                                         <p className="text-sm font-black text-slate-900">₱{Number(po.total_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
                                     </td>
-                                    <td className="px-8 py-6 text-center">
-                                        <span className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                                    <td className="table-td text-sm text-slate-500 font-medium whitespace-nowrap">
+                                        {new Date(po.po_date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </td>
+                                    <td className="table-td text-center">
+                                        <span className="status-badge status-badge--complete">
                                             Generated
                                         </span>
                                     </td>
-                                    <td className="px-8 py-6 text-right whitespace-nowrap">
-                                        <div className="flex items-center justify-end gap-2">
+                                    <td className="table-td text-right whitespace-nowrap">
+                                        <div className="table-actions">
                                             <button
                                                 onClick={() => viewPo(po)}
                                                 className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all active:scale-95 shadow-sm"
@@ -485,61 +511,57 @@ const GeneratePO = ({ user, onLogout }) => {
 
                             {selectedPrId && (
                                 <div className="space-y-10 animate-in slide-in-from-top-4 duration-500">
-                                    <div className="bg-slate-50/50 rounded-3xl border border-slate-100 overflow-hidden">
-                                        <div className="p-6 border-b border-slate-100 bg-white flex items-center gap-3">
-                                            <MdInventory className="text-emerald-600" size={20} />
-                                            <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">PR Items</h3>
-                                        </div>
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-left">
-                                                <thead className="bg-slate-50/50">
-                                                    <tr>
-                                                        <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
-                                                        <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                                                        <th className="px-6 py-4 text-center text-[9px] font-black text-slate-400 uppercase tracking-widest">Qty</th>
-                                                        <th className="px-6 py-4 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">Cost</th>
-                                                        <th className="px-6 py-4 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
-                                                    {items.map((item, idx) => (
-                                                        <tr key={idx} className="text-xs">
-                                                            <td className="px-6 py-4 font-bold text-slate-500 uppercase">{item.unit}</td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="font-bold text-slate-700">{item.description}</div>
-                                                                {item.pr_no && (
-                                                                    <div className="text-[10px] font-black text-emerald-600/60 uppercase tracking-tighter mt-0.5">
-                                                                        PR #{item.pr_no}
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-center font-black text-slate-900">{Number(item.quantity).toLocaleString('en-PH', { maximumFractionDigits: 0 })}</td>
-                                                            <td className="px-6 py-4 text-right">
-                                                                <div className="flex items-center justify-end gap-1">
-                                                                    <span className="text-slate-400">₱</span>
-                                                                    <input
-                                                                        type="number"
-                                                                        value={item.unit_cost}
-                                                                        onChange={(e) => handleCostChange(idx, e.target.value)}
-                                                                        className="input-currency w-24 px-2 py-1 bg-white border border-slate-200 rounded-lg text-right font-black text-slate-900 focus:border-emerald-500 focus:ring-0 outline-none transition-all shadow-sm"
-                                                                        step="0.01"
-                                                                        min="0"
-                                                                    />
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-right font-black text-slate-900">₱{(parseFloat(item.quantity) * parseFloat(item.unit_cost)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                        <div className="table-container shadow-none border-slate-100">
+                                            <div className="overflow-x-auto">
+                                                <table className="app-table">
+                                                    <thead>
+                                                        <tr className="table-header-row">
+                                                            <th className="table-th">Unit</th>
+                                                            <th className="table-th">Description</th>
+                                                            <th className="table-th text-center">Qty</th>
+                                                            <th className="table-th text-right">Cost</th>
+                                                            <th className="table-th text-right">Total</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                                <tfoot className="bg-slate-900 text-white">
-                                                    <tr>
-                                                        <td colSpan="4" className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest opacity-70">Grand Total</td>
-                                                        <td className="px-6 py-5 text-right text-lg font-black tracking-tight">₱{totalAmount.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {items.map((item, idx) => (
+                                                            <tr key={idx} className="table-tr group text-xs">
+                                                                <td className="table-td font-bold text-slate-500 uppercase">{item.unit}</td>
+                                                                <td className="table-td">
+                                                                    <div className="font-bold text-slate-700">{item.description}</div>
+                                                                    {item.pr_no && (
+                                                                        <div className="text-[10px] font-black text-emerald-600/60 uppercase tracking-tighter mt-0.5">
+                                                                            PR #{item.pr_no}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="table-td text-center font-black text-slate-900">{Number(item.quantity).toLocaleString('en-PH', { maximumFractionDigits: 0 })}</td>
+                                                                <td className="table-td text-right">
+                                                                    <div className="flex items-center justify-end gap-1">
+                                                                        <span className="text-slate-400">₱</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={item.unit_cost}
+                                                                            onChange={(e) => handleCostChange(idx, e.target.value)}
+                                                                            className="input-currency w-24 px-2 py-1 bg-white border border-slate-200 rounded-lg text-right font-black text-slate-900 focus:border-emerald-500 focus:ring-0 outline-none transition-all shadow-sm"
+                                                                            step="0.01"
+                                                                            min="0"
+                                                                        />
+                                                                    </div>
+                                                                </td>
+                                                                <td className="table-td text-right font-black text-slate-900">₱{((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                    <tfoot className="bg-slate-900 text-white">
+                                                        <tr>
+                                                            <td colSpan="4" className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest opacity-70">Grand Total</td>
+                                                            <td className="px-6 py-5 text-right text-lg font-black tracking-tight">₱{totalAmount.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
                                         </div>
-                                    </div>
 
                                     {/* PO INPUT FIELDS */}
                                     <div className="space-y-8 bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
@@ -557,9 +579,12 @@ const GeneratePO = ({ user, onLogout }) => {
                                                 <input
                                                     type="text"
                                                     value={poData.po_no}
-                                                    onChange={(e) => setPoData({ ...poData, po_no: e.target.value })}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9-]/g, '');
+                                                        setPoData({ ...poData, po_no: val });
+                                                    }}
                                                     className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
-                                                    placeholder="Enter PO No."
+                                                    placeholder="YYYY-MM-XXX"
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -578,7 +603,10 @@ const GeneratePO = ({ user, onLogout }) => {
                                                 <input
                                                     type="text"
                                                     value={poData.supplier_name}
-                                                    onChange={(e) => setPoData({ ...poData, supplier_name: e.target.value })}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^a-zA-Z0-9\s.,&()-]/g, '');
+                                                        setPoData({ ...poData, supplier_name: val });
+                                                    }}
                                                     className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-black text-slate-900 text-lg transition-all"
                                                     placeholder="Full Business Name"
                                                 />
@@ -590,9 +618,14 @@ const GeneratePO = ({ user, onLogout }) => {
                                                 <input
                                                     type="text"
                                                     value={poData.tin}
-                                                    onChange={(e) => setPoData({ ...poData, tin: e.target.value })}
+                                                    onChange={(e) => {
+                                                        const raw = e.target.value.replace(/\D/g, '');
+                                                        const formatted = (raw.match(/.{1,3}/g) || []).slice(0, 4).join('-');
+                                                        setPoData({ ...poData, tin: formatted });
+                                                    }}
                                                     className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
                                                     placeholder="000-000-000-000"
+                                                    maxLength={15}
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -690,8 +723,12 @@ const GeneratePO = ({ user, onLogout }) => {
                                                 <input
                                                     type="text"
                                                     value={poData.funds_available}
-                                                    onChange={(e) => setPoData({ ...poData, funds_available: e.target.value })}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9.]/g, '');
+                                                        setPoData({ ...poData, funds_available: val });
+                                                    }}
                                                     className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
+                                                    placeholder="0.00"
                                                 />
                                             </div>
 
@@ -709,9 +746,12 @@ const GeneratePO = ({ user, onLogout }) => {
                                                 <input
                                                     type="text"
                                                     value={poData.ors_burs_no}
-                                                    onChange={(e) => setPoData({ ...poData, ors_burs_no: e.target.value })}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9-]/g, '');
+                                                        setPoData({ ...poData, ors_burs_no: val });
+                                                    }}
                                                     className="w-full px-5 py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white focus:ring-0 font-bold text-slate-800 transition-all"
-                                                    placeholder="Enter ORS/BURS number"
+                                                    placeholder="00-00-0000"
                                                 />
                                             </div>
                                         </div>

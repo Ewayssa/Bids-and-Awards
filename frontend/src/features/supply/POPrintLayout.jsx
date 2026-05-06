@@ -97,14 +97,13 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
                                 <td className="border-r-[1.5px] border-black p-1 text-center">{item.unit}</td>
                                 <td className="border-r-[1.5px] border-black p-1 px-2 leading-tight">
                                     <div className="font-bold">{item.description}</div>
-                                    {item.pr_no && <div className="text-[9px] italic text-slate-500 mt-0.5">PR No. {item.pr_no}</div>}
                                 </td>
                                 <td className="border-r-[1.5px] border-black p-1 text-center">{Number(parseFloat(item.quantity) || 0).toLocaleString('en-PH', { maximumFractionDigits: 0 })}</td>
                                 <td className="border-r-[1.5px] border-black p-1 text-right pr-2">
-                                    {Number(parseFloat(item.unit_cost) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ₱{Number(parseFloat(item.unit_cost) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className="p-1 text-right pr-2 font-bold">
-                                    {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ₱{((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                             </tr>
                         ))}
@@ -129,7 +128,7 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
                                 {data.amount_in_words}
                             </td>
                             <td className="border-t-[1.5px] border-black p-1 text-right pr-2 text-xs font-bold">
-                                {Number(data.total_amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                ₱{Number(data.total_amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                         </tr>
                     </tfoot>
@@ -171,7 +170,9 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
                         </div>
                         <div className="flex gap-2 pb-6">
                             <span className="font-bold">Funds Available :</span>
-                            <span className="border-b border-black flex-1 min-h-[16px]">{data.funds_available}</span>
+                            <span className="border-b border-black flex-1 min-h-[16px]">
+                                {data.funds_available ? `₱${Number(data.funds_available).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                            </span>
                         </div>
                         
                         <div className="text-center pt-4">
@@ -186,11 +187,9 @@ const POPrintLayout = React.forwardRef(({ data, prItems }, ref) => {
                             <span className="font-bold whitespace-nowrap">Date of the ORS/BURS:</span>
                             <span className="border-b border-black flex-1 min-h-[16px]">{data.date_of_ors_burs}</span>
                         </div>
-                        <div className="flex gap-2 pt-2">
+                        <div className="flex gap-2 pt-1">
                             <span className="font-bold whitespace-nowrap">ORS/BURS No. :</span>
-                            <span className="border-b border-black flex-1 min-h-[16px] font-bold">
-                                {data.ors_burs_amount}
-                            </span>
+                            <span className="border-b border-black flex-1 min-h-[16px] font-bold">{data.ors_burs_no}</span>
                         </div>
                     </div>
                 </div>

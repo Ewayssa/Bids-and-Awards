@@ -27,6 +27,7 @@ const NAV_ITEMS = [
     { path: '/pr', label: 'Purchase Request', icon: MdReceipt },
     { path: '/supply/generate-po', label: 'Purchase Orders', icon: MdPostAdd },
 
+
     { path: '/personnel', label: 'User Management', icon: MdGroup },
     { path: '/audit-trail', label: 'Activity Logs', icon: MdHistoryToggleOff },
 ];

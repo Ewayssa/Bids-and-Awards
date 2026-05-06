@@ -270,38 +270,40 @@ const Personnel = ({ user }) => {
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
-                            <thead className="bg-[#F8FAFC] dark:bg-slate-800/50">
-                                <tr>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Name</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Email</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Dept</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Role</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                                    {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>}
+                        <table className="app-table table-zebra">
+                            <thead>
+                                <tr className="table-header-row">
+                                    <th className="table-th">Name</th>
+                                    <th className="table-th">Email</th>
+                                    <th className="table-th">Dept</th>
+                                    <th className="table-th text-center">Role</th>
+                                    <th className="table-th text-center">Status</th>
+                                    {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && <th className="table-th text-right">Actions</th>}
                                 </tr>
                             </thead>
-                            <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">
+                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                 {paginatedUsers.map((u) => (
-                                    <tr key={u.id} className="hover:bg-slate-50/80 group transition-all">
-                                        <td className="px-6 py-5 font-black text-slate-800 dark:text-slate-200">{u.fullName || '—'}</td>
-                                        <td className="px-6 py-5 text-sm text-slate-500">{u.username}</td>
-                                        <td className="px-6 py-5 text-sm text-slate-500">{u.office || '—'}</td>
-                                        <td className="px-6 py-5 text-center">
+                                    <tr key={u.id} className="table-tr group">
+                                        <td className="table-td font-black text-slate-800 dark:text-slate-200">{u.fullName || '—'}</td>
+                                        <td className="table-td text-sm text-slate-500">{u.username}</td>
+                                        <td className="table-td text-sm text-slate-500">{u.office || '—'}</td>
+                                        <td className="table-td text-center">
                                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${u.role === ROLES.ADMIN ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
                                                 {getRoleDisplayName(u.role)}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-5 text-center">
+                                        <td className="table-td text-center">
                                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${u.is_active !== false ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                                                 {u.is_active !== false ? 'Active' : 'Inactive'}
                                             </span>
                                         </td>
                                         {hasPermission(user?.role, PERMISSIONS.MANAGE_USERS) && (
-                                            <td className="px-6 py-5 text-right">
-                                                <button onClick={() => openEditModal(u)} className="p-2 text-slate-400 hover:text-[var(--primary)] transition-colors">
-                                                    <MdEdit className="w-5 h-5" />
-                                                </button>
+                                            <td className="table-td text-right">
+                                                <div className="table-actions">
+                                                    <button onClick={() => openEditModal(u)} className="p-2 text-slate-400 hover:text-[var(--primary)] transition-colors">
+                                                        <MdEdit className="w-5 h-5" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         )}
                                     </tr>

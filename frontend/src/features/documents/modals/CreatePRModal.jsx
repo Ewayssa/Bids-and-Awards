@@ -523,7 +523,7 @@ const CreatePRModal = ({
                     )}
 
                     {/* Table Section */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
+                    <div className="table-container shadow-none !rounded-2xl flex flex-col">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
                             <div />
                             <button
@@ -542,23 +542,15 @@ const CreatePRModal = ({
                         )}
 
                         <div className="overflow-x-auto">
-                            <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900">
-                                <colgroup>
-                                    <col className="w-24" />
-                                    <col className="w-auto" />
-                                    <col className="w-24" />
-                                    <col className="w-32" />
-                                    <col className="w-32" />
-                                    <col className="w-16" />
-                                </colgroup>
-                                <thead className="table-header">
-                                    <tr>
-                                        <th className="table-th !text-center !px-4">Unit</th>
-                                        <th className="table-th !text-center !px-4">Description</th>
-                                        <th className="table-th !text-center !px-4">Qty</th>
-                                        <th className="table-th !text-center !px-4">Unit Cost</th>
-                                        <th className="table-th !text-center !px-4">Total</th>
-                                        <th className="table-th !px-4"></th>
+                            <table className="app-table table-zebra">
+                                <thead>
+                                    <tr className="table-header-row">
+                                        <th className="table-th text-center" style={{ width: '100px' }}>Unit</th>
+                                        <th className="table-th text-center">Description</th>
+                                        <th className="table-th text-center" style={{ width: '100px' }}>Qty</th>
+                                        <th className="table-th text-center" style={{ width: '130px' }}>Unit Cost</th>
+                                        <th className="table-th text-center" style={{ width: '130px' }}>Total</th>
+                                        <th className="table-th" style={{ width: '60px' }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -572,23 +564,23 @@ const CreatePRModal = ({
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, scale: 0.95 }}
                                                     transition={{ duration: 0.2 }}
-                                                    className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors group"
+                                                    className="table-tr group"
                                                 >
-                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td !py-2 !px-2">
                                                         <input
                                                             type="text"
                                                             value={item.unit}
                                                             onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
                                                             placeholder="Unit"
-                                                            className="w-full p-2.5 text-xs text-center bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold placeholder:text-slate-300"
+                                                            className="w-full p-2.5 text-xs text-center bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold placeholder:text-slate-300"
                                                         />
                                                     </td>
-                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td !py-2 !px-2">
                                                         <textarea
                                                             value={item.description}
                                                             onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
                                                             rows={1}
-                                                            className="w-full p-2.5 text-xs text-left bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all resize-none min-h-[42px] overflow-hidden font-bold placeholder:text-slate-300"
+                                                            className="w-full p-2.5 text-xs text-left bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all resize-none min-h-[42px] overflow-hidden font-bold placeholder:text-slate-300"
                                                             placeholder="Enter item description..."
                                                             onInput={(e) => {
                                                                 e.target.style.height = 'auto';
@@ -596,31 +588,31 @@ const CreatePRModal = ({
                                                             }}
                                                         />
                                                     </td>
-                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td !py-2 !px-2">
                                                         <input
                                                             type="number"
                                                             min="1"
                                                             value={item.quantity}
                                                             onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
-                                                            className="w-full p-2.5 text-xs text-center font-mono bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            className="w-full p-2.5 text-xs text-center font-mono bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                         />
                                                     </td>
-                                                    <td className="table-td align-middle !py-2 !px-2 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td !py-2 !px-2">
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             step="0.01"
                                                             value={item.unit_cost}
                                                             onChange={(e) => handleItemChange(item.id, 'unit_cost', e.target.value)}
-                                                            className="w-full p-2.5 text-xs text-center font-mono bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            className="w-full p-2.5 text-xs text-center font-mono bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                         />
                                                     </td>
-                                                    <td className="table-td align-middle !py-3 !px-4 border-b border-slate-100 dark:border-slate-700/50">
-                                                        <div className="p-2 text-xs text-center font-black text-slate-700 dark:text-slate-300 truncate">
+                                                    <td className="table-td !py-3 !px-4 text-center">
+                                                        <div className="p-2 text-xs font-black text-emerald-600 truncate">
                                                             {formatCurrency(rowTotal)}
                                                         </div>
                                                     </td>
-                                                    <td className="table-td align-middle !text-center !py-3 !px-4 border-b border-slate-100 dark:border-slate-700/50">
+                                                    <td className="table-td !text-center !py-3 !px-4">
                                                         <button
                                                             type="button"
                                                             onClick={() => handleRemoveItem(item.id)}

@@ -83,6 +83,7 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
         return instance
 
 class PurchaseOrderSerializer(serializers.ModelSerializer):
+    pr_no = serializers.CharField(source='purchase_request.pr_no', read_only=True)
     purchase_request_details = PurchaseRequestSerializer(source='purchase_request', read_only=True)
     po_date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])
     date_of_ors_burs = serializers.DateField(required=False, allow_null=True, input_formats=['%Y-%m-%d', '%m/%d/%Y', '%m-%d-%Y', 'iso-8601'])

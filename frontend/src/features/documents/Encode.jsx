@@ -349,6 +349,7 @@ const Encode = ({ user }) => {
                 ppmpNo={selectedPPMP}
                 documents={selectedPPMPDocs}
                 record={selectedProcurementRecord}
+                user={user}
             />
 
             <ProcurementDocumentModal

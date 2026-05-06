@@ -36,11 +36,15 @@ const DocItem = React.memo(({ doc, isNear, innerRef }) => {
     );
 }, (prev, next) => prev.isNear === next.isNear && prev.doc.id === next.doc.id);
 
-const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record }) => {
+const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record, user }) => {
     const [activeId, setActiveId] = useState(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const scrollContainerRef = useRef(null);
     const itemRefs = useRef({});
+
+    const isEndUser = (user?.role || '').toLowerCase().includes('end_user') || user?.role === 'USER';
+    const isOwner = record?.created_by === (user?.fullName || user?.username);
+    const canDownload = !isEndUser || isOwner;
 
     // Hooks order must be preserved - hooks before early return
     const folderDocs = (documents || [])
@@ -105,7 +109,7 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record }) => {
     };
 
     const handleDownload = async () => {
-        if (folderDocs.length === 0 || isDownloading) return;
+        if (folderDocs.length === 0 || isDownloading || !canDownload) return;
 
         setIsDownloading(true);
         try {
@@ -175,8 +179,9 @@ const PPMPFolderModal = ({ isOpen, onClose, ppmpNo, documents, record }) => {
                     <div className="p-6 border-b border-slate-200 bg-white/50 backdrop-blur-md">
                         <button
                             onClick={handleDownload}
-                            disabled={folderDocs.length === 0 || isDownloading}
+                            disabled={folderDocs.length === 0 || isDownloading || !canDownload}
                             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--primary)] text-white rounded-xl shadow-lg shadow-[var(--primary)]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            title={!canDownload ? "Download restricted to owner" : "Download All as PDF"}
                         >
                             <MdDownload className="w-4 h-4" />
                             {isDownloading ? 'Preparing...' : 'Download All'}

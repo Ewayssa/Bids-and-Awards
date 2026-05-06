@@ -60,7 +60,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden transition-all duration-500 hover:shadow-2xl">
                         <div className="px-8 py-6 border-b border-slate-50">
-                            <p className="text-xl font-black text-slate-800 tracking-tight">Calendar Events</p>
+                            <p className="text-xl font-black text-slate-800 tracking-tight">Calendar of Activities</p>
                         </div>
                         <DashboardCalendar 
                             events={stats.calendarEvents} 

@@ -65,9 +65,6 @@ export const ProcurementProgress = ({ pieData, procurementMethodCounts, ringProg
                 <div>
                     <p className="text-xl font-black text-slate-800 tracking-tight">Procurement Progress</p>
                 </div>
-                <div className="px-3 py-1 bg-emerald-50 rounded-full text-[10px] font-black text-emerald-600 uppercase tracking-widest border border-emerald-100">
-                    Real-time
-                </div>
             </div>
             
             <div className="p-8 flex flex-col xl:flex-row gap-12 items-center">

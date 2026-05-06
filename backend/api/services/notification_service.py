@@ -66,12 +66,12 @@ class EmailNotificationService:
 
     @classmethod
     def send_calendar_event_notification(cls, event):
-        """Send notification when a calendar event is newly created."""
+        """Send notification when a calendar activity is newly created."""
         recipients = cls._calendar_recipients()
         
         context = {
             'notification_type': 'Notice of Scheduled Activity',
-            'intro_text': 'This serves as an official notice that a new activity has been scheduled in the BAC Calendar. Please find the formal details below:',
+            'intro_text': 'This serves as an official notice that a new activity has been scheduled in the Calendar of Activities. Please find the formal details below:',
             'event': event,
             'time_display': cls._event_time_display(event),
         }

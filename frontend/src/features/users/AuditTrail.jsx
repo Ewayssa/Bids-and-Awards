@@ -105,16 +105,16 @@ const AuditTrail = () => {
                             <p className="text-xs text-[var(--text-muted)] mt-0.5">Only significant events are recorded. Auto-updates in real time.</p>
                         </div>
                     </div>
-                    <div className="overflow-x-auto min-h-[400px]">
-                        <table className="min-w-full w-full border-collapse">
-                            <thead className="bg-[#F8FAFC] dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
-                                <tr>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-left" style={{ width: '25%' }}>User</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center" style={{ width: '50%' }}>System Activity / Action</th>
-                                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right" style={{ width: '25%' }}>Date & Time</th>
+                    <div className="overflow-x-auto min-h-[400px] table-container !rounded-none !border-0 !shadow-none">
+                        <table className="app-table table-zebra">
+                            <thead>
+                                <tr className="table-header-row">
+                                    <th className="table-th" style={{ width: '25%' }}>User</th>
+                                    <th className="table-th text-center" style={{ width: '50%' }}>System Activity / Action</th>
+                                    <th className="table-th text-right" style={{ width: '25%' }}>Date & Time</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">
+                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                 {logs.length === 0 ? (
                                     <tr key="empty">
                                         <td colSpan={3} className="px-8 py-20 text-center text-slate-400">
@@ -129,19 +129,19 @@ const AuditTrail = () => {
                                     paginatedLogs.map((entry) => (
                                         <tr
                                             key={entry.id != null ? String(entry.id) : entry.created_at + (entry.actor || '')}
-                                            className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 ease-out group"
+                                            className="table-tr group"
                                         >
-                                            <td className="px-8 py-5 align-middle">
+                                            <td className="table-td">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-slate-700 dark:text-slate-300 group-hover:text-[var(--primary)] transition-colors">{entry.actor || 'System'}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5 align-middle text-center">
+                                            <td className="table-td text-center">
                                                 <span className="inline-flex justify-center items-center px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-200 text-[10px] font-black uppercase tracking-[0.1em] border border-slate-200 dark:border-slate-700 group-hover:border-[var(--primary)] group-hover:text-[var(--primary)] transition-all duration-300 shadow-sm">
                                                     {ACTION_LABELS[entry.action] || entry.action}
                                                 </span>
                                             </td>
-                                            <td className="px-8 py-5 align-middle text-right whitespace-nowrap">
+                                            <td className="table-td text-right whitespace-nowrap">
                                                 <div className="flex flex-col items-end">
                                                     <span className="text-[11px] font-black text-slate-600 dark:text-slate-400 tracking-tight">
                                                         {formatDate(entry.created_at)}

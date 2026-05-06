@@ -1,35 +1,32 @@
 import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'bac_backend.settings'
 import django
-django.setup()
 from django.db import connection
 
-missing_cols = [
-    ("mode_of_procurement", "VARCHAR(100) NOT NULL DEFAULT ''"),
-    ("source_of_fund", "VARCHAR(255) NOT NULL DEFAULT ''"),
-]
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bac_backend.settings')
+django.setup()
 
-with connection.cursor() as cursor:
-    cursor.execute("DESCRIBE api_procurementrecord")
-    existing = {row[0] for row in cursor.fetchall()}
-
-print("Existing columns:", sorted(existing))
-print()
-
-with connection.cursor() as cursor:
-    for col_name, col_def in missing_cols:
-        if col_name not in existing:
-            sql = "ALTER TABLE api_procurementrecord ADD COLUMN " + col_name + " " + col_def
-            cursor.execute(sql)
-            print("Added: " + col_name)
+def add_column_if_missing(table, column, definition):
+    with connection.cursor() as cursor:
+        cursor.execute(f"SHOW COLUMNS FROM {table} LIKE '{column}'")
+        if not cursor.fetchone():
+            print(f"Adding column {column} to {table}...")
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
         else:
-            print("Already exists: " + col_name)
+            print(f"Column {column} already exists in {table}.")
 
-# Verify final state
-with connection.cursor() as cursor:
-    cursor.execute("DESCRIBE api_procurementrecord")
-    cols = [row[0] for row in cursor.fetchall()]
-    print()
-    print("Final columns:", sorted(cols))
-    print("mode_of_procurement present:", "mode_of_procurement" in cols)
-    print("source_of_fund present:", "source_of_fund" in cols)
+try:
+    # PurchaseOrder missing fields
+    add_column_if_missing('api_purchaseorder', 'tin', 'VARCHAR(100) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'place_of_delivery', 'VARCHAR(255) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'date_of_delivery', 'VARCHAR(255) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'payment_term', 'VARCHAR(100) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'amount_in_words', 'VARCHAR(500) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'fund_cluster', 'VARCHAR(100) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'funds_available', 'VARCHAR(255) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'ors_burs_no', 'VARCHAR(100) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_purchaseorder', 'date_of_ors_burs', 'DATE NULL')
+    add_column_if_missing('api_purchaseorder', 'ors_burs_amount', 'VARCHAR(100) NOT NULL DEFAULT ""')
+    
+    print("Database schema fixed!")
+except Exception as e:
+    print(f"Error fixing schema: {e}")

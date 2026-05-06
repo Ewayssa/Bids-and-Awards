@@ -230,24 +230,24 @@ const PR = ({ user }) => {
 
 
                 {prs.length > 0 ? (
-                    <div className="bg-white dark:bg-slate-900 overflow-x-auto rounded-3xl border border-slate-100 dark:border-slate-800/50 shadow-xl shadow-slate-200/40">
-                        <table className="w-full">
-                            <thead className="table-header">
-                                <tr>
-                                    <th className="table-th !text-center !px-4">PR No.</th>
-                                    <th className="table-th !text-center !px-4">PPMP No.</th>
-                                    <th className="table-th !text-center !px-4">Purpose</th>
-                                    <th className="table-th !text-center !px-4">Total Cost</th>
-                                    <th className="table-th !text-center !px-4">Status</th>
-                                    <th className="table-th !text-center !px-4">Date Uploaded</th>
-                                    <th className="table-th !text-center !px-4">Actions</th>
+                    <div className="table-container">
+                        <table className="app-table table-zebra">
+                            <thead>
+                                <tr className="table-header-row">
+                                    <th className="table-th text-center">PR No.</th>
+                                    <th className="table-th text-center">PPMP No.</th>
+                                    <th className="table-th text-center">Purpose</th>
+                                    <th className="table-th text-center">Total Cost</th>
+                                    <th className="table-th text-center">Status</th>
+                                    <th className="table-th text-center">Date Uploaded</th>
+                                    {!isEndUser && <th className="table-th !text-center !px-4">Actions</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                 {prs.map((item, idx) => {
                                     return (
-                                        <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
-                                            <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                        <tr key={idx} className="table-tr group">
+                                            <td className="table-td text-center">
                                                 <button
                                                     onClick={() => handleQuickView(item)}
                                                     className={`text-xs font-black transition-all truncate text-center hover:text-slate-900 dark:text-white block w-full ${item.pr_no ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}
@@ -255,22 +255,22 @@ const PR = ({ user }) => {
                                                     {item.pr_no || 'No assigned PR No.'}
                                                 </button>
                                             </td>
-                                            <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <td className="table-td text-center">
                                                 <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700 font-mono">
                                                     {item.ppmp_no || 'UNLINKED'}
                                                 </span>
                                             </td>
-                                            <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                                <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 line-clamp-2" title={item.purpose}>
+                                            <td className="table-td text-center">
+                                                <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 line-clamp-2 mx-auto max-w-[200px]" title={item.purpose}>
                                                     {item.purpose || 'No Purpose Specified'}
                                                 </p>
                                             </td>
-                                            <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <td className="table-td text-center">
                                                 <span className="text-sm font-black text-emerald-600 font-mono whitespace-nowrap">
                                                     ₱{parseFloat(item.grand_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             </td>
-                                            <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <td className="table-td text-center">
                                                 <span className={`status-badge ${(item.status === 'completed' || item.status === 'po_generated')
                                                         ? 'status-badge--complete'
                                                         : 'status-badge--ongoing'
@@ -278,61 +278,67 @@ const PR = ({ user }) => {
                                                     {(item.status === 'completed' || item.status === 'po_generated') ? 'COMPLETED' : 'ON GOING'}
                                                 </span>
                                             </td>
-                                            <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                            <td className="table-td text-center">
                                                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
                                                     {item.created_at ? new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                                                 </span>
                                             </td>
-                                            <td className="table-td !text-center !px-3 !py-3 border-b border-slate-50 dark:border-slate-800/50 min-w-[280px]">
-                                                <div className="flex flex-wrap justify-center items-center gap-2">
-                                                    {editingPrId === item.id && !item.pr_no ? (
-                                                        <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
-                                                            <input
-                                                                autoFocus
-                                                                type="text"
-                                                                value={assignValue}
-                                                                onChange={(e) => setAssignValue(e.target.value)}
-                                                                className="h-8 w-24 px-2 bg-white border-2 border-emerald-500 rounded text-[10px] font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
-                                                                placeholder="PR No."
-                                                            />
-                                                            <button
-                                                                disabled={assigning || !assignValue.trim()}
-                                                                onClick={() => handleAssignPR(item)}
-                                                                className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all active:scale-90 shadow-sm"
-                                                            >
-                                                                {assigning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full" /> : <MdCheck className="w-5 h-5" />}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setEditingPrId(null)}
-                                                                className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
-                                                            >
-                                                                <MdClose className="w-5 h-5" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        canAssignPR && !item.pr_no && (
-                                                            <button
-                                                                onClick={() => startAssigning(item)}
-                                                                className="btn-action-secondary justify-center !text-emerald-700 !border-emerald-200 hover:!bg-emerald-50 !text-[10px] !font-black !uppercase !tracking-wide"
-                                                            >
-                                                                Assign PR No.
-                                                            </button>
-                                                        )
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleView(item)}
-                                                        className="btn-action justify-center bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-700 !text-[10px] !font-black !uppercase !tracking-wide shadow-sm"
-                                                    >
-                                                        View
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleQuickView(item)}
-                                                        className="btn-action-secondary justify-center !text-slate-800 dark:!text-white !text-[10px] !font-black !uppercase !tracking-wide"
-                                                    >
-                                                        Download
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            {!isEndUser && (
+                                                <td className="table-td !text-center !px-3 !py-3 border-b border-slate-50 dark:border-slate-800/50 min-w-[280px]">
+                                                    <div className="flex flex-wrap justify-center items-center gap-2">
+                                                        {editingPrId === item.id && !item.pr_no ? (
+                                                            <div className="flex items-center justify-center gap-1.5 animate-in slide-in-from-right duration-200">
+                                                                <input
+                                                                    autoFocus
+                                                                    type="text"
+                                                                    value={assignValue}
+                                                                    onChange={(e) => setAssignValue(e.target.value)}
+                                                                    className="h-8 w-24 px-2 bg-white border-2 border-emerald-500 rounded text-[10px] font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                                                                    placeholder="PR No."
+                                                                />
+                                                                <button
+                                                                    disabled={assigning || !assignValue.trim()}
+                                                                    onClick={() => handleAssignPR(item)}
+                                                                    className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all active:scale-90 shadow-sm"
+                                                                >
+                                                                    {assigning ? <div className="w-3 h-3 border-2 border-white/30 border-t-white animate-spin rounded-full" /> : <MdCheck className="w-5 h-5" />}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingPrId(null)}
+                                                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
+                                                                >
+                                                                    <MdClose className="w-5 h-5" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            canAssignPR && !item.pr_no && (
+                                                                <button
+                                                                    onClick={() => startAssigning(item)}
+                                                                    className="btn-action-secondary justify-center !text-emerald-700 !border-emerald-200 hover:!bg-emerald-50 !text-[10px] !font-black !uppercase !tracking-wide"
+                                                                >
+                                                                    Assign PR No.
+                                                                </button>
+                                                            )
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleView(item)}
+                                                            disabled={isEndUser && item.created_by !== (user?.fullName || user?.username)}
+                                                            className={`btn-action justify-center bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-700 !text-[10px] !font-black !uppercase !tracking-wide shadow-sm disabled:opacity-30 disabled:cursor-not-allowed`}
+                                                            title={isEndUser && item.created_by !== (user?.fullName || user?.username) ? "Access restricted to owner" : "View Details"}
+                                                        >
+                                                            View
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleQuickView(item)}
+                                                            disabled={isEndUser && item.created_by !== (user?.fullName || user?.username)}
+                                                            className="btn-action-secondary justify-center !text-slate-800 dark:!text-white !text-[10px] !font-black !uppercase !tracking-wide disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            title={isEndUser && item.created_by !== (user?.fullName || user?.username) ? "Access restricted to owner" : "Download PDF"}
+                                                        >
+                                                            Download
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     );
                                 })}

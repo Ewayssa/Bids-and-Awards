@@ -82,55 +82,54 @@ const PPMP = ({ user }) => {
 
                 
                 {ppmps.length > 0 ? (
-                    <div className="bg-white dark:bg-slate-900 overflow-x-auto min-h-[400px]">
-                        <table className="w-full border-separate border-spacing-0 table-fixed bg-white dark:bg-slate-900 shadow-sm rounded-xl overflow-hidden">
-                            <colgroup>
-                                <col className="w-[25%]" />
-                                <col className="w-[15%]" />
-                                <col className="w-[15%]" />
-                                <col className="w-[25%]" />
-                                <col className="w-[20%]" />
-                            </colgroup>
-                            <thead className="table-header">
-                                <tr>
-                                    <th className="table-th !text-center !px-4">PPMP No.</th>
-                                    <th className="table-th !text-center !px-4">Quarter</th>
-                                    <th className="table-th !text-center !px-4">Year</th>
-                                    <th className="table-th !text-center !px-4">Date Uploaded</th>
-                                    <th className="table-th !text-center !px-4">Actions</th>
+                    <div className="table-container">
+                        <table className="app-table table-zebra">
+                            <thead>
+                                <tr className="table-header-row">
+                                    <th className="table-th text-center">PPMP No.</th>
+                                    <th className="table-th text-center">Quarter</th>
+                                    <th className="table-th text-center">Year</th>
+                                    <th className="table-th text-center">Date Uploaded</th>
+                                    {user?.role !== ROLES.END_USER && <th className="table-th text-center">Actions</th>}
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                                 {ppmps.map((item, idx) => (
-                                    <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 group">
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                    <tr key={idx} className="table-tr group">
+                                        <td className="table-td text-center">
                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                                 {item.ppmp_no || 'N/A'}
                                             </span>
                                         </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                        <td className="table-td text-center">
                                             <span className="inline-block text-[10px] font-black text-[var(--primary)] uppercase tracking-widest px-3 py-1 bg-[var(--primary)]/10 rounded-lg border border-[var(--primary)]/20 shadow-sm">
                                                 {item.quarter || 'N/A'}
                                             </span>
                                         </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                        <td className="table-td text-center">
                                             <span className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-700">
                                                 {item.year || 'N/A'}
                                             </span>
                                         </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                        <td className="table-td text-center">
                                             <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap tabular-nums">
                                                 {item.uploaded_at ? new Date(item.uploaded_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                                             </span>
                                         </td>
-                                        <td className="table-td !text-center !px-4 !py-3 border-b border-slate-50 dark:border-slate-800/50">
-                                            <button 
-                                                onClick={() => handleView(item)}
-                                                className="px-6 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-full font-black uppercase tracking-widest text-[9px] hover:scale-110 active:scale-95 transition-all shadow-xl shadow-slate-900/20"
-                                            >
-                                                View
-                                            </button>
-                                        </td>
+                                        {user?.role !== ROLES.END_USER && (
+                                            <td className="table-td text-center">
+                                                <div className="table-actions justify-center">
+                                                    <button 
+                                                        onClick={() => handleView(item)}
+                                                        disabled={user?.role === ROLES.END_USER && item.uploadedBy !== (user?.fullName || user?.username)}
+                                                        className="px-6 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-full font-black uppercase tracking-widest text-[9px] hover:scale-110 active:scale-95 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                                        title={user?.role === ROLES.END_USER && item.uploadedBy !== (user?.fullName || user?.username) ? "Access restricted to owner" : "View Document"}
+                                                    >
+                                                        View
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

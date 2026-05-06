@@ -117,7 +117,7 @@ class DashboardService:
         # 2. Total folders represented in the progress cards
         totalDocumentsUploaded = stats.get('total', 0)
 
-        # 3. Calendar Events (Next 30 days or all upcoming)
+        # 3. Calendar of Activities (Next 30 days or all upcoming)
         events = CalendarEvent.objects.filter(date__gte=timezone.now().date()).order_by('date')[:10]
         calendarEvents = [
             {

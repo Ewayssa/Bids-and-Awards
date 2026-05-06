@@ -505,6 +505,12 @@ export const purchaseOrderService = {
             params: { year }
         });
         return response.data.next_sequence;
+    },
+    async getNextOrsBursSequence(year, cluster) {
+        const response = await api.get(`/purchase-orders/next_ors_burs_sequence/`, {
+            params: { year, cluster }
+        });
+        return response.data.next_sequence;
     }
 };
 

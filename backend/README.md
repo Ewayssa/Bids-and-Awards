@@ -32,5 +32,5 @@ The `api` app has been reorganized into modular components for better maintainab
    ```
 
 ## Management Commands
-- `python manage.py send_event_reminders`: Sends email reminders for upcoming calendar events.
+- `python manage.py send_event_reminders`: Sends email reminders for upcoming calendar of activities.
 - `python manage.py recalculate_document_status`: Bulk recalculates status for all documents.

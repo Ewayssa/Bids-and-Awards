@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = 'Sends email reminders for calendar events occurring tomorrow'
+    help = 'Sends email reminders for calendar of activities occurring tomorrow'
 
     def handle(self, *args, **options):
         self.stdout.write('Checking for upcoming BAC activities...')
