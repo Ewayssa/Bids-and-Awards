@@ -95,9 +95,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         # Sync procurement folder status if a folder exists for this prNo
         if doc.prNo:
-            record = ProcurementRecord.objects.filter(pr_no=doc.prNo).first()
-            if record:
-                sync_procurement_completion(record)
+            sync_procurement_completion(doc.prNo)
 
     def perform_update(self, serializer):
         from ..utils.document_status import DocumentStatusCalculator
@@ -114,9 +112,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             
         # Sync procurement folder status if a folder exists for this prNo
         if doc.prNo:
-            record = ProcurementRecord.objects.filter(pr_no=doc.prNo).first()
-            if record:
-                sync_procurement_completion(record)
+            sync_procurement_completion(doc.prNo)
 
     @action(detail=True, methods=['post'], url_path='update_pr_file')
     def update_pr_file(self, request, pk=None):
@@ -208,9 +204,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         pr_no = instance.prNo
         super().perform_destroy(instance)
         if pr_no:
-            record = ProcurementRecord.objects.filter(pr_no=pr_no).first()
-            if record:
-                sync_procurement_completion(record)
+            sync_procurement_completion(pr_no)
         _log_audit('document_deleted', actor, 'document', doc_id, title)
 
 class ReportViewSet(viewsets.ModelViewSet):
