@@ -315,18 +315,14 @@ def sync_supply_readiness(record):
     prs = record.purchase_requests.all()
 
     for pr in prs:
-        # Check if this specific PR has a PR number assigned
-        has_pr_no = bool(pr.pr_no and pr.pr_no.strip())
-        
         # Conditions for a PR to be 'completed' (visible to Supply Officer):
         # 1. Mandatory initial documents are uploaded (is_docs_ready)
-        # 2. OR a PR number has already been assigned by a BAC Member (has_pr_no)
-        if is_docs_ready or has_pr_no:
+        if is_docs_ready:
             if pr.status != 'completed' and pr.status != 'po_generated':
                 pr.status = 'completed'
                 pr.save(update_fields=['status'])
         else:
-            # Only set to ongoing if it doesn't have a PR No. assigned
+            # Set to ongoing if missing files
             if pr.status != 'ongoing':
                 pr.status = 'ongoing'
                 pr.save(update_fields=['status'])
