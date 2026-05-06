@@ -17,11 +17,10 @@ import {
     MdPrint,
     MdKeyboardArrowDown
 } from 'react-icons/md';
-import { useReactToPrint } from 'react-to-print';
 import Modal from '../../components/Modal';
-import POPrintLayout from './POPrintLayout';
-import { purchaseRequestService, purchaseOrderService, openPreviewTab } from '../../services/api';
+import { purchaseRequestService, purchaseOrderService } from '../../services/api';
 import { numberToWords } from '../../utils/numberToWords';
+import { generatePO_PDFBlob } from '../../utils/poGenerator';
 
 const GeneratePO = ({ user, onLogout }) => {
     const navigate = useNavigate();
@@ -62,6 +61,7 @@ const GeneratePO = ({ user, onLogout }) => {
 
     const printRef = useRef();
     const previewPrintRef = useRef();
+    const viewPrintRef = useRef();
 
     useEffect(() => {
         fetchPOs();
@@ -141,40 +141,61 @@ const GeneratePO = ({ user, onLogout }) => {
         setItems(newItems);
     };
 
-    const handlePrint = useReactToPrint({
-        contentRef: printRef,
-        documentTitle: `PO_${poData.po_no}`,
-    });
-
-    const triggerPrint = (po) => {
-        setSelectedPo(po);
+    const triggerPrint = async (po) => {
         try {
-            const poItems = po.purchase_request_details?.items || [];
-            setSelectedPoItems(poItems);
-            setTimeout(() => handlePrint(), 100);
+            const dataForPdf = {
+                ...po,
+                items: po.purchase_request_details?.items || []
+            };
+            const blob = await generatePO_PDFBlob(dataForPdf);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `PO_${po.po_no || 'Document'}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (e) {
-            console.error(e);
+            console.error('Failed to generate PO PDF:', e);
+            alert('Failed to generate PDF download. Please try again.');
         }
     };
 
-    const viewPo = (po) => {
-        const url = `/po/preview/${po.id}`;
-        openPreviewTab(url, `Purchase Order ${po.po_no}`);
+    const viewPo = async (po) => {
+        try {
+            const dataForPdf = {
+                ...po,
+                items: po.purchase_request_details?.items || []
+            };
+            const blob = await generatePO_PDFBlob(dataForPdf);
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        } catch (e) {
+            console.error('Failed to generate PO PDF:', e);
+            alert('Failed to preview PDF. Please try again.');
+        }
     };
-
-    const handlePreviewNew = () => {
-        // Save current form data to localStorage for the preview page
+    const handlePreviewNew = async () => {
         const previewData = {
             ...poData,
             total_amount: totalAmount,
+            items: items,
             purchase_request_details: {
                 ...prDetails,
                 items: items
             }
         };
-        localStorage.setItem('pending_po_preview', JSON.stringify(previewData));
-        openPreviewTab('/po/preview/new', `Preview: ${poData.po_no || 'New PO'}`);
+        try {
+            const blob = await generatePO_PDFBlob(previewData);
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        } catch (e) {
+            console.error('Failed to generate PO PDF preview:', e);
+            alert('Failed to generate preview. Please check the form data.');
+        }
     };
+
 
     // Correctly parse quantity and unit_cost as floats (DRF returns DecimalField as strings)
     const totalAmount = items.reduce((sum, item) => {
@@ -399,7 +420,7 @@ const GeneratePO = ({ user, onLogout }) => {
                                 <th className="table-th text-right">Amount</th>
                                 <th className="table-th">Date</th>
                                 <th className="table-th text-center">Status</th>
-                                <th className="table-th text-right">Actions</th>
+                                <th className="table-th text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -436,21 +457,21 @@ const GeneratePO = ({ user, onLogout }) => {
                                             Generated
                                         </span>
                                     </td>
-                                    <td className="table-td text-right whitespace-nowrap">
-                                        <div className="table-actions">
+                                    <td className="table-td !text-center !px-3 !py-3">
+                                        <div className="flex flex-wrap justify-center items-center gap-2">
                                             <button
                                                 onClick={() => viewPo(po)}
-                                                className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all active:scale-95 shadow-sm"
-                                                title="View in New Tab"
+                                                className="btn-action justify-center bg-slate-900 dark:bg-emerald-600 text-white hover:bg-slate-800 dark:hover:bg-emerald-700 !text-[10px] !font-black !uppercase !tracking-wide shadow-sm"
+                                                title="View Details"
                                             >
-                                                <MdRemoveRedEye size={20} />
+                                                View
                                             </button>
                                             <button
                                                 onClick={() => triggerPrint(po)}
-                                                className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-95 shadow-sm"
-                                                title="Print PDF"
+                                                className="btn-action-secondary justify-center !text-slate-800 dark:!text-white !text-[10px] !font-black !uppercase !tracking-wide"
+                                                title="Download PDF"
                                             >
-                                                <MdPrint size={20} />
+                                                Download
                                             </button>
                                         </div>
                                     </td>
@@ -783,10 +804,6 @@ const GeneratePO = ({ user, onLogout }) => {
             </Modal>
 
 
-            {/* Hidden Print Content */}
-            <div className="hidden">
-                <POPrintLayout ref={printRef} data={selectedPo} prItems={selectedPoItems} />
-            </div>
         </div>
     );
 };
