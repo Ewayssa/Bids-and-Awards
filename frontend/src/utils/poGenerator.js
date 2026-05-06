@@ -1,3 +1,4 @@
+
 import { jsPDF } from 'jspdf';
 import { numberToWords } from './numberToWords';
 
@@ -14,7 +15,7 @@ export const generatePO_PDFBlob = async (data) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 40;
     const contentWidth = pageWidth - (margin * 2);
-    
+
     // Fonts and styling helpers
     const setFont = (type = 'normal', size = 10) => {
         if (type === 'bold') doc.setFont('times', 'bold');
@@ -36,7 +37,7 @@ export const generatePO_PDFBlob = async (data) => {
 
     // ---------------- PAGE HEADER ----------------
     let startY = margin;
-    
+
     setFont('italic', 10);
     doc.text('Appendix 61', pageWidth - margin, startY, { align: 'right' });
     startY += 20;
@@ -55,7 +56,7 @@ export const generatePO_PDFBlob = async (data) => {
     // ---------------- SUPPLIER INFO (Row 1) ----------------
     const row1Height = 50;
     drawRect(boxStartX, currentY, contentWidth, row1Height);
-    
+
     const midX = boxStartX + (contentWidth * 0.55);
     drawLine(midX, currentY, midX, currentY + row1Height); // Vertical divider
 
@@ -64,12 +65,12 @@ export const generatePO_PDFBlob = async (data) => {
     doc.text('Supplier:', boxStartX + 5, currentY + 14);
     setFont('bold', 10);
     doc.text(String(data.supplier_name || '').toUpperCase(), boxStartX + 50, currentY + 14);
-    
+
     setFont('normal', 10);
     doc.text('Address:', boxStartX + 5, currentY + 28);
     setFont('normal', 9);
     doc.text(String(data.supplier_address || '').toUpperCase(), boxStartX + 50, currentY + 28, { maxWidth: midX - boxStartX - 55 });
-    
+
     setFont('normal', 10);
     doc.text('TIN:', boxStartX + 5, currentY + 42);
     doc.text(String(data.tin || ''), boxStartX + 50, currentY + 42);
@@ -93,11 +94,11 @@ export const generatePO_PDFBlob = async (data) => {
     // ---------------- SALUTATION (Row 2) ----------------
     const row2Height = 30;
     drawRect(boxStartX, currentY, contentWidth, row2Height);
-    
+
     setFont('normal', 10);
     doc.text('Gentlemen:', boxStartX + 5, currentY + 12);
     doc.text('Please furnish this Office the following articles subject to the terms and conditions contained herein:', boxStartX + 30, currentY + 24);
-    
+
     currentY += row2Height;
 
     // ---------------- DELIVERY INFO (Row 3) ----------------
@@ -109,7 +110,7 @@ export const generatePO_PDFBlob = async (data) => {
     doc.text('Place of Delivery:', boxStartX + 5, currentY + 14);
     setFont('bold', 10);
     doc.text(String(data.place_of_delivery || ''), boxStartX + 90, currentY + 14);
-    
+
     setFont('normal', 10);
     doc.text('Date of Delivery:', boxStartX + 5, currentY + 28);
     setFont('bold', 10);
@@ -142,18 +143,18 @@ export const generatePO_PDFBlob = async (data) => {
 
     const headerHeight = 25;
     drawRect(boxStartX, currentY, contentWidth, headerHeight);
-    
+
     for (let i = 1; i < colX.length; i++) {
         drawLine(colX[i], currentY, colX[i], currentY + headerHeight);
     }
 
     setFont('bold', 9);
-    doc.text('Stock/ Property No.', colX[0] + (colWidths[0]/2), currentY + 12, { align: 'center', maxWidth: colWidths[0] - 4 });
-    doc.text('Unit', colX[1] + (colWidths[1]/2), currentY + 15, { align: 'center' });
-    doc.text('Description', colX[2] + (colWidths[2]/2), currentY + 15, { align: 'center' });
-    doc.text('Quantity', colX[3] + (colWidths[3]/2), currentY + 15, { align: 'center' });
-    doc.text('Unit Cost', colX[4] + (colWidths[4]/2), currentY + 15, { align: 'center' });
-    doc.text('Amount', colX[5] + (colWidths[5]/2), currentY + 15, { align: 'center' });
+    doc.text('Stock/ Property No.', colX[0] + (colWidths[0] / 2), currentY + 12, { align: 'center', maxWidth: colWidths[0] - 4 });
+    doc.text('Unit', colX[1] + (colWidths[1] / 2), currentY + 15, { align: 'center' });
+    doc.text('Description', colX[2] + (colWidths[2] / 2), currentY + 15, { align: 'center' });
+    doc.text('Quantity', colX[3] + (colWidths[3] / 2), currentY + 15, { align: 'center' });
+    doc.text('Unit Cost', colX[4] + (colWidths[4] / 2), currentY + 15, { align: 'center' });
+    doc.text('Amount', colX[5] + (colWidths[5] / 2), currentY + 15, { align: 'center' });
 
     currentY += headerHeight;
 
@@ -171,29 +172,29 @@ export const generatePO_PDFBlob = async (data) => {
             for (let i = 1; i < colX.length; i++) {
                 drawLine(colX[i], tableYStart, colX[i], currentY);
             }
-            
+
             doc.addPage();
             currentY = margin;
             tableYStart = currentY;
-            
+
             // Re-draw headers on new page
             drawRect(boxStartX, currentY, contentWidth, headerHeight);
             for (let i = 1; i < colX.length; i++) {
                 drawLine(colX[i], currentY, colX[i], currentY + headerHeight);
             }
             setFont('bold', 9);
-            doc.text('Stock/ Property No.', colX[0] + (colWidths[0]/2), currentY + 12, { align: 'center', maxWidth: colWidths[0] - 4 });
-            doc.text('Unit', colX[1] + (colWidths[1]/2), currentY + 15, { align: 'center' });
-            doc.text('Description', colX[2] + (colWidths[2]/2), currentY + 15, { align: 'center' });
-            doc.text('Quantity', colX[3] + (colWidths[3]/2), currentY + 15, { align: 'center' });
-            doc.text('Unit Cost', colX[4] + (colWidths[4]/2), currentY + 15, { align: 'center' });
-            doc.text('Amount', colX[5] + (colWidths[5]/2), currentY + 15, { align: 'center' });
+            doc.text('Stock/ Property No.', colX[0] + (colWidths[0] / 2), currentY + 12, { align: 'center', maxWidth: colWidths[0] - 4 });
+            doc.text('Unit', colX[1] + (colWidths[1] / 2), currentY + 15, { align: 'center' });
+            doc.text('Description', colX[2] + (colWidths[2] / 2), currentY + 15, { align: 'center' });
+            doc.text('Quantity', colX[3] + (colWidths[3] / 2), currentY + 15, { align: 'center' });
+            doc.text('Unit Cost', colX[4] + (colWidths[4] / 2), currentY + 15, { align: 'center' });
+            doc.text('Amount', colX[5] + (colWidths[5] / 2), currentY + 15, { align: 'center' });
             currentY += headerHeight;
             tableYStart = currentY;
         }
 
         let rowHeight = 20;
-        
+
         if (!isBlank) {
             const quantity = parseFloat(item.quantity) || 0;
             const unitCost = parseFloat(item.unit_cost) || 0;
@@ -203,15 +204,15 @@ export const generatePO_PDFBlob = async (data) => {
             const descLines = doc.splitTextToSize(item.description || '', colWidths[2] - 8);
             rowHeight = Math.max(20, (descLines.length * 12) + 8);
 
-            doc.text(item.stockNo || '', colX[0] + (colWidths[0]/2), currentY + 12, { align: 'center' });
+            doc.text(item.stockNo || '', colX[0] + (colWidths[0] / 2), currentY + 12, { align: 'center' });
             setFont('normal', 9);
-            doc.text(item.unit || '', colX[1] + (colWidths[1]/2), currentY + 12, { align: 'center' });
-            
+            doc.text(item.unit || '', colX[1] + (colWidths[1] / 2), currentY + 12, { align: 'center' });
+
             setFont('bold', 9);
             doc.text(descLines, colX[2] + 4, currentY + 12);
-            
+
             setFont('normal', 9);
-            doc.text(quantity.toString(), colX[3] + (colWidths[3]/2), currentY + 12, { align: 'center' });
+            doc.text(quantity.toString(), colX[3] + (colWidths[3] / 2), currentY + 12, { align: 'center' });
             doc.text(formatAmount(unitCost), colX[4] + colWidths[4] - 4, currentY + 12, { align: 'right' });
             setFont('bold', 9);
             doc.text(formatAmount(rowTotal), colX[5] + colWidths[5] - 4, currentY + 12, { align: 'right' });
@@ -241,7 +242,7 @@ export const generatePO_PDFBlob = async (data) => {
     setFont('bold', 9);
     const labelCenterX = boxStartX + ((colX[2] - boxStartX) / 2);
     doc.text('(Total Amount in Words)', labelCenterX, currentY + 16, { align: 'center' });
-    
+
     setFont('normal', 10);
     const amountInWords = String(data.amount_in_words || numberToWords(data.total_amount || 0));
     const amountMaxWidth = (colX[5] - colX[2]) - 10;
@@ -251,7 +252,7 @@ export const generatePO_PDFBlob = async (data) => {
     doc.text(amountLines, colX[2] + 5, textYOffset);
     setFont('bold', 10);
     doc.text(formatAmount(data.total_amount || 0), colX[5] + colWidths[5] - 4, currentY + 16, { align: 'right' });
-    
+
     currentY += totalRowHeight;
 
     // ---------------- PENALTY CLAUSE ----------------
@@ -259,7 +260,7 @@ export const generatePO_PDFBlob = async (data) => {
     drawRect(boxStartX, currentY, contentWidth, penaltyHeight);
     setFont('normal', 9);
     doc.text('In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.', boxStartX + 5, currentY + 14, { maxWidth: contentWidth - 10 });
-    
+
     currentY += penaltyHeight;
 
     // ---------------- SIGNATURE SECTION ----------------
@@ -269,29 +270,29 @@ export const generatePO_PDFBlob = async (data) => {
 
     // Conforme
     doc.text('Conforme:', boxStartX + 5, currentY + 15);
-    
+
     const conformeCenter = boxStartX + (contentWidth / 4);
     drawLine(conformeCenter - 80, currentY + 60, conformeCenter + 80, currentY + 60);
     setFont('normal', 8);
     doc.text('Signature over Printed Name of Supplier', conformeCenter, currentY + 70, { align: 'center' });
-    
+
     drawLine(conformeCenter - 40, currentY + 88, conformeCenter + 40, currentY + 88);
     doc.text('Date', conformeCenter, currentY + 98, { align: 'center' });
 
     // Very truly yours
     setFont('normal', 9);
     doc.text('Very truly yours,', (pageWidth / 2) + 5, currentY + 15);
-    
+
     const approverCenter = (pageWidth / 2) + (contentWidth / 4);
     setFont('bold', 10);
     doc.text('JONATHAN PAUL M. LEUSEN, JR., CESO III', approverCenter, currentY + 55, { align: 'center' });
     // draw underline
     const txtWidth = doc.getTextWidth('JONATHAN PAUL M. LEUSEN, JR., CESO III');
-    drawLine(approverCenter - (txtWidth/2), currentY + 57, approverCenter + (txtWidth/2), currentY + 57);
-    
+    drawLine(approverCenter - (txtWidth / 2), currentY + 57, approverCenter + (txtWidth / 2), currentY + 57);
+
     setFont('bold', 9);
     doc.text('Regional Director', approverCenter, currentY + 68, { align: 'center' });
-    
+
     drawLine(approverCenter - 60, currentY + 88, approverCenter + 60, currentY + 88);
     setFont('normal', 8);
     doc.text('Designation', approverCenter, currentY + 98, { align: 'center' });
@@ -321,11 +322,11 @@ export const generatePO_PDFBlob = async (data) => {
     setFont('bold', 10);
     doc.text('DENNIS A. LIM', accountantCenter, currentY + 60, { align: 'center' });
     const accWidth = doc.getTextWidth('DENNIS A. LIM');
-    drawLine(accountantCenter - (accWidth/2), currentY + 62, accountantCenter + (accWidth/2), currentY + 62);
-    
+    drawLine(accountantCenter - (accWidth / 2), currentY + 62, accountantCenter + (accWidth / 2), currentY + 62);
+
     setFont('bold', 9);
     doc.text('ACCOUNTANT II', accountantCenter, currentY + 72, { align: 'center' });
-    
+
     setFont('italic', 8);
     doc.text('Signature over Printed Name of Authorized Official', accountantCenter, currentY + 84, { align: 'center' });
 

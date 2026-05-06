@@ -118,11 +118,10 @@ export const getRoleDisplayName = (role) => {
  * Get all available roles for select inputs
  */
 export const getAvailableRoles = () => [
-    { value: ROLES.ADMIN, label: ROLE_DISPLAY_NAMES[ROLES.ADMIN] },
-    { value: ROLES.SECRETARIAT, label: ROLE_DISPLAY_NAMES[ROLES.SECRETARIAT] },
-    { value: ROLES.MEMBER, label: ROLE_DISPLAY_NAMES[ROLES.MEMBER] },
-    { value: ROLES.SUPPLY, label: ROLE_DISPLAY_NAMES[ROLES.SUPPLY] },
-    { value: ROLES.END_USER, label: ROLE_DISPLAY_NAMES[ROLES.END_USER] },
+    { value: ROLES.ADMIN, label: 'BAC Secretariat' },
+    { value: ROLES.MEMBER, label: 'BAC Member' },
+    { value: ROLES.SUPPLY, label: 'Supply Officer' },
+    { value: ROLES.END_USER, label: 'End User' },
 ];
 
 /**

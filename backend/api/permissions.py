@@ -14,8 +14,7 @@ class IsBACSecretariat(permissions.BasePermission):
             return False
         if getattr(user, 'is_superuser', False):
             return True
-        role = (getattr(user, 'role', None) or '').strip().lower()
-        return role == 'bac_secretariat'
+        return is_bac_secretariat(user)
 
 
 class IsBACSecretariatOrReadOnly(permissions.BasePermission):
@@ -50,8 +49,7 @@ class CanManageUsers(permissions.BasePermission):
             return False
         if getattr(user, 'is_superuser', False):
             return True
-        role = (getattr(user, 'role', None) or '').strip().lower()
-        return role == 'bac_secretariat'
+        return is_bac_secretariat(user)
 
 
 class CanUploadDocuments(permissions.BasePermission):
@@ -80,8 +78,7 @@ class CanEditProcurementRecords(permissions.BasePermission):
             return False
         if getattr(user, 'is_superuser', False):
             return True
-        role = (getattr(user, 'role', None) or '').strip().lower()
-        return role == 'bac_secretariat'
+        return is_bac_secretariat(user)
 
 
 class CanDeleteRecords(permissions.BasePermission):
@@ -95,8 +92,7 @@ class CanDeleteRecords(permissions.BasePermission):
             return False
         if getattr(user, 'is_superuser', False):
             return True
-        role = (getattr(user, 'role', None) or '').strip().lower()
-        return role == 'bac_secretariat'
+        return is_bac_secretariat(user)
 
 
 class CanViewAuditLog(permissions.BasePermission):
@@ -110,8 +106,7 @@ class CanViewAuditLog(permissions.BasePermission):
             return False
         if getattr(user, 'is_superuser', False):
             return True
-        role = (getattr(user, 'role', None) or '').strip().lower()
-        return role == 'bac_secretariat'
+        return is_bac_secretariat(user)
 
 
 class IsPlanningUnit(permissions.BasePermission):
