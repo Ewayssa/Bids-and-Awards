@@ -30,6 +30,14 @@ class PurchaseRequest(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        old_pr_no = None
+        if not is_new:
+            try:
+                old_pr_no = PurchaseRequest.objects.get(pk=self.pk).pr_no
+            except PurchaseRequest.DoesNotExist:
+                pass
+
         super().save(*args, **kwargs)
         
         # Sync PR No. and Purpose to the parent ProcurementRecord (Folder) if linked
@@ -50,6 +58,18 @@ class PurchaseRequest(models.Model):
         # Propagate PR No to items
         if self.pr_no:
             self.items.all().update(pr_no=self.pr_no)
+
+        # Notify Supply Officer when PR No is assigned
+        if self.pr_no and old_pr_no != self.pr_no:
+            from .system import Notification
+            msg = f"PR No. {self.pr_no} has been assigned. Ready for PO generation."
+            # Check if notification already exists to avoid duplicates
+            if not Notification.objects.filter(message=msg, recipient_role='supply_officer').exists():
+                Notification.objects.create(
+                    message=msg,
+                    link='/po', 
+                    recipient_role='supply_officer'
+                )
 
     def __str__(self):
         return f"PR {self.pr_no} - {self.purpose[:50]}"

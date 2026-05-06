@@ -124,8 +124,7 @@ const PR = ({ user }) => {
                 const status = (pr.status || '').toLowerCase();
                 const isCompleted = status === 'completed' || status === 'po_generated';
                 const hasPRNo = pr.pr_no && pr.pr_no.trim() !== '';
-                const hasItems = pr.items && pr.items.length > 0;
-                return isReady || isCompleted || hasPRNo || hasItems;
+                return isReady || isCompleted || hasPRNo;
             });
         }
         
@@ -163,8 +162,7 @@ const PR = ({ user }) => {
                     const status = (pr.status || '').toLowerCase();
                     const isCompleted = status === 'completed' || status === 'po_generated';
                     const hasPRNo = pr.pr_no && pr.pr_no.trim() !== '';
-                    const hasItems = pr.items && pr.items.length > 0;
-                    return isReady || isCompleted || hasPRNo || hasItems;
+                    return isReady || isCompleted || hasPRNo;
                 }));
             } else {
                 setPrs(data);
