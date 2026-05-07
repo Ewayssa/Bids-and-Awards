@@ -15,6 +15,11 @@ def add_column_if_missing(table, column, definition):
             print(f"Column {column} already exists in {table}.")
 
 try:
+    # ProcurementRecord missing fields
+    add_column_if_missing('api_procurementrecord', 'mode_of_procurement', 'VARCHAR(100) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_procurementrecord', 'source_of_fund', 'VARCHAR(255) NOT NULL DEFAULT ""')
+    add_column_if_missing('api_procurementrecord', 'end_user_office', 'VARCHAR(255) NOT NULL DEFAULT ""')
+
     # PurchaseOrder missing fields
     add_column_if_missing('api_purchaseorder', 'tin', 'VARCHAR(100) NOT NULL DEFAULT ""')
     add_column_if_missing('api_purchaseorder', 'place_of_delivery', 'VARCHAR(255) NOT NULL DEFAULT ""')
