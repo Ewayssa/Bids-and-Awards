@@ -17,7 +17,7 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
     ppmp = serializers.SlugRelatedField(slug_field='pr_no', queryset=ProcurementRecord.objects.all(), required=False, allow_null=True)
     ppmp_no = serializers.CharField(source='ppmp.ppmp_no', read_only=True)
     ppmp_title = serializers.CharField(source='ppmp.title', read_only=True)
-    end_user_office = serializers.CharField(source='ppmp.end_user_office', read_only=True)
+    end_user_office = serializers.SerializerMethodField()
     related_documents = serializers.SerializerMethodField()
     folder_pr_no = serializers.CharField(source='ppmp.pr_no', read_only=True)
     is_ready = serializers.BooleanField(source='ppmp.is_ready', read_only=True)
@@ -57,6 +57,18 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
                 })
             return related_files
         return []
+
+    def get_end_user_office(self, obj):
+        if obj.ppmp and obj.ppmp.end_user_office:
+            return obj.ppmp.end_user_office
+        
+        from ..models import User
+        if obj.created_by:
+            user = User.objects.filter(fullName=obj.created_by).first() or \
+                   User.objects.filter(username=obj.created_by).first()
+            if user and user.office:
+                return user.office
+        return ''
 
     def create(self, validated_data):
         try:

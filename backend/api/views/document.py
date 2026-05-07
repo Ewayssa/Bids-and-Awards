@@ -170,6 +170,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if record:
             record.user_pr_no = user_pr_no
             record.save(update_fields=['user_pr_no'])
+            
+            # Propagate the assigned PR number to all associated Purchase Requests
+            for pr in record.purchase_requests.all():
+                pr.pr_no = user_pr_no
+                pr.save()
+
             from ..utils.workflow_logic import check_folder_readiness
             check_folder_readiness(record)
             sync_procurement_completion(record)
