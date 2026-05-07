@@ -27,9 +27,7 @@ class IsBACSecretariatOrReadOnly(permissions.BasePermission):
         if not user or not user.is_authenticated:
             return False
         
-        role = (getattr(user, 'role', None) or '').strip().lower()
-        
-        if role == 'bac_secretariat':
+        if is_bac_secretariat(user):
             return True
         
         if request.method in permissions.SAFE_METHODS:

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { userService } from '../../services/api';
-import { MdPersonAdd, MdCheckCircle, MdSearch, MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff, MdContentCopy, MdCheck, MdEdit } from 'react-icons/md';
+import { MdPersonAdd, MdCheckCircle, MdSearch, MdChevronLeft, MdChevronRight, MdVisibility, MdVisibilityOff, MdContentCopy, MdCheck, MdEdit, MdClose } from 'react-icons/md';
 import PageHeader from '../../components/PageHeader';
 import Modal from '../../components/Modal';
 import { ROLES, getRoleDisplayName, getAvailableRoles, hasPermission, PERMISSIONS } from '../../utils/auth';
@@ -12,6 +13,33 @@ const EMPTY_EDIT_FORM = { fullName: '', office: '', role: '', is_active: true };
 // Helper: returns border class if field is touched and invalid
 const fieldCls = (touched, error) =>
     `input-field w-full${touched && error ? ' border-red-400 focus:ring-red-400' : ''}`;
+
+const SuccessToast = ({ message, onClose }) => {
+    if (!message) return null;
+
+    return createPortal(
+        <div className="fixed right-5 top-5 z-[10001] w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-emerald-200 bg-white shadow-2xl shadow-slate-900/15 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="p-4 flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <MdCheckCircle className="w-6 h-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">Success</p>
+                    <p className="text-sm font-bold text-slate-900 leading-snug m-0">{message}</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    aria-label="Close success message"
+                >
+                    <MdClose className="w-5 h-5" />
+                </button>
+            </div>
+        </div>,
+        document.body
+    );
+};
 
 const Personnel = ({ user }) => {
     const [users, setUsers] = useState([]);
@@ -232,13 +260,9 @@ const Personnel = ({ user }) => {
         <div className="space-y-5 pb-8">
             <PageHeader title="User Management" subtitle="Create and manage user accounts, assign roles and permissions." />
 
+            <SuccessToast message={successMessage} onClose={() => setSuccessMessage('')} />
+
             <section className="content-section overflow-hidden rounded-xl p-0">
-                {successMessage && (
-                    <div className="flex items-center gap-3 px-5 py-3 rounded-t-xl bg-green-50 border-b border-green-200 text-green-800 text-sm font-medium">
-                        <MdCheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
-                        <span>{successMessage}</span>
-                    </div>
-                )}
                 <div className="section-header">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -388,7 +412,7 @@ const Personnel = ({ user }) => {
                 ) : (
                     <form onSubmit={handleEditSubmit} className="space-y-4">
                         <div>
-                            <label className="label-text">Email (Read-only)</label>
+                            <label className="label-text">Email</label>
                             <input type="text" value={editingUser?.username || ''} className="input-field bg-slate-50 cursor-not-allowed" disabled />
                         </div>
                         <div>

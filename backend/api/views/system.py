@@ -8,13 +8,14 @@ from django.db.models import Q
 
 from ..models import CalendarEvent, Notification, AuditLog
 from ..serializers import CalendarEventSerializer, NotificationSerializer, AuditLogSerializer
-from ..permissions import IsBACSecretariat, is_bac_secretariat, is_bac_member
+from ..permissions import IsBACSecretariat, IsBACSecretariatOrReadOnly, is_bac_secretariat, is_bac_member
 from ..services.notification_service import EmailNotificationService
 from .helpers import _log_audit, _create_notification
 
 class CalendarEventViewSet(viewsets.ModelViewSet):
     queryset = CalendarEvent.objects.all().order_by('-created_at')
     serializer_class = CalendarEventSerializer
+    permission_classes = [IsBACSecretariatOrReadOnly]
 
     def perform_create(self, serializer):
         event = serializer.save()

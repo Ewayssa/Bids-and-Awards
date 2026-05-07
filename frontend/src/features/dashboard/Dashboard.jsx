@@ -23,7 +23,8 @@ const Dashboard = ({ user, onLogout }) => {
     const [eventModal, setEventModal] = useState(null);
     const [editEventModal, setEditEventModal] = useState(null);
 
-    const isAdmin = mapOldRoleToNew(user?.role) === ROLES.ADMIN;
+    const normalizedRole = mapOldRoleToNew(user?.role, user?.position);
+    const canManageEvents = [ROLES.ADMIN, ROLES.SECRETARIAT].includes(normalizedRole);
     const dateLabel = new Date().toLocaleDateString('en-PH', { 
         weekday: 'long', 
         month: 'short', 
@@ -64,7 +65,7 @@ const Dashboard = ({ user, onLogout }) => {
                         </div>
                         <DashboardCalendar 
                             events={stats.calendarEvents} 
-                            isAdmin={isAdmin} 
+                            isAdmin={canManageEvents} 
                             onOpenAddEvent={(date) => setEventModal({ date })}
                             onOpenEditEvent={(ev) => setEditEventModal({ ev })}
                         />

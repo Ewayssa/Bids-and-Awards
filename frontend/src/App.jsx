@@ -14,6 +14,7 @@ import Navigation from './layouts/Navigation';
 import SupplyDashboard from './features/supply/SupplyDashboard';
 import GeneratePO from './features/supply/GeneratePO';
 import POPreview from './features/supply/POPreview';
+import NotificationToast from './features/notifications/NotificationToast';
 import { canAccessRoute, mapOldRoleToNew, getDefaultRouteForRole, ROLES } from './utils/auth';
 import { userService } from './services/api';
 
@@ -135,6 +136,7 @@ function AppContent() {
                 ) : (
                     <div className={`flex flex-nowrap min-h-screen w-full max-w-full bg-[var(--background)] overflow-x-hidden ${sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
                         <Navigation user={user} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={handleLogout} />
+                        <NotificationToast user={user} />
                         <main className="flex-1 min-w-0 pt-14 md:pt-0 bg-[var(--background)] md:border-l border-[var(--border-light)] min-h-screen overflow-x-hidden" role="main">
                             <div className="page-container h-full w-full min-w-0 overflow-x-hidden">
                                 <Routes>
